@@ -18,7 +18,7 @@ class DockerTask(Batch):
 
     """
 
-    def __init__(self, name, command, image=None, container_id=None, working_dir=None, endpoint=None, remove=True, volume=None):
+    def __init__(self, name, command, image=None, container_id=None, working_dir=None, endpoint=None, remove=True, volume=None,transversal_workflow=None):
 
         """
         :param name: task name
@@ -40,7 +40,7 @@ class DockerTask(Batch):
         :type remove: bool
         """
 
-        Task.__init__(self, name, command, working_dir=working_dir)
+        Task.__init__(self, name, command, working_dir=working_dir,transversal_workflow=transversal_workflow)
         self.command = command
         self.container_id = container_id
         self.container = None

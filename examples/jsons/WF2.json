@@ -1,0 +1,43 @@
+{
+    "id": 0, 
+    "name": "DataFlow-transversal", 
+    "tasks": {
+      "E": {
+        "command": "mkdir output;hostname > output/f1.txt", 
+        "name": "E", 
+        "nexts": [
+          "F"
+        ], 
+        "prevs": [], 
+        "status": "READY", 
+        "type": "batch", 
+        "working_dir": null
+      }, 
+      "F": {
+        "command": "echo $RANDOM > f2.txt; cat workflow://DataFlow-Demo-Server/A/output/f1.txt >> f2.txt; cat workflow:///E/output/f1.txt >> f2.txt", 
+        "name": "F", 
+        "nexts": [
+          "G"
+        ], 
+        "prevs": [
+          "A", 
+          "E"
+        ], 
+        "status": "READY", 
+        "type": "batch", 
+        "working_dir": null
+      }, 
+      "G": {
+        "command": "cat workflow:///F/f2.txt >> f3.txt; cat workflow://DataFlow-Demo-Server/C/f2.txt >> f3.txt", 
+        "name": "G", 
+        "nexts": [], 
+        "prevs": [
+          "F", 
+          "C"
+        ], 
+        "status": "READY", 
+        "type": "batch", 
+        "working_dir": null
+      }
+    }
+

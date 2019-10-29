@@ -10,7 +10,7 @@ class Batch(Task):
     **Executes a Batch task**
     """
 
-    def __init__(self, name, command, working_dir=None, endpoint=None):
+    def __init__(self, name, command, working_dir=None, endpoint=None, transversal_workflow=None):
         """
         :param name: task name
         :type name: str
@@ -24,7 +24,7 @@ class Batch(Task):
         :param endpoint: Globus endpoint ID
         :type endpoint: str
         """
-        Task.__init__(self, name, command, working_dir)
+        Task.__init__(self, name, command, working_dir,transversal_workflow = transversal_workflow)
 
     def __new__(cls, *args, **kwargs):
         """Create an Batch task local or remote

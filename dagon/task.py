@@ -106,7 +106,7 @@ class Task(Thread):
 
     """
 
-    def __init__(self, name, command, working_dir=None):
+    def __init__(self, name, command, working_dir=None,transversal_workflow=None):
         """
         :param name: name of the task
         :type name: str
@@ -131,6 +131,9 @@ class Task(Thread):
         self.working_dir = working_dir
         self.command = command
         self.info = None
+        self.dag_tps = None
+        self.transversal_workflow = transversal_workflow
+        self.workflows=None
 
     def set_info(self, info):
         """
@@ -219,6 +222,15 @@ class Task(Thread):
         :type workflow: :class:`dagon.Workflow`
         """
         self.workflow = workflow
+    
+    def set_dag_tps(self, DAG_tps):
+        """
+        Set the DAG_tps workflow which execute this task
+
+        :param  DAG_tps: :class:`dagon.dag_tps` instance
+        :type  DAG_tps: :class:`dagon.dag_tps`
+        """
+        self.dag_tps = DAG_tps
 
     # Set the current status
     def set_status(self, status):
@@ -253,6 +265,19 @@ class Task(Thread):
 
         if self.workflow.is_api_available:  # add in the server
             self.workflow.api.add_dependency(self.workflow.workflow_id, self.name, task.name)
+
+    def add_transversal_point(self, task):
+        """
+        Add a dependency from other task
+
+        :param task: :class:`dagon.task.Task` instance dependency
+        :type task: :class:`dagon.task.Task`
+        """
+        self.prevs.append(task)
+
+        if self.workflow.is_api_available:  # add in the server
+            self.workflow.api.add_dependency(self.workflow.workflow_id, self.name, task.name)
+
 
     # Increment the reference count
     def increment_reference_count(self):
@@ -298,7 +323,10 @@ class Task(Thread):
         """
         # Index of the starting position
         pos = 0
-
+        #get workflows of dag_tps
+        if self.dag_tps is not None:
+            self.workflows = self.dag_tps.workflows
+        
         # Forever unless no anymore dagon.Workflow.SCHEMA are present
         while True:
             # Get the position of the next dagon.Workflow.SCHEMA
@@ -336,16 +364,32 @@ class Task(Thread):
                 workflow_name = self.workflow.name
 
             # Extract the reference task object
-            task = self.workflow.find_task_by_name(workflow_name, task_name)
+
+            if self.workflows is None:
+                task = self.workflow.find_task_by_name(workflow_name, task_name)
+            else:
+                for wf in self.workflows:
+                    task = wf.find_task_by_name(workflow_name, task_name)
+                    if task is not None: 
+                        break
 
             # Check if the refernced task is consistent
             if task is not None:
                 # Add the dependency to the task
-                self.add_dependency_to(task)
-
+                if workflow_name == self.workflow.name:
+                    self.add_dependency_to(task)
+                else:
+                    self.add_transversal_point(task)
                 # Add the reference from the task
                 task.increment_reference_count()
 
+            if task is None: #if is None means that task is from another WF maybe in the dagon service
+                if self.workflow.is_api_available:
+                    workflow_id=self.workflow.api.get_workflow_by_name(workflow_name)
+                    transversal_task = self.workflow.api.get_task(workflow_id,task_name) ['task']#get the task from the external workflow
+                    transversal_task = DagonTask(TaskType[transversal_task['type'].upper()],transversal_task['name'],transversal_task['command'],
+                        transversal_workflow=workflow_id, working_dir=transversal_task['working_dir'])
+                    self.add_transversal_point(transversal_task)
             # Go to the next element
             pos = pos2
 
@@ -425,13 +469,27 @@ class Task(Thread):
 
             # Get the rest of the string as local path
             local_path = arg.replace(workflow_name + "/" + task_name, "")
-
+            
             # Set the default workflow name if needed
             if workflow_name is None or workflow_name == "":
                 workflow_name = self.workflow.name
 
             # Extract the reference task object
-            task = self.workflow.find_task_by_name(workflow_name, task_name)
+            #task = self.workflow.find_task_by_name(workflow_name, task_name)
+            if self.workflows is None:
+                task = self.workflow.find_task_by_name(workflow_name, task_name)
+            else:
+                for wf in self.workflows:
+                    task = wf.find_task_by_name(workflow_name, task_name)
+                    if task is not None: break
+
+
+            if task is None: #if is None means that task is from another WF maybe in the dagon service
+                if self.workflow.is_api_available:
+                    workflow_id=self.workflow.api.get_workflow_by_name(workflow_name)
+                    transversal_task = self.workflow.api.get_task(workflow_id,task_name) ['task']#get the task from the external workflow
+                    task = DagonTask(TaskType[transversal_task['type'].upper()],transversal_task['name'],transversal_task['command'],
+                        transversal_workflow=workflow_id, working_dir=transversal_task['working_dir'])
 
             # Check if the refernced task is consistent
             if task is not None:
@@ -492,7 +550,6 @@ class Task(Thread):
         """
         # The launcher script name
         script_name = self.working_dir + "/.dagon/" + script_name
-
         # Create a temporary launcher script
         file = open(script_name, "w")
         file.write(script)
@@ -517,6 +574,8 @@ class Task(Thread):
         if self.working_dir is None:
             # Set a scratch directory as working directory
             self.working_dir = self.workflow.get_scratch_dir_base() + "/" + self.get_scratch_name()
+
+
 
             # Set to remove the scratch directory
             self.remove_scratch_dir = True
@@ -578,7 +637,13 @@ class Task(Thread):
                 workflow_name = self.workflow.name
 
             # Extract the reference task object
-            task = self.workflow.find_task_by_name(workflow_name, task_name)
+            #task = self.workflow.find_task_by_name(workflow_name, task_name)
+            if self.workflows is None:
+                task = self.workflow.find_task_by_name(workflow_name, task_name)
+            else:
+                for wf in self.workflows:
+                    task = wf.find_task_by_name(workflow_name, task_name)
+                    if task is not None: break
 
             # Check if the refernced task is consistent
             if task is not None:
@@ -598,8 +663,7 @@ class Task(Thread):
         self.create_working_dir()
 
         # Apply some command pre processing
-        launcher_script = self.pre_process_command(self.command)
-
+        launcher_script = self.pre_process_command(self.command)      
         # Apply some command post processing
         launcher_script = self.post_process_command(launcher_script)
 
@@ -626,7 +690,30 @@ class Task(Thread):
 
             # Wait for each previous tasks
             for task in self.prevs:
-                task.join()
+                if self.workflow.find_task_by_name(self.workflow.name, task.name) == None: #if its a process from other workflow
+                    while(True):
+                        if self.workflow.is_api_available and task.transversal_workflow is not None:
+                            try:
+                                transversal_task = self.workflow.api.get_task(task.transversal_workflow,task.name)['task'] #get the task from the external workflow using the api
+                                if transversal_task['status']==dagon.Status.FINISHED.value or transversal_task['status']==dagon.Status.FAILED.value:
+                                    break
+                                else:
+                                    sleep(1)
+                            except Exception as e:
+                                task.set_status(dagon.Status.FAILED)
+                                self.workflow.logger.warning('Worflow dependence not found, Error: '+str(e))
+                                break
+                        elif task.status==dagon.Status.FINISHED or task.status==dagon.Status.FAILED:
+                            break
+                        else:
+                            sleep(.5)
+                else:
+                    while (True):
+                        if task.status ==dagon.Status.WAITING or task.status ==dagon.Status.READY: #if this happends, the workflow is probably a meta-workflow
+                            sleep(.5)
+                        else:
+                            task.join()
+                            break
 
             # Check if one of the previous tasks crashed
             for task in self.prevs:
@@ -684,6 +771,55 @@ class Task(Thread):
         """
         pass
 
+    def remove_from_workflow(self):
+        """
+        Remove the reference to the workflow
+        For each workflow:// in the command
+        """
+        # Remove the reference
+        # For each workflow:// in the command
+
+        # Index of the starting position
+        pos = 0
+        temp = self.command
+        while True:
+            # Get the position of the next dagon.Workflow.SCHEMA
+            pos1 = self.command.find(dagon.Workflow.SCHEMA, pos)
+
+            # Check if there is no dagon.Workflow.SCHEMA
+            if pos1 == -1:
+                # Exit the forever cycle
+                break
+
+            # Find the first occurrent of a whitespace (or if no occurrence means the end of the string)
+            pos2 = self.command.find(" ", pos1)
+
+            # Check if this is the last referenced argument
+            if pos2 == -1:
+                pos2 = len(self.command)
+
+            # Extract the parameter string
+            arg = self.command[pos1:pos2]
+
+            # Remove the dagon.Workflow.SCHEMA label
+            arg = arg.replace(dagon.Workflow.SCHEMA, "")
+
+            # Split each argument in elements by the slash
+            elements = arg.split("/")
+
+            # Extract the referenced task's workflow name
+            workflow_name = elements[0]
+
+            # Set the default workflow name if needed
+            if workflow_name is None or workflow_name == "":
+                pass
+            else:
+                temp = temp.replace(workflow_name,"")
+                
+            # Go to the next element
+            pos = pos2
+        return temp
+
     def get_how_im_script(self):
         """
         Create the script to get the context where the task will be executed
@@ -692,7 +828,6 @@ class Task(Thread):
         :rtype: str
         """
         return """
-
 # Initialize
 machine_type="none"
 public_id="none"

@@ -110,7 +110,7 @@ class API:
         :raises Exception: when there is an error with the call
         """
 
-        service = "/update/%s/%s" % (workflow_id, task)
+        service = "/%s/%s" % (workflow_id, task)
         url = self.base_url + service
         res = requests.get(url)
         if res.status_code != 201 and res.status_code != 200:  # error
@@ -118,6 +118,29 @@ class API:
         else:
             task = res.json()
             return task
+
+    # get a task from the server
+    def get_workflow_by_name(self, workflow_name):
+        """
+        get a workflow id from the server
+
+        :param workflow_name: workflow name
+        :type workflow_name: str
+
+        :return: id
+        :rtype: :str
+
+        :raises Exception: when there is an error with the call
+        """
+
+        service = "/getworkflow/%s" % workflow_name
+        url = self.base_url + service
+        res = requests.post(url)
+        if res.status_code != 201 and res.status_code != 200:  # error
+            raise Exception("Something went wrong, no Transversal workflow founded, %d %s" % (res.status_code, res.reason))
+        else:
+            workflow_id = res.text
+            return workflow_id
 
     # update atribute of the task
     def update_task(self, workflow_id, task, attribute, value):

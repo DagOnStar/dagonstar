@@ -1,0 +1,56 @@
+{
+    "id": 0, 
+    "name": "DataFlow-Demo-Server", 
+    "tasks": {
+      "A": {
+        "command": "mkdir output;hostname > output/f1.txt", 
+        "name": "A", 
+        "nexts": [
+          "B", 
+          "C"
+        ], 
+        "prevs": [], 
+        "status": "READY", 
+        "type": "batch", 
+        "working_dir": null
+      }, 
+      "B": {
+        "command": "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", 
+        "name": "B", 
+        "nexts": [
+          "D"
+        ], 
+        "prevs": [
+          "A"
+        ], 
+        "status": "READY", 
+        "type": "batch", 
+        "working_dir": null
+      }, 
+      "C": {
+        "command": "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", 
+        "name": "C", 
+        "nexts": [
+          "D"
+        ], 
+        "prevs": [
+          "A"
+        ], 
+        "status": "READY", 
+        "type": "batch", 
+        "working_dir": null
+      }, 
+      "D": {
+        "command": "cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt", 
+        "name": "D", 
+        "nexts": [], 
+        "prevs": [
+          "B", 
+          "C"
+        ], 
+        "status": "READY", 
+        "type": "batch", 
+        "working_dir": null
+      }
+    }
+  }

@@ -61,7 +61,7 @@ class Workflow(object):
 
     SCHEMA = "workflow://"
 
-    def __init__(self, name, config=None, config_file='dagon.ini', max_threads=10):
+    def __init__(self, name, config=None, config_file='dagon.ini', max_threads=10, jsonload=None):
         """
         Create a workflow
 
@@ -86,13 +86,14 @@ class Workflow(object):
         logging.getLogger("globus_sdk").setLevel(logging.WARNING)
 
         self.logger = logging.getLogger()
-
-        self.name = name
+        self.dag_tps=None
         self.dry = False
         self.tasks = []
         self.workflow_id = 0
         self.is_api_available = False
-
+        if jsonload is not None: #load from json file
+            self.load_json(jsonload)
+        self.name = name
         # to regist in the dagon service
         try:
             self.api = API(self.cfg['dagon_service']['route'])
@@ -164,6 +165,15 @@ class Workflow(object):
         task.set_workflow(self)
         if self.is_api_available:
             self.api.add_task(self.workflow_id, task)
+    
+    def set_dag_tps(self, DAG_tps):
+        """
+        Set the DAG_tps workflow which execute this workflow
+
+        :param  DAG_tps: :class:`dagon.dag_tps` instance
+        :type  DAG_tps: :class:`dagon.dag_tps`
+        """
+        self.dag_tps = DAG_tps
 
     def make_dependencies(self):
         """
@@ -180,7 +190,10 @@ class Workflow(object):
         for task in self.tasks:
             # Invoke pre run
             task.set_semaphore(self.sem)
+            task.set_dag_tps(self.dag_tps)
             task.pre_run()
+
+        self.Validate_WF()
 
     # Return a json representation of the workflow
     def as_json(self):
@@ -206,9 +219,38 @@ class Workflow(object):
         for task in self.tasks:
             task.join()
         completed_in = (time() - start_time)
-        print completed_in
-        self.logger.debug("Workflow completed in %s seconds ---" % completed_in)
+        self.logger.info("Workflow '"+self.name+ "' completed in %s seconds ---" % completed_in)
 
+    def load_json(self, Json_data):
+        from dagon.task import DagonTask, TaskType
+        self.name = Json_data['name']
+        self.workflow_id =Json_data['id']
+        for task in Json_data['tasks']:
+            temp = Json_data['tasks'][task]
+            tk = DagonTask(TaskType[temp['type'].upper()], temp['name'], temp['command'])
+            self.add_task(tk)
+        #self.make_dependencies()
+
+    def Validate_WF(self):
+        """
+        Validate the workflow to avoid any kind of cycle on the grap
+
+        Raise an Exception when a cylce is founded
+        """
+        needed = []; needy = []
+        for task in self.tasks:
+            for prev in task.prevs:
+                bool_needed = False; bool_needy = False
+                needed.append(prev) #dependency task is added
+                if task in needed or task.nexts in needed: bool_needed=True #are you or your decendents needed?
+                if prev in needy: bool_needy=True #that who you need is also needed?
+                if bool_needy and bool_needed:
+                    logging.warning('A cycle have been found')
+                    raise Exception("A cycle have been found from %s to %s" % (prev.name, task.name))
+                else:
+                    needy.append(task) #add the task and decendets to the needys array
+                    for t in task.nexts:
+                        needy.append(t)
 
 class DataMover(Enum):
     """
