@@ -1,0 +1,42 @@
+{
+  "id": "5e30b9b162347b000c914648",
+  "name": "DAGtp_workflow_2",
+  "tasks": {
+    "Adquisition2": {
+      "command": "cp -r /home/robot/Escritorio/Projects/Crawlers/Merra_Master//launcher/lib $PWD;java -jar /home/robot/Escritorio/Projects/Crawlers/Merra_Master/launcher/launcher.jar 1 1 02-01-2019 02-01-2019 $PWD/ aqui2",
+      "name": "Adquisition2",
+      "nexts": [
+        "Interpolation2"
+      ],
+      "prevs": [],
+      "status": "READY",
+      "type": "batch",
+      "working_dir": null
+    },
+    "Interpolation2": {
+      "command": "python /home/Interpolacion.py -i 'workflow://DAGtp_workflow_1/Adquisition1/metadata/FilesNc ,workflow://DAGtp_workflow_2/Adquisition2/metadata/FilesNc ' -w 1 ",
+      "name": "Interpolation2",
+      "nexts": [
+        "Uploader2"
+      ],
+      "prevs": [
+        "Adquisition1",
+        "Adquisition2"
+      ],
+      "status": "READY",
+      "type": "dockertask",
+      "working_dir": null
+    },
+    "Uploader2": {
+      "command": "python /home/upload.py -i workflow:///Interpolation2/output -w 1 ",
+      "name": "Uploader2",
+      "nexts": [],
+      "prevs": [
+        "Interpolation2"
+      ],
+      "status": "READY",
+      "type": "dockertask",
+      "working_dir": null
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "id": 0,
-  "name": "DagonTransversal",
+  "name": "DS-TPSM-2",
   "tasks": {
     "A": {
       "command": "sleep 1; mkdir output;cat /tmp/pruebas/conHeaders.csv > output/f1.csv",
@@ -12,7 +12,7 @@
       "prevs": [],
       "status": "FINISHED",
       "type": "batch",
-      "working_dir": "/tmp/pruebas/1574242240992-A"
+      "working_dir": "/tmp/pruebas/1574253600889-A"
     },
     "B": {
       "command": "sleep 1; echo $RANDOM > f2.txt; cat workflow:///A/output/f1.csv >> f2.txt",
@@ -25,7 +25,7 @@
       ],
       "status": "FINISHED",
       "type": "batch",
-      "working_dir": "/tmp/pruebas/1574242249291-B"
+      "working_dir": "/tmp/pruebas/1574253604454-B"
     },
     "C": {
       "command": "sleep 1; echo $RANDOM > f2.txt; cat workflow:///A/output/f1.csv >> f2.txt",
@@ -38,7 +38,7 @@
       ],
       "status": "FINISHED",
       "type": "batch",
-      "working_dir": "/tmp/pruebas/1574242249295-C"
+      "working_dir": "/tmp/pruebas/1574253604454-C"
     },
     "D": {
       "command": "sleep 1; cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt",
@@ -50,7 +50,7 @@
       ],
       "status": "FINISHED",
       "type": "batch",
-      "working_dir": "/tmp/pruebas/1574242252912-D"
+      "working_dir": "/tmp/pruebas/1574253608069-D"
     },
     "E": {
       "command": "mkdir output;cat /tmp/pruebas/merra.csv > output/f1.csv",
@@ -61,7 +61,7 @@
       "prevs": [],
       "status": "FINISHED",
       "type": "batch",
-      "working_dir": "/tmp/pruebas/1574242240992-E"
+      "working_dir": "/tmp/pruebas/1574253600889-E"
     },
     "F": {
       "command": "echo $RANDOM > f2.txt; cat workflow://TPw1/A/output/f1.csv >> f2.txt; cat workflow:///E/output/f1.csv >> f2.txt",
@@ -75,7 +75,7 @@
       ],
       "status": "FINISHED",
       "type": "batch",
-      "working_dir": "/tmp/pruebas/1574242249524-F"
+      "working_dir": "/tmp/pruebas/1574253604892-F"
     },
     "G": {
       "command": "cat workflow:///F/f2.txt >> f3.txt; cat workflow://TPw1/C/f2.txt >> f3.txt",
@@ -87,7 +87,7 @@
       ],
       "status": "FINISHED",
       "type": "batch",
-      "working_dir": "/tmp/pruebas/1574242252974-G"
+      "working_dir": "/tmp/pruebas/1574253608288-G"
     }
   }
 }

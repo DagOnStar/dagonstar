@@ -5,7 +5,7 @@ from threading import Semaphore
 from os import makedirs, path, chmod
 from time import time, sleep
 from enum import Enum
-
+from dagon.ftp_publisher import FTP_API
 import dagon
 
 
@@ -487,9 +487,21 @@ class Task(Thread):
             if task is None: #if is None means that task is from another WF maybe in the dagon service
                 if self.workflow.is_api_available:
                     workflow_id=self.workflow.api.get_workflow_by_name(workflow_name)
-                    transversal_task = self.workflow.api.get_task(workflow_id,task_name) ['task']#get the task from the external workflow
+                    response = self.workflow.api.get_task(workflow_id,task_name) #get the task from the external workflow
+                    transversal_task = response['task']
+                    host_ip = response['host']
+                    #if the host is the same in this computer, the task is in the same computer
+                    if host_ip == self.workflow.ftpAtt['host']:
+                        task_path = transversal_task['working_dir'] #the same workingdir
+                    else:
+                        task_path = self.workflow.local_path+transversal_task['working_dir'] #if not, we add an extra path
+                        ftp = FTP_API(host_ip)
+                        task_folder = transversal_task['working_dir'].split("/")[-1]#the last one is the task folder
+                        ftp.downloadFiles(task_folder,task_path)
+                        #we need to download the data from the ftp host
+
                     task = DagonTask(TaskType[transversal_task['type'].upper()],transversal_task['name'],transversal_task['command'],
-                        transversal_workflow=workflow_id, working_dir=transversal_task['working_dir'])
+                        transversal_workflow=workflow_id, working_dir=task_path)
 
             # Check if the refernced task is consistent
             if task is not None:
@@ -555,7 +567,7 @@ class Task(Thread):
         file.write(script)
         file.flush()
         file.close()
-        chmod(script_name, 0744)
+        chmod(script_name, 0o744)
 
     # create path using mkdirs
     def mkdir_working_dir(self, path):
@@ -586,7 +598,7 @@ class Task(Thread):
         if self.workflow.is_api_available:  # change scratch directory on server
             try:
                 self.workflow.api.update_task(self.workflow.workflow_id, self.name, "working_dir", self.working_dir)
-            except Exception, e:
+            except Exception as e:
                 self.workflow.logger.error("%s: Error updating scratch directory on server %s", self.name, e)
 
     def remove_reference_workflow(self):
@@ -692,7 +704,7 @@ class Task(Thread):
             for task in self.prevs:
                 if self.workflow.find_task_by_name(self.workflow.name, task.name) == None: #if its a process from other workflow
                     while(True):
-                        if self.workflow.is_api_available and task.transversal_workflow is not None:
+                        if self.workflow.is_api_available and task.transversal_workflow is not None: #when is an asynchronous execution
                             try:
                                 transversal_task = self.workflow.api.get_task(task.transversal_workflow,task.name)['task'] #get the task from the external workflow using the api
                                 if transversal_task['status']==dagon.Status.FINISHED.value or transversal_task['status']==dagon.Status.FAILED.value:
@@ -703,7 +715,7 @@ class Task(Thread):
                                 task.set_status(dagon.Status.FAILED)
                                 self.workflow.logger.warning('Worflow dependence not found, Error: '+str(e))
                                 break
-                        elif task.status==dagon.Status.FINISHED or task.status==dagon.Status.FAILED:
+                        elif task.status==dagon.Status.FINISHED or task.status==dagon.Status.FAILED: #when is used the dag_tps structure
                             break
                         else:
                             sleep(.5)
@@ -748,6 +760,7 @@ class Task(Thread):
                         self.workflow.logger.warn("%s: Task %s already started.", self.name, task.name)
 
             # Change the status
+            #self.workflow.api.update_task(self.workflow.workflow_id, self.name, "working_dir", self.working_dir)
             self.set_status(dagon.Status.FINISHED)
             return
 

@@ -2,7 +2,6 @@ import logging
 import logging.config
 import os
 from logging.config import fileConfig
-from types import NoneType
 import threading
 from backports.configparser import NoSectionError
 from enum import Enum
@@ -10,7 +9,7 @@ from requests.exceptions import ConnectionError
 
 from time import time, sleep
 
-from config import read_config
+from dagon.config import read_config
 from dagon.api import API
 from dagon.api.server import WorkflowServer
 from dagon.batch import Batch
@@ -94,23 +93,35 @@ class Workflow(object):
         if jsonload is not None: #load from json file
             self.load_json(jsonload)
         self.name = name
+
+        #ftp attributes
+        self.ftpAtt = dict()
+        try:
+            self.ftpAtt['host'] = self.cfg['ftp_pub']['ip']
+            self.ftpAtt['user'] = "guess"
+            self.ftpAtt['password'] = "guess"
+            self.local_path = self.cfg['batch']['scratch_dir_base']
+        except KeyError:
+            self.logger.error("No ftp ip in config file")
+
         # to regist in the dagon service
         try:
             self.api = API(self.cfg['dagon_service']['route'])
             self.is_api_available = True
-        except NoneType:
+        except KeyError:
             self.logger.error("No dagon URL in config file")
         except NoSectionError:
             self.logger.error("No dagon URL in config file")
-        except ConnectionError, e:
+        except ConnectionError as e:
             self.logger.error(e)
 
         if self.is_api_available:
             try:
                 self.workflow_id = self.api.create_workflow(self)
                 self.logger.debug("Workflow registration success id = %s" % self.workflow_id)
-            except Exception, e:
+            except Exception as e:
                 raise Exception(e)
+
 
     def get_dry(self):
         return self.dry
@@ -192,8 +203,7 @@ class Workflow(object):
             task.set_semaphore(self.sem)
             task.set_dag_tps(self.dag_tps)
             task.pre_run()
-
-        self.Validate_WF()
+        #self.Validate_WF()
 
     # Return a json representation of the workflow
     def as_json(self):
@@ -204,7 +214,7 @@ class Workflow(object):
         :rtype: dict(str, object) with data class
         """
 
-        jsonWorkflow = {"tasks": {}, "name": self.name, "id": self.workflow_id}
+        jsonWorkflow = {"tasks": {}, "name": self.name, "id": self.workflow_id, "host":self.ftpAtt["host"]}
         for task in self.tasks:
             jsonWorkflow['tasks'][task.name] = task.as_json()
         return jsonWorkflow

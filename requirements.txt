@@ -1,6 +1,6 @@
 requests
-fabric==1.14.0
-boto3==1.7.25
+fabric3
+boto3==1.10.19
 paramiko==2.4.1
 graphviz==0.8.3
 globus_sdk==1.5.0

@@ -1,9 +1,9 @@
 from dagon import Batch
 from dagon.remote import RemoteTask
-from dockercontainer import Container
-from dockercontainer import DockerClient
-from dockercontainer import DockerRemoteClient
-from task import Task
+from dagon.dockercontainer import Container
+from dagon.dockercontainer import DockerClient
+from dagon.dockercontainer import DockerRemoteClient
+from dagon.task import Task
 
 
 class DockerTask(Batch):

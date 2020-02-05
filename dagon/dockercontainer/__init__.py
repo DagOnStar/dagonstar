@@ -157,7 +157,7 @@ class Container(object):
 
         try:
             self.client.exec_command(command)
-        except Exception, e:
+        except Exception as e:
             return False
         return True
 
@@ -171,7 +171,7 @@ class Container(object):
         command = "docker stop %s" % self.key
         try:
             self.client.exec_command(command)
-        except Exception, e:
-            print e
+        except Exception as e:
+            print(e)
             return False
         return True

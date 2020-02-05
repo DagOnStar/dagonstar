@@ -20,7 +20,7 @@ class API:
         """
         try:
             requests.head(self.base_url)
-        except ConnectionError, e:
+        except ConnectionError as e:
             raise ConnectionError("It is not possible connect to the URL %s" % self.base_url)
         except MissingSchema:
             raise ConnectionError("Bad URL %s" % self.base_url)
@@ -135,9 +135,9 @@ class API:
 
         service = "/getworkflow/%s" % workflow_name
         url = self.base_url + service
-        res = requests.post(url)
+        res = requests.get(url)
         if res.status_code != 201 and res.status_code != 200:  # error
-            raise Exception("Something went wrong, no Transversal workflow founded, %d %s" % (res.status_code, res.reason))
+            raise Exception("Something went wrong, no Transversal workflow %s founded, %d %s" % (workflow_name,res.status_code, res.reason))
         else:
             workflow_id = res.text
             return workflow_id

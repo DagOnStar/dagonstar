@@ -1,6 +1,12 @@
 [dagon_service]
 route = http://localhost:57000
 
+[transversal_service]
+route = http://localhost:54350
+
+[ftp_pub]
+ip = localhost
+
 [dagon_ip]
 ip = localhost
 

@@ -1,0 +1,41 @@
+{
+  "id": 0,
+  "name": "Merra-Docker",
+  "tasks": {
+    "Adquisition": {
+      "command": "cp -r /home/robot/Escritorio/Projects/Crawlers/Merra_Master//launcher/lib $PWD;            java -jar /home/robot/Escritorio/Projects/Crawlers/Merra_Master/launcher/launcher.jar 1 1 01-01-2019 31-01-2019 $PWD/ aq_2",
+      "name": "Adquisition",
+      "nexts": [
+        "Interpolation"
+      ],
+      "prevs": [],
+      "status": "READY",
+      "type": "batch",
+      "working_dir": null
+    },
+    "Interpolation": {
+      "command": "python /home/Interpolacion.py -i workflow:///Adquisition/metadata/FilesNc -w 1 ",
+      "name": "Interpolation",
+      "nexts": [
+        "Uploader"
+      ],
+      "prevs": [
+        "Adquisition"
+      ],
+      "status": "READY",
+      "type": "dockertask",
+      "working_dir": null
+    },
+    "Uploader": {
+      "command": "python /home/upload.py -i workflow:///Interpolation/output -w 1 ",
+      "name": "Uploader",
+      "nexts": [],
+      "prevs": [
+        "Interpolation"
+      ],
+      "status": "READY",
+      "type": "dockertask",
+      "working_dir": null
+    }
+  }
+}

@@ -201,7 +201,7 @@ class KeyPair(object):
 
         from os import chmod
         with open(filename, 'w') as content_file:
-            chmod(filename, 0600)
+            chmod(filename, 0o600)
             content_file.write(privateKey)
 
     @staticmethod

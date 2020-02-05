@@ -1,8 +1,8 @@
 from os.path import abspath
 
-from communication.ssh import SSHManager
+from dagon.communication.ssh import SSHManager
 from dagon.cloud import CloudManager
-from task import Task
+from dagon.task import Task
 
 
 class RemoteTask(Task):

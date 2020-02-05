@@ -1,0 +1,49 @@
+2020-02-04 01:30:56,031 root         DEBUG    TPS API is alive
+2020-02-04 01:30:56,257 root         DEBUG    Workflow registration success id = 5e38bb409e158e000c846bc6
+2020-02-04 01:30:56,274 root         DEBUG    Workflow registration success id = 5e38bb409e158e000c846bc7
+2020-02-04 01:30:56,363 root         DEBUG    Running meta-workflow: DAGtp_2WF_2TPS
+2020-02-04 01:30:56,364 root         DEBUG    Running workflow: TestTPS_WFa
+2020-02-04 01:30:56,364 root         DEBUG    Running workflow: TestTPS_WFb
+2020-02-04 01:30:56,365 root         DEBUG    AdquisitionA: Status.WAITING
+2020-02-04 01:30:56,365 root         DEBUG    AdquisitionB: Status.WAITING
+2020-02-04 01:30:56,370 root         DEBUG    InterpolationA: Status.WAITING
+2020-02-04 01:30:56,370 root         DEBUG    InterpolationB: Status.WAITING
+2020-02-04 01:30:56,373 root         DEBUG    UploaderA: Status.WAITING
+2020-02-04 01:30:56,376 root         DEBUG    UploaderB: Status.WAITING
+2020-02-04 01:30:56,389 root         DEBUG    AdquisitionB: Status.RUNNING
+2020-02-04 01:30:56,399 root         DEBUG    AdquisitionA: Status.RUNNING
+2020-02-04 01:30:56,410 root         DEBUG    AdquisitionB: Executing...
+2020-02-04 01:30:56,410 root         DEBUG    AdquisitionB: Scratch directory: /tmp/pruebas/1580776256410-AdquisitionB
+2020-02-04 01:30:56,414 root         DEBUG    AdquisitionA: Executing...
+2020-02-04 01:30:56,415 root         DEBUG    AdquisitionA: Scratch directory: /tmp/pruebas/1580776256415-AdquisitionA
+2020-02-04 01:31:22,633 root         DEBUG    AdquisitionB Completed in 24.09243392944336 seconds ---
+2020-02-04 01:31:23,322 root         DEBUG    AdquisitionA Completed in 24.733715772628784 seconds ---
+2020-02-04 01:31:24,635 root         DEBUG    AdquisitionB: Status.FINISHED
+2020-02-04 01:31:24,654 root         DEBUG    InterpolationB: Status.RUNNING
+2020-02-04 01:31:24,659 root         DEBUG    InterpolationB: Executing...
+2020-02-04 01:31:24,660 root         DEBUG    InterpolationB: Scratch directory: /tmp/pruebas/1580776284660-InterpolationB
+2020-02-04 01:31:25,325 root         DEBUG    AdquisitionA: Status.FINISHED
+2020-02-04 01:31:25,340 root         DEBUG    InterpolationA: Status.RUNNING
+2020-02-04 01:31:25,355 root         DEBUG    InterpolationA: Executing...
+2020-02-04 01:31:25,355 root         DEBUG    InterpolationA: Scratch directory: /tmp/pruebas/1580776285355-InterpolationA
+2020-02-04 01:31:41,222 root         DEBUG    InterpolationB Completed in 14.747185945510864 seconds ---
+2020-02-04 01:31:41,222 root         DEBUG    Removed /tmp/pruebas/1580776256410-AdquisitionB
+2020-02-04 01:31:41,254 root         DEBUG    InterpolationA Completed in 14.06697130203247 seconds ---
+2020-02-04 01:31:41,254 root         DEBUG    Removed /tmp/pruebas/1580776256415-AdquisitionA
+2020-02-04 01:31:43,225 root         DEBUG    InterpolationB: Status.FINISHED
+2020-02-04 01:31:43,243 root         DEBUG    UploaderB: Status.RUNNING
+2020-02-04 01:31:43,255 root         DEBUG    InterpolationA: Status.FINISHED
+2020-02-04 01:31:43,261 root         DEBUG    UploaderB: Executing...
+2020-02-04 01:31:43,261 root         DEBUG    UploaderB: Scratch directory: /tmp/pruebas/1580776303261-UploaderB
+2020-02-04 01:31:43,267 root         DEBUG    UploaderA: Status.RUNNING
+2020-02-04 01:31:43,274 root         DEBUG    UploaderA: Executing...
+2020-02-04 01:31:43,274 root         DEBUG    UploaderA: Scratch directory: /tmp/pruebas/1580776303275-UploaderA
+2020-02-04 01:33:56,542 root         DEBUG    UploaderA Completed in 130.76083517074585 seconds ---
+2020-02-04 01:33:56,542 root         DEBUG    Removed /tmp/pruebas/1580776285355-InterpolationA
+2020-02-04 01:33:56,542 root         DEBUG    UploaderB Completed in 130.8900637626648 seconds ---
+2020-02-04 01:33:56,543 root         DEBUG    Removed /tmp/pruebas/1580776284660-InterpolationB
+2020-02-04 01:33:58,545 root         DEBUG    UploaderA: Status.FINISHED
+2020-02-04 01:33:58,545 root         DEBUG    UploaderB: Status.FINISHED
+2020-02-04 01:33:58,561 root         INFO     Workflow 'TestTPS_WFb' completed in 182.19586968421936 seconds ---
+2020-02-04 01:33:58,562 root         INFO     Workflow 'TestTPS_WFa' completed in 182.1976354122162 seconds ---
+2020-02-04 01:33:58,562 root         INFO     Meta-Workflow 'DAGtp_2WF_2TPS' completed in 182.19837260246277 seconds ---

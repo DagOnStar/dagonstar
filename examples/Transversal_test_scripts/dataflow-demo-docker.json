@@ -1,0 +1,41 @@
+{
+  "id": 0,
+  "name": "DAGtp_1_workflows",
+  "tasks": {
+    "Adquisition1": {
+      "command": "cp -r /home/robot/Escritorio/Projects/Crawlers/Merra_Master//launcher/lib $PWD;java -jar /home/robot/Escritorio/Projects/Crawlers/Merra_Master/launcher/launcher.jar 1 1 03-01-2019 04-01-2019 $PWD/ aqui1",
+      "name": "Adquisition1",
+      "nexts": [
+        "Interpolation1"
+      ],
+      "prevs": [],
+      "status": "READY",
+      "type": "batch",
+      "working_dir": null
+    },
+    "Interpolation1": {
+      "command": "python /home/Interpolacion.py -i 'workflow://Merra-Docker_1/Adquisition1/metadata/FilesNc ' -w 1 ",
+      "name": "Interpolation1",
+      "nexts": [
+        "Uploader1"
+      ],
+      "prevs": [
+        "Adquisition1"
+      ],
+      "status": "READY",
+      "type": "dockertask",
+      "working_dir": null
+    },
+    "Uploader1": {
+      "command": "python /home/upload.py -i workflow:///Interpolation1/output -w 1 ",
+      "name": "Uploader1",
+      "nexts": [],
+      "prevs": [
+        "Interpolation1"
+      ],
+      "status": "READY",
+      "type": "dockertask",
+      "working_dir": null
+    }
+  }
+}

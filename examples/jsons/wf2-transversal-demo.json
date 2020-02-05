@@ -1,55 +1,42 @@
 {
-  "id": "5db6c2c89f25cf000bfeff42", 
-  "name": "wf1-transversal-demo", 
+  "id": "5ddcfb16049a35000c73f94c",
+  "name": "wf2-transversal-demo",
   "tasks": {
-    "A": {
-      "command": "mkdir output;hostname > output/f1.txt", 
-      "name": "A", 
+    "E": {
+      "command": "mkdir output;hostname > output/f1.txt",
+      "name": "E",
       "nexts": [
-        "B", 
+        "F"
+      ],
+      "prevs": [],
+      "status": "READY",
+      "type": "batch",
+      "working_dir": null
+    },
+    "F": {
+      "command": "echo $RANDOM > f2.txt; cat workflow://wf1-transversal-demo/A/output/f1.txt >> f2.txt; cat workflow:///E/output/f1.txt >> f2.txt",
+      "name": "F",
+      "nexts": [
+        "G"
+      ],
+      "prevs": [
+        "A",
+        "E"
+      ],
+      "status": "READY",
+      "type": "batch",
+      "working_dir": null
+    },
+    "G": {
+      "command": "cat workflow:///F/f2.txt >> f3.txt; cat workflow://wf1-transversal-demo/C/f2.txt >> f3.txt",
+      "name": "G",
+      "nexts": [],
+      "prevs": [
+        "F",
         "C"
-      ], 
-      "prevs": [], 
-      "status": "READY", 
-      "type": "batch", 
-      "working_dir": null
-    }, 
-    "B": {
-      "command": "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt;sleep 10", 
-      "name": "B", 
-      "nexts": [
-        "D"
-      ], 
-      "prevs": [
-        "A"
-      ], 
-      "status": "READY", 
-      "type": "batch", 
-      "working_dir": null
-    }, 
-    "C": {
-      "command": "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt;sleep 10", 
-      "name": "C", 
-      "nexts": [
-        "D"
-      ], 
-      "prevs": [
-        "A"
-      ], 
-      "status": "READY", 
-      "type": "batch", 
-      "working_dir": null
-    }, 
-    "D": {
-      "command": "cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt;sleep 10", 
-      "name": "D", 
-      "nexts": [], 
-      "prevs": [
-        "B", 
-        "C"
-      ], 
-      "status": "READY", 
-      "type": "batch", 
+      ],
+      "status": "READY",
+      "type": "batch",
       "working_dir": null
     }
   }

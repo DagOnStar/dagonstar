@@ -24,34 +24,34 @@ if __name__ == '__main__':
     }
 
     # Create the orchestration workflow
-    workflow = Workflow("DataFlow-Demo-Server")
+    workflow = Workflow("TPw1")
 
     # Set the dry
     workflow.set_dry(False)
 
     # The task a
-    taskA = DagonTask(TaskType.BATCH, "A", "mkdir output;cat /tmp/pruebas/conHeaders.csv > output/f1.csv")
+    taskA = DagonTask(TaskType.BATCH, "A", "sleep 1; mkdir output;cat /tmp/pruebas/conHeaders.csv > output/f1.csv")
 
     # The task b
-    taskB = DagonTask(TaskType.BATCH, "B", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.csv >> f2.txt")
+    taskB = DagonTask(TaskType.BATCH, "B", "sleep 1; echo $RANDOM > f2.txt; cat workflow:///A/output/f1.csv >> f2.txt")
 
     # The task c
-    taskC = DagonTask(TaskType.BATCH, "C", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.csv >> f2.txt")
+    taskC = DagonTask(TaskType.BATCH, "C", "sleep 1; echo $RANDOM > f2.txt; cat workflow:///A/output/f1.csv >> f2.txt")
 
     # The task d
-    taskD = DagonTask(TaskType.BATCH, "D", "cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt")
+    taskD = DagonTask(TaskType.BATCH, "D", "sleep 1; cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt")
 
 #second workflow
-    workflow2 = Workflow("DataFlow-transversal")
+    workflow2 = Workflow("TPw2")
     workflow2.set_dry(False)
     # The task E
     taskE = DagonTask(TaskType.BATCH, "E", "mkdir output;cat /tmp/pruebas/merra.csv > output/f1.csv")
 
     # The task f
-    taskF = DagonTask(TaskType.BATCH, "F", "echo $RANDOM > f2.txt; cat workflow://DataFlow-Demo-Server/A/output/f1.csv >> f2.txt; cat workflow:///E/output/f1.csv >> f2.txt")
+    taskF = DagonTask(TaskType.BATCH, "F", "echo $RANDOM > f2.txt; cat workflow://TPw1/A/output/f1.csv >> f2.txt; cat workflow:///E/output/f1.csv >> f2.txt")
 
     # The task g
-    taskG = DagonTask(TaskType.BATCH, "G", "cat workflow:///F/f2.txt >> f3.txt; cat workflow://DataFlow-Demo-Server/C/f2.txt >> f3.txt")
+    taskG = DagonTask(TaskType.BATCH, "G", "cat workflow:///F/f2.txt >> f3.txt; cat workflow://TPw1/C/f2.txt >> f3.txt")
 
     # add tasks to the workflow 1
     workflow.add_task(taskA)
@@ -66,28 +66,29 @@ if __name__ == '__main__':
 
 #list of the workflows
     #WF =[workflow,workflow2]
-    metaworkflow=DAG_TPS("NewDAG")
+    metaworkflow=DAG_TPS("DS-TPSM-2")
     metaworkflow.add_workflow(workflow)
     metaworkflow.add_workflow(workflow2)
     metaworkflow.make_dependencies()
+
+    #running tps manager after running the workflow 
+    tpp1 = metaworkflow.Create_TPP_Double("A", "E" , "Codigo-Codigo,Fecha-Fecha", Bpath="output/", Apath="output/")
+    tpp2= metaworkflow.Create_TPP_Double("A", "E" , "Codigo-Codigo,Fecha-Fecha", Bpath="output/", Apath="output/", name = "prueba2")
+    tpp3 = metaworkflow.Create_TPP_Single("A", name = "prueba1", path="output/")
+
+    metaworkflow.prepare_tps()
 
     # run the workflow
     metaworkflow.run()
 
     jsonWorkflow = metaworkflow.as_json(json_format="mw") 
-    with open('./jsons/MW-demo2.json', 'w') as outfile:
+    with open('./jsons/MW-demo3.json', 'w') as outfile:
         stringWorkflow = json.dumps(jsonWorkflow, sort_keys=True, indent=2)
         outfile.write(stringWorkflow)
 
-    tpp1 = metaworkflow.Create_TPP("A", "E" , "Codigo-Codigo,Fecha-Fecha", Bpath="output/", Apath="output/")
-    tpp2= metaworkflow.Create_TPP("A", "E" , "Codigo-Codigo,Fecha-Fecha", Bpath="output/", Apath="output/", name = "prueba2")
-    tpp3 = metaworkflow.Create_TPP("D", "G" , "Codigo-Codigo,Fecha-Fecha", name = "prueba1", Bpath="f3.txt", Apath="f3.txt")
-
-    metaworkflow.prepare_tps()
-    
     #TPS describe example
-    a = metaworkflow.TPSapi.Describe(tpp1)
-    b = metaworkflow.TPSapi.Describe(tpp2)
+    #a = metaworkflow.TPSapi.Describe(tpp1)
+    #b = metaworkflow.TPSapi.Describe(tpp2)
 
-    logging.info(a)
-    logging.info(b)
+    #logging.info(a)
+    #logging.info(b)

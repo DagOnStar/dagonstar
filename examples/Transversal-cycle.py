@@ -30,7 +30,7 @@ if __name__ == '__main__':
     workflow.set_dry(False)
 
     # The task a
-    taskA = DagonTask(TaskType.BATCH, "A", "mkdir output;hostname > output/f1.txt; cat workflow://WF-3/H/output/f1.txt >> output/f1.txt")
+    taskA = DagonTask(TaskType.BATCH, "A", "$SC:5 ;mkdir output;hostname > output/f1.txt; cat workflow://WF-3/H/output/f1.txt >> output/f1.txt")
 
     # The task b
     taskB = DagonTask(TaskType.BATCH, "B", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt")
