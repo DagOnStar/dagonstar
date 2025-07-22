@@ -8,6 +8,8 @@ from time import time, sleep
 from enum import Enum
 from dagon.ftp_publisher import FTP_API
 import dagon
+from dagon.storage.dynostore import client
+
 
 
 class TaskType(Enum):
@@ -494,7 +496,7 @@ class Task(Thread):
         :return: command preprocessed
         :rtype: str
         """
-        stager = dagon.Stager(
+        stager = dagon.stager.base.Stager(
             self.data_mover, self.stager_mover, self.workflow.cfg)
 
         # Initialize the script
@@ -517,8 +519,13 @@ class Task(Thread):
         # Optional: remove trailing newline if needed
         unescaped_output = unescaped_output.strip()
 
-            
-        self.set_info(loads(unescaped_output))
+        info = loads(unescaped_output)
+
+        if "dynostore" in self.workflow.cfg:
+            info['dynostore'] = self.workflow.cfg['dynostore']
+
+            #ToDO: Check if dynostore is available
+        self.set_info(info)
 
         # start the creation of the launcher.sh script
         # Create the header
@@ -885,6 +892,13 @@ class Task(Thread):
                 # Invoke the actual executor
                 start_time = time()
                 self.result = self.on_execute(launcher_script, "launcher.sh")
+
+                # if dynostore, push the data to dynostore
+                if "dynostore" in self.workflow.cfg:
+                    dyno_conf = self.workflow.cfg['dynostore']
+                    dyno_server = f"{dyno_conf.get("host")}:{dyno_conf.get("port")}"
+                    print("DYNOSTORE CONFIG", dyno_server)
+
                 self.workflow.logger.debug(
                     "%s Completed in %s seconds ---" % (self.name, (time() - start_time)))
 
@@ -1054,6 +1068,13 @@ class Task(Thread):
         :return: Context script
         :rtype: str
         """
+
+        if "dynostore" in self.workflow.cfg:
+            script_header = "#! /bin/bash\n"
+            script_header += "# This is the DagOn context script\n\n"
+            #ToDo: check if python is available to install DynoStore
+            script_header += "pip install git+https://github.com/dynostore/dynostore-client"
+
         return r"""
 # Initialize
 machine_type="none"
@@ -1061,8 +1082,6 @@ public_id="none"
 user="none"
 status_sshd="none"
 status_ftpd="none"
-status_skycds="none"
-
 #get http communication protocol
 curl_or_wget=$(if hash curl 2>/dev/null; then echo "curl"; elif hash wget 2>/dev/null; then echo "wget"; fi);
 
@@ -1116,15 +1135,6 @@ then
   status_gsiftpd="none"
 fi
 
-#check if skycds container is running
-status_docker=`systemctl status docker 2>/dev/null|grep "Active"| awk '{print $2}'`
-if [ "$status_gsiftpd" == "active" ]
-then
-    if [ "$(docker ps -aq -f status=running -f name=client)" ]; then
-    # cleanup
-        status_skycds="active"
-    fi
-fi
 
 # Get the user
 user=$USER
@@ -1132,6 +1142,6 @@ user=$USER
 echo "no" | ssh-keygen  -b 2048 -t rsa -f ssh_key -q -N ""  >/dev/null
 
 # Construct the json
-json="{\\\"type\\\":\\\"$machine_type\\\",\\\"public_ip\\\":\\\"$public_ip\\\",\\\"ip\\\":\\\"$private_ip\\\",\\\"user\\\":\\\"$user\\\",\\\"SCP\\\":\\\"$status_sshd\\\",\\\"FTP\\\":\\\"$status_ftpd\\\",\\\"GRIDFTP\\\":\\\"$status_gsiftpd\\\",\\\"SKYCDS\\\":\\\"$status_skycds\\\"}"
+json="{\\\"type\\\":\\\"$machine_type\\\",\\\"public_ip\\\":\\\"$public_ip\\\",\\\"ip\\\":\\\"$private_ip\\\",\\\"user\\\":\\\"$user\\\",\\\"SCP\\\":\\\"$status_sshd\\\",\\\"FTP\\\":\\\"$status_ftpd\\\",\\\"GRIDFTP\\\":\\\"$status_gsiftpd\\\"}"
 echo $json
 """

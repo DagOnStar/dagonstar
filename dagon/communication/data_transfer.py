@@ -171,25 +171,3 @@ class GlobusManager:
         if res != "OK":
             raise Exception(res)
 
-
-class SKYCDS:
-    #TODO: Read this from configuration file
-    CLIENT_TOKEN = "3c2d53762ec82cf4cb14f3c6d45601afaf4b2eb42c702fb9f9cc53fa874cf9a0"
-    CATALOG_TOKEN = "b341db39dc182f276a4685ad4c0c8eb64bef1e7e1217655ff3da6eb28095670e"
-    API_TOKEN = "16970b17feb38ad94a29443954487f8cde3221d2"
-    IP_SKYCDS = ""
-
-    def upload_data(self, task, path, mode="single", encryption=False):
-        str_encryption = "true" if encryption else "false"
-        command = "tar -czvf %s/data.tar %s --exclude=*.tar &&  docker exec -i client java -jar -Xmx3g -Xmx3g CP-ABE_ST_Up.jar %s %s %s %s bob 2 %s test %s" % \
-                  (
-                  task.get_scratch_dir(), path, SKYCDS.CLIENT_TOKEN, SKYCDS.API_TOKEN, SKYCDS.CATALOG_TOKEN, mode, path,
-                  str_encryption)
-        result = task.execute_command(command)
-        return result
-
-    def download_data(self, task, path):
-        command = "mkdir -p %s && docker exec -i client java -jar -Xmx3g -Xmx3g CP-ABE_ST_Dow.jar %s %s %s %s 2 1 test %s" % \
-                  (path, SKYCDS.CLIENT_TOKEN, SKYCDS.API_TOKEN, SKYCDS.CATALOG_TOKEN, SKYCDS.IP_SKYCDS, path)
-        result = task.execute_command(command)
-        return result

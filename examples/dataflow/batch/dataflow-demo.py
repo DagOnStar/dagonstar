@@ -29,9 +29,9 @@ if __name__ == '__main__':
 
     # add tasks to the workflow
     workflow.add_task(taskA)
-    workflow.add_task(taskB)
-    workflow.add_task(taskC)
-    workflow.add_task(taskD)
+    #workflow.add_task(taskB)
+    #workflow.add_task(taskC)
+    #workflow.add_task(taskD)
 
     workflow.make_dependencies()
 
