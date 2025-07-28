@@ -45,6 +45,20 @@ def create_and_run_workflow(object_size_mb: int, num_objects: int, label: str = 
     workflow.run()
     end = time.time()
     print(f"<<< Completed: {wf_label} in {end - start:.2f} seconds\n")
+
+    # Save task times into a CSV
+    task_times = workflow.get_task_times()
+    csv_path = f"{wf_label}_task_times.csv"
+    with open(csv_path, 'a', newline='') as csvfile:
+        fieldnames = ["task_id", "duration"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for task_id, times in task_times.items():
+            writer.writerow({
+                "task_id": task_id,
+                "duration": times
+            })
+
     return end - start
 
 def append_to_csv(csv_path: str, config: str, test_config: dict, duration: float, iteration: int):

@@ -148,6 +148,7 @@ class Task(Thread):
         self.mode = "sequential"
         self.globusendpoint = globusendpoint
         self.new_tasks = []
+        self.completetion_time = 0
 
     def get_endpoint(self):
         return self.globusendpoint
@@ -931,9 +932,9 @@ class Task(Thread):
                 # Invoke the actual executor
                 start_time = time()
                 self.result = self.on_execute(launcher_script, "launcher.sh")
-
+                self.completetion_time = time() - start_time
                 self.workflow.logger.debug(
-                    "%s Completed in %s seconds ---" % (self.name, (time() - start_time)))
+                    "%s Completed in %s seconds ---" % (self.name, self.completetion_time))
 
                 self.workflow.checkpoints[key]["code"] = self.result['code']
 

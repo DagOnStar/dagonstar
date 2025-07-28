@@ -329,6 +329,14 @@ class Workflow(object):
             if task not in visited:
                 visit(task, visited, stack)
 
+    def get_task_times(self):
+        """
+        Get the execution times of each task in the workflow
 
-
-
+        :return: Dictionary with task names as keys and their execution times as values
+        :rtype: dict(str, float)
+        """
+        task_times = {}
+        for task in self.tasks:
+            task_times[task.name] = task.completetion_time
+        return task_times
