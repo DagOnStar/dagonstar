@@ -121,3 +121,6 @@ examples/dataflow/batch/last_run_remote.json
 examples/dataflow/batch/dataflow-demo-remote.json
 examples/dataflow/docker/*.json
 examples/dataflow/slurm/*.json
+tests/benchmarks/dynostore/*.json
+tests/benchmarks/dynostore/*.csv
+tests/benchmarks/dynostore/*.txt

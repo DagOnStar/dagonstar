@@ -101,4 +101,4 @@ class SSHManager:
         if code == 0:
             return {"code": 0, "output": stdout}
         else:
-            return {"code": 1, "message": stdout}
+            return {"code": 1, "message": stdout + stderr}

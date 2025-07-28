@@ -103,7 +103,8 @@ class Stager(object):
 
         # check transference protocols and remote machine info if is available
         # if dynostore is available, use it
-        if "dynostore" in dst_task_info and "dynostore" in src_task_info:
+
+        if "dynostore" in src_task.workflow.cfg:
             data_mover = DataMover.DYNOSTORE
         elif dst_task_info is not None and src_task_info is not None:
             if dst_task_info['ip'] == src_task_info['ip']:
@@ -129,7 +130,6 @@ class Stager(object):
 
         # Check if the symbolic link have to be used...
         if data_mover == DataMover.DYNOSTORE:
-            print("DYNOSTORE",src, dst, local_path)
             dyno_conf = src_task.workflow.cfg['dynostore']
             dyno_server = f"{dyno_conf.get("host")}:{dyno_conf.get("port")}"
             command = command + "# Add the dynostore command\n"
