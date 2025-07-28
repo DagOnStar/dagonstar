@@ -23,7 +23,8 @@ class Batch(Task):
         :param globusendpoint: Globus endpoint ID
         :type globusendpoint: str
         """
-        Task.__init__(self, name, command, working_dir,transversal_workflow = transversal_workflow, globusendpoint=globusendpoint)
+        Task.__init__(self, name, command, working_dir,
+                      transversal_workflow=transversal_workflow, globusendpoint=globusendpoint)
 
     def __new__(cls, *args, **kwargs):
         """Create an Batch task local or remote
@@ -38,11 +39,11 @@ class Batch(Task):
            ssh_username -- username in remote machine
            keypath -- path to the private keypath
         """
-        #if "ip" in kwargs:
+        # if "ip" in kwargs:
         #    return super(Task, cls).__new__(RemoteBatch)
-        #else:
+        # else:
         #    return super(Batch, cls).__new__(cls, *args, **kwargs)
-        
+
         if "ip" in kwargs:
             return super().__new__(RemoteBatch)
         else:
@@ -70,15 +71,15 @@ class Batch(Task):
         #         code, message = 1, result.stderr
         #
         #     return {"code": code, "message": message, "output": result.stdout}
-        p = Popen(shlex.split(command), stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, bufsize=-1, universal_newlines=True)
-        
-        out, err = p.communicate()
+        p = Popen(shlex.split(command), stdin=PIPE, stdout=PIPE,
+                  stderr=PIPE, close_fds=True, bufsize=-1, universal_newlines=True)
 
+        out, err = p.communicate()
+        
         code, message = 0, ""
-        if len(err):
+        if p.returncode != 0:
             code, message = 1, err
         return {"code": code, "message": message, "output": out}
-
 
     def on_execute(self, script, script_name):
         """
@@ -167,7 +168,8 @@ class RemoteBatch(RemoteTask, Batch):
         """
         # Invoke the base method
         RemoteTask.on_execute(self, launcher_script, script_name)
-        result = self.ssh_connection.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
+        result = self.ssh_connection.execute_command(
+            "bash " + self.working_dir + "/.dagon/" + script_name)
         return result
 
 
@@ -194,8 +196,8 @@ class Slurm(Batch):
     :vartype ntasks_per_node: int
     """
 
-    def __init__(self, name, command, partition=None, ntasks=None, memory=None, 
-                time=None, nodes=None, ntasks_per_node=None, working_dir=None, globusendpoint=None):
+    def __init__(self, name, command, partition=None, ntasks=None, memory=None,
+                 time=None, nodes=None, ntasks_per_node=None, working_dir=None, globusendpoint=None):
         """
         :param name: name of the task
         :type name: str
@@ -228,7 +230,8 @@ class Slurm(Batch):
         :type globusendpoint: str
         """
 
-        Batch.__init__(self, name, command, working_dir, globusendpoint=globusendpoint)
+        Batch.__init__(self, name, command, working_dir,
+                       globusendpoint=globusendpoint)
         self.partition = partition
         self.ntasks = ntasks
         self.memory = memory
@@ -256,7 +259,6 @@ class Slurm(Batch):
             return super().__new__(cls)
 
     def generate_command(self, script_name):
-
         """
         Generates the Slurm command including the partition and number of task parameters
 
@@ -282,23 +284,24 @@ class Slurm(Batch):
         time_text = ""
         if self.time is not None:
             time_text = "--time=" + self.time
-        
+
         nodes_text = ""
         if self.nodes is not None:
             nodes_text = "--nodes=" + str(self.nodes)
-        
+
         ntasks_per_node_text = ""
         if self.ntasks_per_node is not None:
-            ntasks_per_node_text = "--ntasks-per-node=" + str(self.ntasks_per_node)
+            ntasks_per_node_text = "--ntasks-per-node=" + \
+                str(self.ntasks_per_node)
 
         # Add the slurm batch command
         command = "sbatch " + partition_text + " " + ntasks_text + " " + memory_text + " " + time_text + " " + nodes_text + " " + ntasks_per_node_text + " " \
-                   + " -J " + self.name + " -D " + self.working_dir + " -W " + self.working_dir + "/.dagon/" + script_name
-        
+            + " -J " + self.name + " -D " + self.working_dir + \
+            " -W " + self.working_dir + "/.dagon/" + script_name
+
         return command
 
     def on_execute(self, script, script_name):
-
         """
         Execute a script using slurm
 
@@ -362,7 +365,8 @@ class RemoteSlurm(RemoteTask, Slurm):
         """
         Slurm.__init__(self, name, command, working_dir=working_dir, partition=partition, ntasks=ntasks, memory=memory,
                        globusendpoint=globusendpoint)
-        RemoteTask.__init__(self, name, ssh_username, keypath, command, ip, working_dir, globusendpoint=None)
+        RemoteTask.__init__(self, name, ssh_username, keypath,
+                            command, ip, working_dir, globusendpoint=None)
 
     def on_execute(self, script, script_name):
         """

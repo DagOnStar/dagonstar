@@ -55,6 +55,7 @@ class RemoteTask(Task):
         self.ssh_username = ssh_username
         self.ssh_connection = None
         if self.ip is not None and self.ssh_username is not None:
+            print(self.ip)
             self.ssh_connection = SSHManager(self.ssh_username, self.ip, self.keypath)
 
     def add_public_key(self, key):

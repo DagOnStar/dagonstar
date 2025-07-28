@@ -129,17 +129,11 @@ class Stager(object):
 
         # Check if the symbolic link have to be used...
         if data_mover == DataMover.DYNOSTORE:
-            print("LOCAL", src)
-            dyno_conf = src_task_info.get("dynostore")
+            print("DYNOSTORE",src, dst, local_path)
+            dyno_conf = src_task.workflow.cfg['dynostore']
             dyno_server = f"{dyno_conf.get("host")}:{dyno_conf.get("port")}"
-            print("DYNOSTORE CONFIG", dyno_conf)
-            dyno_client = client.Client(dyno_server)
-            # Read object in bytes
-            with open(src, "rb") as f:
-                data_bytes = f.read()
-            object_key = dyno_client.put(data_bytes, src_task.get_scratch_dir(), is_encrypted=dyno_conf.get(
-                "cypher", False), resiliency=dyno_conf.get("reliability", 1))
-            print("OBJECT KEY", object_key)
+            command = command + "# Add the dynostore command\n"
+            command += f"dynostore --server {dyno_server} get_catalog {os.path.basename(src_task.get_scratch_dir())} {dst}"
         elif data_mover == DataMover.GRIDFTP:
             # data could be copy using globus sdk
             ep1 = src_task.get_endpoint()

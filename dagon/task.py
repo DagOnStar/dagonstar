@@ -1,5 +1,6 @@
 import shutil
 import glob
+import os
 from json import loads, dumps
 from threading import Thread
 from threading import Semaphore
@@ -8,8 +9,6 @@ from time import time, sleep
 from enum import Enum
 from dagon.ftp_publisher import FTP_API
 import dagon
-from dagon.storage.dynostore import client
-
 
 
 class TaskType(Enum):
@@ -501,30 +500,64 @@ class Task(Thread):
 
         # Initialize the script
         header = "#! /bin/bash\n"
+        header = "export PATH=\"$HOME/.local/bin:$PATH\"\n"
         header = header + "# This is the DagOn launcher script\n\n"
         header = header + "code=0\n"
         # Add and execute the howim script
 
         context_script = header + "cd " + self.working_dir + "/.dagon\n"
+
+        if "dynostore" in self.workflow.cfg:
+
+            # Check if python is available
+            header += "if command -v python &>/dev/null; then\n"
+            header += "PYTHON=python\n"
+            header += "elif command -v python3 &>/dev/null; then\n"
+            header += "PYTHON=python3\n"
+            header += "else\n"
+            header += " echo \"Python is not available, please install Python to use DynoStore\"\n"
+            header += " exit 1\n"
+            header += "fi\n"
+
+            header += "if $PYTHON -c \"import dynostore\" &>/dev/null; then\n"
+            header += " echo \"DynoStore is installed\"\n"
+            header += "else\n"
+            header += " echo \"DynoStore is not installed, installing...\"\n"
+            header += "pip install git+https://github.com/dynostore/dynostore-client\n"
+            header += " fi\n"
+
+        header += "echo \n echo \"************************************\"\n echo \n"
+
         context_script += header + self.get_how_im_script() + "\n\n"
 
         # execute context script
         result = self.on_execute(context_script, "context.sh")
+        print(result)
+        print(result['code'])
         if result['code']:
             raise Exception(result['message'])
-        
+
         # Step 1: Unescape the backslashes
-        unescaped_output = result['output'].encode('utf-8').decode('unicode_escape')
+        unescaped_output = result['output'].encode(
+            'utf-8').decode('unicode_escape')
 
         # Optional: remove trailing newline if needed
         unescaped_output = unescaped_output.strip()
 
-        info = loads(unescaped_output)
+        # Get only the JSON part of the output
+        parts_output = unescaped_output.split(
+            "************************************")
+        if len(parts_output) > 1:
+            json_output = parts_output[1].strip()
+        else:
+            raise ValueError("Output does not contain expected JSON format")
+
+        info = loads(json_output)
 
         if "dynostore" in self.workflow.cfg:
             info['dynostore'] = self.workflow.cfg['dynostore']
 
-            #ToDO: Check if dynostore is available
+            # ToDO: Check if dynostore is available
         self.set_info(info)
 
         # start the creation of the launcher.sh script
@@ -720,6 +753,14 @@ class Task(Thread):
         """
         footer = command + "\n\n"
         footer = footer + "# Perform post process\n"
+
+        # if dynostore, push the data to dynostore
+        if "dynostore" in self.workflow.cfg:
+            dyno_conf = self.workflow.cfg['dynostore']
+            dyno_server = f"{dyno_conf.get("host")}:{dyno_conf.get("port")}"
+            footer += f"echo \"Pushing data to DynoStore server {dyno_server}\"\n"
+            footer += f"dynostore --server {dyno_server} put {self.working_dir} --recursive --catalog={os.path.basename(self.working_dir)}\n"
+
         footer += "exit $code"
         return footer
 
@@ -893,12 +934,6 @@ class Task(Thread):
                 start_time = time()
                 self.result = self.on_execute(launcher_script, "launcher.sh")
 
-                # if dynostore, push the data to dynostore
-                if "dynostore" in self.workflow.cfg:
-                    dyno_conf = self.workflow.cfg['dynostore']
-                    dyno_server = f"{dyno_conf.get("host")}:{dyno_conf.get("port")}"
-                    print("DYNOSTORE CONFIG", dyno_server)
-
                 self.workflow.logger.debug(
                     "%s Completed in %s seconds ---" % (self.name, (time() - start_time)))
 
@@ -1068,12 +1103,6 @@ class Task(Thread):
         :return: Context script
         :rtype: str
         """
-
-        if "dynostore" in self.workflow.cfg:
-            script_header = "#! /bin/bash\n"
-            script_header += "# This is the DagOn context script\n\n"
-            #ToDo: check if python is available to install DynoStore
-            script_header += "pip install git+https://github.com/dynostore/dynostore-client"
 
         return r"""
 # Initialize

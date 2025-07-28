@@ -93,14 +93,12 @@ class SSHManager:
         :return: execution results
         :rtype: dict(str, object)
         """
-
         _, stdout, stderr = self.connection.exec_command(command)
         code = stdout.channel.recv_exit_status()
         stdout = "\n".join(stdout.readlines())
         stderr = "\n".join(stderr.readlines())
-        if len(stderr):
-            return {"code": 1, "message": stderr}
-        elif code > 0:
-            return {"code": 1, "message": stdout}
-        else:
+
+        if code == 0:
             return {"code": 0, "output": stdout}
+        else:
+            return {"code": 1, "message": stdout}
