@@ -79,6 +79,7 @@ class Batch(Task):
         code, message = 0, ""
         if p.returncode != 0:
             code, message = 1, err
+        
         return {"code": code, "message": message, "output": out}
 
     def on_execute(self, script, script_name):

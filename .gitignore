@@ -124,3 +124,5 @@ examples/dataflow/slurm/*.json
 tests/benchmarks/dynostore/*.json
 tests/benchmarks/dynostore/*.csv
 tests/benchmarks/dynostore/*.txt
+tests/benchmarks/dynostore/*.bin
+tests/benchmarks/dynostore/temp_outputs/

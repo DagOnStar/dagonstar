@@ -556,7 +556,7 @@ class Task(Thread):
         if "dynostore" in self.workflow.cfg:
             info['dynostore'] = self.workflow.cfg['dynostore']
 
-            # ToDO: Check if dynostore is available
+        # ToDO: Check if dynostore is available
         self.set_info(info)
 
         # start the creation of the launcher.sh script
@@ -759,7 +759,8 @@ class Task(Thread):
             dyno_server = f"{dyno_conf.get("host")}:{dyno_conf.get("port")}"
             footer += f"echo \"Pushing data to DynoStore server {dyno_server}\"\n"
             footer += f"dynostore --server {dyno_server} put {self.working_dir} --recursive --catalog={os.path.basename(self.working_dir)}\n"
-
+            # an sleep for sync
+            footer += f"sleep 1\n"
         footer += "exit $code"
         return footer
 
@@ -931,6 +932,7 @@ class Task(Thread):
 
                 # Invoke the actual executor
                 start_time = time()
+                print(self.name)
                 self.result = self.on_execute(launcher_script, "launcher.sh")
                 self.completetion_time = time() - start_time
                 self.workflow.logger.debug(
@@ -1142,10 +1144,16 @@ then
   private_ip=`ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\\1/p'`
 fi
 
-# Check if the secure copy is available
-status_sshd=`systemctl status sshd 2>/dev/null | grep 'Active' | awk '{print $2}'`
-if [ "$status_sshd" == "" ]
-then
+# Check if either sshd.service or ssh.service is available and active
+status_sshd=$(systemctl status sshd 2>/dev/null | grep 'Active' | awk '{print $2}')
+
+# If sshd is not found or inactive, try ssh
+if [ -z "$status_sshd" ]; then
+  status_sshd=$(systemctl status ssh 2>/dev/null | grep 'Active' | awk '{print $2}')
+fi
+
+# If neither is found, set to "none"
+if [ -z "$status_sshd" ]; then
   status_sshd="none"
 fi
 

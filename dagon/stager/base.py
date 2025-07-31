@@ -100,17 +100,18 @@ class Stager(object):
         # get tasks info and select transference protocol
         dst_task_info = dst_task.get_info()
         src_task_info = src_task.get_info()
-
+        
         # check transference protocols and remote machine info if is available
         # if dynostore is available, use it
-
+        print(src_task_info)
+        print(dst_task_info)
         if "dynostore" in src_task.workflow.cfg:
             data_mover = DataMover.DYNOSTORE
         elif dst_task_info is not None and src_task_info is not None:
             if dst_task_info['ip'] == src_task_info['ip']:
                 data_mover = self.data_mover
             else:
-                protocols = ["DYNOSTORE", "GRIDFTP", "SCP", "FTP"]
+                protocols = ["GRIDFTP", "SCP", "FTP"]
                 for p in protocols:
                     if ProtocolStatus(src_task_info[p]) is ProtocolStatus.ACTIVE:
                         data_mover = DataMover[p]
@@ -124,6 +125,8 @@ class Stager(object):
         else:  # best effort (SCP)
             data_mover = self.data_mover
 
+        print(data_mover)
+
         src = src_task.get_scratch_dir() + "/" + local_path
 
         dst = dst_path + "/" + os.path.dirname(os.path.abspath(local_path))
@@ -133,6 +136,7 @@ class Stager(object):
             dyno_conf = src_task.workflow.cfg['dynostore']
             dyno_server = f"{dyno_conf.get("host")}:{dyno_conf.get("port")}"
             command = command + "# Add the dynostore command\n"
+            command += f"sleep 1\n"
             command += f"dynostore --server {dyno_server} get_catalog {os.path.basename(src_task.get_scratch_dir())} {dst}"
         elif data_mover == DataMover.GRIDFTP:
             # data could be copy using globus sdk
@@ -195,6 +199,7 @@ class Stager(object):
                         src, dst, cmd, self.stager_mover.value)
                 command += "\nif [ $? -ne 0 ]; then code=1; fi"
                 # command += "\n rm " + dst_task.working_dir + "/.dagon/ssh_key"
+                print(command)
             else:  # if source is a local machine
                 # copy my public key
                 key = src_task.get_public_key()
@@ -209,15 +214,19 @@ class Stager(object):
                                     dst_path + "/" + os.path.dirname(local_path))
 
                 cmd = "scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i " + src_task.working_dir + \
-                    "/.dagon/ssh_key -r " + " $file " + \
-                    dst_task.get_user() + "@" + dst_task.get_ip() + ":$dst \n\n"
+                    "/.dagon/ssh_key -r " + src + " " +  \
+                    dst_task.get_user() + "@" + dst_task.get_ip() + ":" + dst_path + " \n\n"
                 if StagerMover(self.stager_mover) == StagerMover.PARALLEL:
                     cmd = "scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i " + src_task.working_dir + \
                         "/.dagon/ssh_key -r " + " {} " + \
                         dst_task.get_user() + "@" + dst_task.get_ip() + ":$dst \n\n"
-                command_local = self.generate_command(
-                    src, dst, cmd, self.stager_mover.value)
-                res = Batch.execute_command(command_local)
+                #command_local = self.generate_command(
+                #    src, dst, cmd, self.stager_mover.value)
+
+                #print(command_local)
+                print("CMD",cmd)
+                res = Batch.execute_command(cmd)
+                print(res)
 
                 if res['code']:
                     raise Exception("Couldn't copy data from %s to %s" % (
