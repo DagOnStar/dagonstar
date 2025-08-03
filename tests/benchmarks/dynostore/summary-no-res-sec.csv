@@ -1,0 +1,9 @@
+system,operation,file_size_mb,avg_time,std_dev
+s3,upload,1,0.2608,0.1775
+s3,download,1,0.6833,0.0904
+s3,upload,10,0.6983,0.1606
+s3,download,10,2.3227,0.9151
+s3,upload,50,0.7497,0.1595
+s3,download,50,1.6927,0.6018
+s3,upload,100,1.1548,0.1245
+s3,download,100,2.689,0.9105

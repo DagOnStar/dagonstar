@@ -1,0 +1,9 @@
+system,operation,file_size_mb,avg_time,std_dev
+dynostore,upload,1,0.27,0.0396
+dynostore,download,1,0.027,0.0015
+dynostore,upload,10,0.5571,0.0066
+dynostore,download,10,0.0789,0.006
+dynostore,upload,50,2.0768,0.0236
+dynostore,download,50,0.4028,0.0146
+dynostore,upload,100,3.8371,0.0126
+dynostore,download,100,0.7988,0.0609
