@@ -1,0 +1,20 @@
+{
+    "pull_start": 1754153628506716551,
+    "Object caching": {
+      "start": 257203298236521,
+      "end": 257203442475633
+    },
+    "Chunk retrieval": {
+      "start": 257202811261262,
+      "end": 257203040469456
+    },
+    "Object reconstruction": {
+      "start": 257203040469626,
+      "end": 257203298235018
+    },
+    "Metadata retrieval": {
+      "start": 257202707502243,
+      "end": 257202811261042
+    },
+    "pull_end": 1754153629241805929
+  }

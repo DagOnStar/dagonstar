@@ -107,32 +107,34 @@ if __name__ == '__main__':
     configurations = ["dagon.ini", "dagon-dynostore.ini"]
     #configurations = ["dagon.ini"]
 
-    tests = [
-        # Vary object size, keep readers fixed
-        # {"object_size_mb": 1, "num_objects": 10, "label": "small"},
-        # {"object_size_mb": 50, "num_objects": 10, "label": "medium"},
-        # {"object_size_mb": 100, "num_objects": 10, "label": "large"},
-        # {"object_size_mb": 500, "num_objects": 10, "label": "xlarge"},
-        # {"object_size_mb": 1000, "num_objects": 10, "label": "xxlarge"},
+    # tests = [
+    #     # Vary object size, keep readers fixed
+    #     # {"object_size_mb": 1, "num_objects": 10, "label": "small"},
+    #     # {"object_size_mb": 50, "num_objects": 10, "label": "medium"},
+    #     # {"object_size_mb": 100, "num_objects": 10, "label": "large"},
+    #     # {"object_size_mb": 500, "num_objects": 10, "label": "xlarge"},
+    #     # {"object_size_mb": 1000, "num_objects": 10, "label": "xxlarge"},
 
-        # Vary consumers, fixed object size (scaling test)
-        #{"object_size_mb": 100, "num_objects": 1, "label": "readers1"}#,
-        # {"object_size_mb": 100, "num_objects": 5, "label": "readers5"},
-        # {"object_size_mb": 100, "num_objects": 10, "label": "readers10"},
-        # {"object_size_mb": 100, "num_objects": 20, "label": "readers20"},
-        {"object_size_mb": 100, "num_objects": 100, "label": "readers100"}
-    ]
+    #     # Vary consumers, fixed object size (scaling test)
+    #     #{"object_size_mb": 100, "num_objects": 1, "label": "readers1"}#,
+    #     # {"object_size_mb": 100, "num_objects": 5, "label": "readers5"},
+    #     # {"object_size_mb": 100, "num_objects": 10, "label": "readers10"},
+    #     # {"object_size_mb": 100, "num_objects": 20, "label": "readers20"},
+    #     {"object_size_mb": 100, "num_objects": 100, "label": "readers100"}
+    # ]
 
 
-    for config in configurations:
-        for test in tests:
-            for i in range(iterations):
-                os.makedirs('/home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults', exist_ok=True)
-                duration = create_and_run_multi_consumer(
-                    object_size_mb=test["object_size_mb"],
-                    num_consumers=test["num_objects"],
-                    label=test["label"],
-                    dagonini=config
-                )
-                append_to_csv(output_csv, config, test, duration, iteration=i)
-                shutil.rmtree('/home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults')
+    # for config in configurations:
+    #     for test in tests:
+    #         for i in range(iterations):
+    #             os.makedirs('/home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults', exist_ok=True)
+    #             duration = create_and_run_multi_consumer(
+    #                 object_size_mb=test["object_size_mb"],
+    #                 num_consumers=test["num_objects"],
+    #                 label=test["label"],
+    #                 dagonini=config
+    #             )
+    #             append_to_csv(output_csv, config, test, duration, iteration=i)
+    #             shutil.rmtree('/home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults')
+
+    write_summary_csv(output_csv, summary_csv)
