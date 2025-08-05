@@ -17,7 +17,7 @@ def create_and_run_multi_consumer(object_size_mb: int, num_consumers: int, label
     # One write task
     write_id = "write_0"
     write_cmd = f"dd if=/dev/urandom of=file0.bin bs=1M count={object_size_mb}"
-    task_write = DagonTask(TaskType.BATCH, write_id, write_cmd, ssh_username="ubuntu", ip="13.51.207.137", keypath="/home/cc/key_node_aws.key")
+    task_write = DagonTask(TaskType.BATCH, write_id, write_cmd, ssh_username="ubuntu", ip="16.171.8.15", keypath="/home/cc/key_node_aws.key")
     workflow.add_task(task_write)
 
     consumer_tasks = []
@@ -30,7 +30,7 @@ def create_and_run_multi_consumer(object_size_mb: int, num_consumers: int, label
         consumer_tasks.append(hash_id)
 
     agg_cmd = "cat " + " ".join([f"workflow:///{hid}/hash_{i}.txt" for i, hid in enumerate(consumer_tasks)]) + " > final.txt"
-    task_agg = DagonTask(TaskType.BATCH, "aggregate", agg_cmd)
+    task_agg = DagonTask(TaskType.BATCH, "aggregate", agg_cmd, ssh_username="cc", ip="129.114.108.6", keypath="/home/cc/key_node.key")
     workflow.add_task(task_agg)
 
     json_path = f"{wf_label}.json"
@@ -99,13 +99,13 @@ def write_summary_csv(input_csv: str, summary_csv: str):
 
 
 if __name__ == '__main__':
-    output_csv = "microbench_results-stress.csv"
-    summary_csv = "microbench_summary-stress.csv"
-    iterations = 2
+    output_csv = "v2microbench_results-stress.csv"
+    summary_csv = "v2microbench_summary-stress.csv"
+    iterations = 10
 
     #configurations = ["dagon-dynostore.ini"]  # ["dagon.ini", "dagon-dynostore.ini"]
-    configurations = ["dagon.ini", "dagon-dynostore.ini"]
-    #configurations = ["dagon.ini"]
+    #configurations = ["dagon.ini", "dagon-dynostore.ini"]
+    configurations = ["dagon.ini"]
 
     tests = [
         # Vary object size, keep readers fixed
@@ -116,10 +116,10 @@ if __name__ == '__main__':
         # {"object_size_mb": 1000, "num_objects": 10, "label": "xxlarge"},
 
         # Vary consumers, fixed object size (scaling test)
-        #{"object_size_mb": 100, "num_objects": 1, "label": "readers1"}#,
-        # {"object_size_mb": 100, "num_objects": 5, "label": "readers5"},
-        # {"object_size_mb": 100, "num_objects": 10, "label": "readers10"},
-        # {"object_size_mb": 100, "num_objects": 20, "label": "readers20"},
+        #{"object_size_mb": 100, "num_objects": 1, "label": "readers1"},
+        #{"object_size_mb": 100, "num_objects": 5, "label": "readers5"},
+        #{"object_size_mb": 100, "num_objects": 10, "label": "readers10"},
+        #{"object_size_mb": 100, "num_objects": 20, "label": "readers20"},
         {"object_size_mb": 100, "num_objects": 100, "label": "readers100"}
     ]
 
@@ -136,3 +136,5 @@ if __name__ == '__main__':
                 )
                 append_to_csv(output_csv, config, test, duration, iteration=i)
                 shutil.rmtree('/home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults')
+
+    write_summary_csv(output_csv, summary_csv)
