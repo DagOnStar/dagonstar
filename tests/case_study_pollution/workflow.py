@@ -34,6 +34,7 @@ workflow = Workflow("airqualityworkflow", config_file="dagon.ini")
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # *********** EDGE TASKS ************
+print(len(stations_data.keys()))
 edge_tasks = {}
 for station_id in stations_data.keys():
     edge_tasks[station_id] = []
@@ -49,46 +50,46 @@ for station_id in stations_data.keys():
         break
     break
 
-# print(edge_tasks)
+print(edge_tasks)
 
-# # *********** FOG TASKS ************
-# fog_tasks = []
-# for station_id in edge_tasks.keys():
-#     fog_cmd = (
-#         "python3 " + current_dir + "/fog/merge.py --edge_csv_path { " +
-#         " ".join([f"workflow:///{eid}/airquality_{eid}.csv" for eid in edge_tasks[station_id]]) +
-#         " } --output_path fog_summary_" + str(station_id) + ".csv"
-#     )
-#     fog_id = f"fog_{station_id}"
-#     fog_tasks.append({"task_id": fog_id, "station_id": station_id})
-#     task_fog = DagonTask(TaskType.BATCH, fog_id, fog_cmd)
-#     workflow.add_task(task_fog)
+# *********** FOG TASKS ************
+fog_tasks = []
+for station_id in edge_tasks.keys():
+    fog_cmd = (
+        "python3 " + current_dir + "/fog/merge.py --edge_csv_path { " +
+        " ".join([f"workflow:///{eid}/airquality_{eid}.csv" for eid in edge_tasks[station_id]]) +
+        " } --output_path fog_summary_" + str(station_id) + ".csv"
+    )
+    fog_id = f"fog_{station_id}"
+    fog_tasks.append({"task_id": fog_id, "station_id": station_id})
+    task_fog = DagonTask(TaskType.BATCH, fog_id, fog_cmd)
+    workflow.add_task(task_fog)
 
-# # *********** CLOUD TASKS ************
-# cloud_tasks = []
+# *********** CLOUD TASKS ************
+cloud_tasks = []
 
-# for i, fog_t in enumerate(fog_tasks):
-#     fog_id, station_id = fog_t["task_id"], fog_t["station_id"]
-#     cloud_cmd = (
-#         "python3 " + current_dir + "/cloud/aggregator.py --input workflow:///" + fog_id + "/fog_summary_" + str(station_id) + ".csv " +
-#         "--output monthly_avg_" + str(station_id) + ".csv " +
-#         "--alert alerts_" + str(station_id) + ".csv " +
-#         "--plots plots_" + str(station_id)
-#     )
-#     task_cloud = DagonTask(TaskType.BATCH, f"cloud_{station_id}", cloud_cmd)
-#     workflow.add_task(task_cloud)
+for i, fog_t in enumerate(fog_tasks):
+    fog_id, station_id = fog_t["task_id"], fog_t["station_id"]
+    cloud_cmd = (
+        "python3 " + current_dir + "/cloud/aggregator.py --input workflow:///" + fog_id + "/fog_summary_" + str(station_id) + ".csv " +
+        "--output monthly_avg_" + str(station_id) + ".csv " +
+        "--alert alerts_" + str(station_id) + ".csv " +
+        "--plots plots_" + str(station_id)
+    )
+    task_cloud = DagonTask(TaskType.BATCH, f"cloud_{station_id}", cloud_cmd)
+    workflow.add_task(task_cloud)
 
 
-# # Training and inference
-# training_cmd = f"python3 {current_dir}/cloud/train.py --data_dir {current_dir}/cloud/historical_data"
-# task_train = DagonTask(TaskType.BATCH, "train_model", training_cmd)
-# workflow.add_task(task_train)
+# Training and inference
+training_cmd = f"python3 {current_dir}/cloud/train.py --data_dir {current_dir}/cloud/historical_data"
+task_train = DagonTask(TaskType.BATCH, "train_model", training_cmd)
+workflow.add_task(task_train)
 
-# # Inference command
-# for station_id in stations_data.keys():
-#     inference_cmd = f"python3 {current_dir}/cloud/prediction.py --stations {station_id} --model workflow:///train_model/pollution_predictor_poly.pkl --features workflow:///train_model/poly_base_features.pkl --poly_transformer workflow:///train_model/poly_transformer.pkl  --data_dir {current_dir}/cloud/historical_data"
-#     task_inference = DagonTask(TaskType.BATCH, f"predict_pollution_{station_id}", inference_cmd)
-#     workflow.add_task(task_inference)
+# Inference command
+for station_id in stations_data.keys():
+    inference_cmd = f"python3 {current_dir}/cloud/prediction.py --stations {station_id} --model workflow:///train_model/pollution_predictor_poly.pkl --features workflow:///train_model/poly_base_features.pkl --poly_transformer workflow:///train_model/poly_transformer.pkl  --data_dir {current_dir}/cloud/historical_data"
+    task_inference = DagonTask(TaskType.BATCH, f"predict_pollution_{station_id}", inference_cmd)
+    workflow.add_task(task_inference)
 
 # Workflow execution
 workflow.make_dependencies()
