@@ -81,6 +81,7 @@ class Workflow(object):
         else:
             self.cfg = read_config(config_file)
             fileConfig(config_file)
+        print(max_threads)
         self.sem = threading.Semaphore(max_threads)
         # supress some logs
         logging.getLogger("paramiko").setLevel(logging.WARNING)
