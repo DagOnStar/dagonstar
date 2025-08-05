@@ -73,7 +73,7 @@ def plot_timeline(timeline):
         else:
             color = "#999999"
         ax.barh(i, duration, left=start, height=0.5, color=color, edgecolor="black")
-        ax.text(start + duration + 0.01, i, f"{duration:.1f}s", va="center", fontsize=8)
+        ax.text(start + duration - 0.5, i, f"{duration:.1f}s", va="center", fontsize=8)
 
     ax.set_yticks(range(len(events)))
     ax.set_yticklabels([name for name, _, _ in events])
@@ -83,15 +83,15 @@ def plot_timeline(timeline):
         total_time_s = timeline["upload_total_perf_ns"] / 1e9
         ax.axvline(total_time_s, color="red", linestyle="--", linewidth=2)
         ax.text(total_time_s + 0.01, len(events) - 0.5,
-                f"Client total time\n{total_time_s:.1f}s", color="red", va="center")
+                f"Response to client {total_time_s:.1f}s", color="red", va="center")
 
     # Legend
     legend_patches = [
-        mpatches.Patch(color="#3399ff", label="Foreground Task"),
-        mpatches.Patch(color="#ff6666", label="Background Task"),
+        mpatches.Patch(color="#3399ff", label="Synchronous Task"),
+        mpatches.Patch(color="#ff6666", label="Asynchronous Task"),
         #mpatches.Patch(color="#e6f2ff", alpha=0.5),#, label="Foreground Region"),
         #mpatches.Patch(color="#ffe6e6", alpha=0.5),#, label="Background Region"),
-        mpatches.Patch(color="red", linestyle="--", label="Client Total Time"),
+        #mpatches.Patch(color="red", linestyle="--", label="Client Total Time"),
     ]
     ax.legend(handles=legend_patches, loc="lower right", fontsize=8)
 

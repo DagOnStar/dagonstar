@@ -1,7 +1,9 @@
 import os
 import json
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
+from matplotlib import colormaps
+
+
 
 # --- Style setup ---
 plt.style.use("../paper.mplstyle")
@@ -46,12 +48,17 @@ def plot_timeline(timeline):
 
     events.sort(key=lambda x: x[1])  # Sort by start time
 
+    # Generate N distinct colors using a colormap
+    N = len(events)
+    cmap = colormaps['Paired'].resampled(N)
+    colors = [cmap(i / (N - 1)) for i in range(N)]  # Normalize i to [0,1] range
+
     fig, ax = plt.subplots(figsize=(my_width, my_width / golden)) #plt.subplots(figsize=(10, 6))
 
     # Plot server-side event bars
     for i, (name, start, duration) in enumerate(events):
-        ax.barh(i, duration, left=start, height=0.4)
-        ax.text(start + duration + 0.01, i, f"{duration:.2f}s", va="center", fontsize=8)
+        ax.barh(i, duration, left=start, height=0.4, color=colors[i])
+        ax.text(start + duration - 0.05, i, f"{duration:.2f}s", va="center", fontsize=8)
 
     # Set y labels
     ax.set_yticks(range(len(events)))
@@ -62,12 +69,12 @@ def plot_timeline(timeline):
         total_time_s = (timeline["pull_end"] - timeline["pull_start"]) / 1e9
         print(total_time_s)
         ax.axvline(total_time_s, color="red", linestyle="--", linewidth=2, label="Client total time")
-        ax.text(total_time_s + 0.01, len(events) - 0.5, f"Client total time\n{total_time_s:.2f}s",
+        ax.text(total_time_s - .17, len(events) - 0.5, f"Response to client {total_time_s:.2f}s",
                 color="red", va="center", fontsize=9)
 
-    ax.set_xlabel("Time (s)")
+    ax.set_xlabel("Service time (s)")
     ax.grid(True, axis='x', linestyle='--', alpha=0.5)
-    ax.legend(loc="lower right")
+    #ax.legend(loc="upper left", frameon=True, facecolor='white', edgecolor='black',)
     plt.tight_layout()
     plt.savefig(f"download_timeline.pdf")
 

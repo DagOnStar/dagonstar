@@ -125,3 +125,10 @@ tests/benchmarks/dynostore/*.json
 tests/benchmarks/dynostore/*.txt
 tests/benchmarks/dynostore/*.bin
 tests/benchmarks/dynostore/temp_outputs/
+tests/case_study_pollution/cloud/*.pkl
+tests/case_study_pollution/cloud/plots/*.png
+tests/case_study_pollution/cloud/test/*.png
+tests/case_study_pollution/edge/*.csv
+tests/case_study_pollution/fog/*.csv
+tests/case_study_pollution/cloud/*.png
+tests/case_study_pollution/cloud/*.csv

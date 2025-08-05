@@ -19,7 +19,6 @@ transfer_categories = [
     "Transfer\nEfficiency",
     "WAN\nTransference",
     "Multi-\nReader\nSupport",
-    "Fragmentation\nAwareness",
     "Security\n\\& Access\nControl",
     "Data\nIntegrity"
 ]
@@ -43,11 +42,11 @@ storage_angles = compute_angles(len(storage_categories))
 
 # === Tool Scores ===
 transfer_scores = {
-    "SSH": [5, 3, 2, 1, 5, 5],
-    "S3": [3, 5, 5, 1, 5, 5],
-    "DynoStore": [4, 5, 5, 5, 5, 5],
-    "Globus/GridFTP": [4, 5, 4, 2, 5, 5],
-    "IPFS": [2, 4, 3, 4, 3, 3]
+    "SSH/SCP": [5, 3, 2, 5, 5],
+    "S3": [3, 5, 5, 5, 5],
+    "DynoStore": [3, 5, 5, 5, 5],
+    "Globus/GridFTP": [5, 5, 5, 5, 5],
+    "IPFS": [5, 3, 5, 3, 3]
 }
 
 storage_scores = {
@@ -58,7 +57,7 @@ storage_scores = {
 
 # === Pastel colors ===
 pastel_colors = {
-    "SSH": "#A1C9F4",
+    "SSH/SCP": "#A1C9F4",
     "S3": "#FFB482",
     "DynoStore": "#8DE5A1",
     "Globus/GridFTP": "#CBA6E3",
@@ -66,7 +65,7 @@ pastel_colors = {
 }
 
 # === Create subplots ===
-fig, axs = plt.subplots(ncols=2, figsize=(10, 6), subplot_kw=dict(polar=True))
+fig, axs = plt.subplots(ncols=1, figsize=(10, 6), subplot_kw=dict(polar=True))
 
 plt.subplots_adjust(wspace=0.35)
 
@@ -83,7 +82,7 @@ def plot_radar(ax, angles, categories, scores_dict, title):
         ax.plot(angles, values, label=tool, color=pastel_colors[tool], linewidth=2, marker='o', markersize=6)
         ax.fill(angles, values, color=pastel_colors[tool], alpha=alpha)
 
-    ax.set_title(title)
+    #ax.set_title(title)
     ax.set_theta_offset(np.pi / 2)
     ax.set_theta_direction(-1)
     ax.set_thetagrids(np.degrees(angles[:-1]), categories, fontsize=11)
@@ -92,17 +91,17 @@ def plot_radar(ax, angles, categories, scores_dict, title):
     ax.grid(True, linestyle='--', linewidth=0.5, color='gray')
 
 # === Plot each radar chart ===
-plot_radar(axs[0], transfer_angles, transfer_categories, transfer_scores, r"\textbf{Data Transfer Capabilities}")
-plot_radar(axs[1], storage_angles, storage_categories, storage_scores, r"\textbf{Data Storage Capabilities}")
+plot_radar(axs, transfer_angles, transfer_categories, transfer_scores, r"\textbf{Data Transfer Capabilities}")
+#plot_radar(axs[1], storage_angles, storage_categories, storage_scores, r"\textbf{Data Storage Capabilities}")
 
 # === Bring category labels forward ===
-for ax in axs:
-    for label in ax.get_xticklabels():
-        label.set_zorder(40)
-        label.set_bbox(dict(facecolor='white', alpha=0.9, edgecolor='none', boxstyle='round,pad=0.2'))
+
+for label in axs.get_xticklabels():
+    label.set_zorder(40)
+    label.set_bbox(dict(facecolor='white', alpha=0.9, edgecolor='none', boxstyle='round,pad=0.2'))
 
 # === Shared legend below both plots ===
-handles, labels = axs[0].get_legend_handles_labels()
+handles, labels = axs.get_legend_handles_labels()
 fig.legend(
     handles, labels,
     loc='upper center',
@@ -112,8 +111,8 @@ fig.legend(
     fontsize=11
 )
 
-axs[0].tick_params(pad=20)  # For transfer plot
-axs[1].tick_params(pad=20)  # For storage plot
+axs.tick_params(pad=20)  # For transfer plot
+#axs[1].tick_params(pad=20)  # For storage plot
 
 # === Final layout and save ===
 plt.tight_layout()
