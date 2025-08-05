@@ -1,0 +1,45 @@
+text.usetex: True
+text.latex.preamble: \usepackage{amsmath}\usepackage{amssymb}
+font.family: serif
+font.serif: Computer Modern
+savefig.bbox: tight
+savefig.format: pdf
+axes.titlesize : large
+axes.labelsize : large
+axes.formatter.use_mathtext : True
+### Ticks
+xtick.top: True
+xtick.bottom: True
+xtick.major.size: 4.0
+xtick.minor.size: 2.0
+xtick.major.width: 0.5
+xtick.minor.width: 0.5
+xtick.direction: in
+xtick.minor.visible: False
+xtick.major.top: False
+xtick.major.bottom: True
+xtick.minor.top: False
+xtick.minor.bottom: False
+xtick.major.pad: 5.0
+xtick.minor.pad: 5.0
+ytick.labelsize: large
+ytick.left: True
+ytick.right: True
+ytick.major.size: 4.0
+ytick.minor.size: 2.0
+ytick.major.width: 0.5
+ytick.minor.width: 0.5
+ytick.direction: in
+ytick.minor.visible: False
+ytick.major.left: True
+ytick.major.right: True
+ytick.minor.left: True
+ytick.minor.right: True
+ytick.major.pad: 5.0
+ytick.minor.pad: 5.0
+xtick.labelsize: large
+### Legend
+legend.frameon: False
+legend.fontsize: 10
+legend.fancybox: True
+legend.framealpha: 0.8

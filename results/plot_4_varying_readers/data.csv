@@ -1,0 +1,9 @@
+label,config,object_size_MB,num_objects,mean_total_time_s,std_total_time_s
+readers1,dagon.ini,100,1,21.96,0.12
+readers5,dagon.ini,100,5,26.27,0.17
+readers10,dagon.ini,100,10,31.17,0.22
+readers20,dagon.ini,100,20,39.79,0.2
+readers5,dagon-dynostore.ini,100,5,62.54,5.84
+readers10,dagon-dynostore.ini,100,10,85.11,1.17
+readers20,dagon-dynostore.ini,100,20,170.83,2.38
+readers1,dagon-dynostore.ini,100,1,35.65,0.37

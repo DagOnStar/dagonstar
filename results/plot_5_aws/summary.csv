@@ -1,0 +1,13 @@
+system,operation,file_size_mb,avg_time,std_dev
+DynoStore,upload,1,0.3495,0.095
+DynoStore,download,1,0.1687,0.0623
+DynoStore,upload,10,0.7433,0.093
+DynoStore,download,10,0.2876,0.0903
+DynoStore,upload,100,5.2178,0.0848
+DynoStore,download,100,1.3451,0.176
+BOTO-S3-Object-Upload,upload,1,0.5037,0.0398
+BOTO-S3-Object-Upload,download,1,0.2117,0.0764
+BOTO-S3-Object-Upload,upload,10,0.584,0.1033
+BOTO-S3-Object-Upload,download,10,1.0956,0.1868
+BOTO-S3-Object-Upload,upload,100,2.8191,0.1307
+BOTO-S3-Object-Upload,download,100,2.6517,0.1009
