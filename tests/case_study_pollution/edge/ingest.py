@@ -6,12 +6,11 @@ import sys
 import requests
 from datetime import datetime
 
-# --- Configuration ---
-DATA_FILE = "../data/datos202412.csv"  # Path to the dataset
+
 
 # --- Get the day from command-line argument ---
-if len(sys.argv) != 4:
-    print("Usage: python ingest_simulator.py <day> <month> <station>")
+if len(sys.argv) != 6:
+    print("Usage: python ingest_simulator.py <day> <month> <station> <data>")
     sys.exit(1)
 
 try:
@@ -23,6 +22,10 @@ try:
 except ValueError:
     print("Invalid day. Must be an integer between 1 and 31.")
     sys.exit(1)
+
+# --- Configuration ---
+DATA_FILE = sys.argv[4]  # Path to the dataset
+output_file = sys.argv[5]
 
 # --- Load dataset ---
 df = pd.read_csv(DATA_FILE, sep=';')
@@ -52,7 +55,7 @@ day_data["timestamp"] = datetime.now().isoformat()
 
 
 # Save temporary slice
-out_filename = f"airquality_2024_{day:02}_{month:02}_{station:02}.csv"
+out_filename = f"airquality_{output_file}"
 day_data.to_csv(out_filename, index=False)
 
 print(f"[INFO] Simulating ingestion for day {day}: {out_filename}")
