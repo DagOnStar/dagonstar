@@ -758,7 +758,7 @@ class Task(Thread):
             dyno_conf = self.workflow.cfg['dynostore']
             dyno_server = f"{dyno_conf.get("host")}:{dyno_conf.get("port")}"
             footer += f"echo \"Pushing data to DynoStore server {dyno_server}\"\n"
-            footer += f"dynostore --server {dyno_server} put {self.working_dir} --recursive --catalog={os.path.basename(self.working_dir)}\n"
+            footer += f"$PYTHON -m dynostore.cli --server {dyno_server} put {self.working_dir} --recursive --catalog={os.path.basename(self.working_dir)}\n"
             # an sleep for sync
             footer += f"sleep 1\n"
         footer += "exit $code"
