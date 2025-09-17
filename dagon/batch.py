@@ -175,6 +175,9 @@ class Slurm(Batch):
     """
     **Run a task using Slurm**
 
+    :ivar comment: some Slurm installations uses the comment to enable non standard features
+    :vartype comment: str, array of str
+
     :ivar partition: partition where the task will be executed
     :vartype partition: str
 
@@ -192,9 +195,10 @@ class Slurm(Batch):
 
     :ivar ntasks_per_node: number of tasks per node
     :vartype ntasks_per_node: int
+
     """
 
-    def __init__(self, name, command, partition=None, ntasks=None, memory=None, 
+    def __init__(self, name, command, comment=None, partition=None, ntasks=None, memory=None,
                 time=None, nodes=None, ntasks_per_node=None, working_dir=None, globusendpoint=None):
         """
         :param name: name of the task
@@ -202,6 +206,9 @@ class Slurm(Batch):
 
         :param command: command to be executed
         :type command: str
+
+        :param comment: slurm comments separated by a comma
+        :type comment: str or array of str
 
         :param partition: partition where the task will be executed
         :type partition: str
@@ -229,6 +236,7 @@ class Slurm(Batch):
         """
 
         Batch.__init__(self, name, command, working_dir, globusendpoint=globusendpoint)
+        self.comment = comment
         self.partition = partition
         self.ntasks = ntasks
         self.memory = memory
@@ -237,11 +245,12 @@ class Slurm(Batch):
         self.ntasks_per_node = ntasks_per_node
 
     def __new__(cls, *args, **kwargs):
-        """Create an Slurm task local or remote
+        """Create a Slurm task local or remote
 
             Keyword arguments:
             name -- task name
             command -- command to be executed
+            comment -- comments as a string or array of strings
             partition -- partition where the task is going to be executed
             ntasks -- number of tasks to execute
             working_dir -- directory where the outputs will be placed
@@ -266,6 +275,16 @@ class Slurm(Batch):
         :return: execution result
         :rtype: dict() with the execution output (str) and code (int)
         """
+
+        comment_text = ""
+        if self.comment is not None:
+            if type(self.comment) == str:
+                comment_text += " --comment=\"" + self.comment.strip() + "\""
+            else:
+                for comment in self.comment:
+                    comment_text = comment_text + " --comment=\"" +comment.strip()+"\""
+
+            comment_text = comment_text.strip()
 
         partition_text = ""
         if self.partition is not None:
@@ -292,7 +311,7 @@ class Slurm(Batch):
             ntasks_per_node_text = "--ntasks-per-node=" + str(self.ntasks_per_node)
 
         # Add the slurm batch command
-        command = "sbatch " + partition_text + " " + ntasks_text + " " + memory_text + " " + time_text + " " + nodes_text + " " + ntasks_per_node_text + " " \
+        command = "sbatch " + comment_text + " " + partition_text + " " + ntasks_text + " " + memory_text + " " + time_text + " " + nodes_text + " " + ntasks_per_node_text + " " \
                    + " -J " + self.name + " -D " + self.working_dir + " -W " + self.working_dir + "/.dagon/" + script_name
         
         return command
