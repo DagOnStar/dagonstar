@@ -9,8 +9,8 @@ df = pd.read_csv("data.csv")  # Update path if needed
 
 # Rename configurations for clarity
 config_map = {
-    "dagon.ini": "P2P transmission",
-    "dagon-dynostore.ini": "Resilient Storage and Transmission"
+    "dagon.ini": "SCP: point-to-point transmission",
+    "dagon-dynostore.ini": "DynoStore: Resilient Storage \n and Transmission"
 }
 df["config_label"] = df["config"].map(config_map)
 
@@ -33,7 +33,7 @@ df_dynostore = agg_df[agg_df["config"] == "dagon-dynostore.ini"]
 pt = 1. / 72.27
 jour_sizes = {"PRD": {"onecol": 246. * pt, "twocol": 510. * pt}}
 my_width = jour_sizes["PRD"]["twocol"]
-golden = (1 + 5 ** 0.5) / 1.5
+golden = (1 + 5 ** 0.5) / 1
 
 sizes = df_ssh["num_objects"].values
 x = np.arange(len(sizes))
@@ -46,23 +46,23 @@ fig, ax1 = plt.subplots(figsize=(my_width, my_width / golden))
 bars1 = ax1.bar(x - width / 2,
                 df_ssh["total_time_s"],
                 width,
-                label="P2P transmission",
+                label="SCP: point-to-point transmission",
                 color="#A1C9F4")
 
 bars2 = ax1.bar(x + width / 2,
                 df_dynostore["total_time_s"],
                 width,
-                label="Resilient Storage and Transmission",
+                label="DynoStore: Resilient Storage and Transmission",
                 color="#8DE5A1")
 
 # Throughput lines
 ax2 = ax1.twinx()
-ax2.plot(x, df_ssh["throughput"], marker='o', color="#3978a8", label="Throughput (P2P)")
-ax2.plot(x, df_dynostore["throughput"], marker='s', color="#2ca02c", label="Throughput (Resilient)")
+ax2.plot(x, df_ssh["throughput"], marker='o', color="#3978a8", label="Throughput (SCP)")
+ax2.plot(x, df_dynostore["throughput"], marker='s', color="#2ca02c", label="Throughput (DynoStore)")
 print(df_dynostore)
 # Axes and legends
-ax1.set_ylabel('Average Response Time (s)')
-ax2.set_ylabel('Average Throughput (requests/s)')
+ax1.set_ylabel('Avgerage \n Response Time (s)')
+ax2.set_ylabel('Average Throughput \n (requests/s)')
 ax1.set_xlabel('Number of Concurrent Readers')
 ax1.set_xticks(x)
 ax1.set_xticklabels(sizes)

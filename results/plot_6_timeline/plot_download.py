@@ -10,7 +10,7 @@ plt.style.use("../paper.mplstyle")
 pt = 1. / 72.27
 jour_sizes = {"PRD": {"onecol": 246. * pt, "twocol": 510. * pt}}
 my_width = jour_sizes["PRD"]["twocol"]
-golden = (1 + 5 ** 0.5) / 1.5
+golden = (1 + 5 ** 0.5) / 1
 plt.rcParams.update({
     'axes.labelsize': 14,
     'legend.fontsize': 14,
@@ -69,7 +69,7 @@ def plot_timeline(timeline):
         total_time_s = (timeline["pull_end"] - timeline["pull_start"]) / 1e9
         print(total_time_s)
         ax.axvline(total_time_s, color="red", linestyle="--", linewidth=2, label="Client total time")
-        ax.text(total_time_s - .17, len(events) - 0.5, f"Response to client {total_time_s:.2f}s",
+        ax.text(total_time_s - .17, len(events) - 0.3, f"Response to client {total_time_s:.2f}s",
                 color="red", va="center", fontsize=9)
 
     ax.set_xlabel("Service time (s)")

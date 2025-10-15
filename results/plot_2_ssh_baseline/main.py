@@ -7,7 +7,7 @@ plt.style.use("../paper.mplstyle")
 pt = 1. / 72.27
 jour_sizes = {"PRD": {"onecol": 246. * pt, "twocol": 510. * pt}}
 my_width = jour_sizes["PRD"]["twocol"]
-golden = (1 + 5 ** 0.5) / 1.5
+golden = (1 + 5 ** 0.5) / 1
 plt.rcParams.update({
     'axes.labelsize': 14,
     'legend.fontsize': 14,
@@ -21,8 +21,8 @@ df = pd.read_csv("data.csv")
 
 # Rename configurations for clarity
 config_map = {
-    "dagon.ini": "P2P transmission",
-    "dagon-dynostore.ini": "Resilient Storage and Transmission"
+    "dagon.ini": "SCP: point-to-point transmission",
+    "dagon-dynostore.ini": "DynoStore: Resilient Storage \n and Transmission"
 }
 df["config_label"] = df["config"].map(config_map)
 
@@ -52,7 +52,7 @@ bars1 = ax.bar(x - width / 2,
                width,
                yerr=df_ssh["std_total_time_s"],
                capsize=5,
-               label='P2P transmission',
+               label='SCP: point-to-point transmission',
                color="#A1C9F4")
 
 bars2 = ax.bar(x + width / 2,
@@ -60,15 +60,15 @@ bars2 = ax.bar(x + width / 2,
                width,
                yerr=df_dynostore["std_total_time_s"],
                capsize=5,
-               label='Resilient Storage and Transmission',
+               label='DynoStore: Resilient Storage \n and Transmission',
                color="#8DE5A1")
 
 # Add labels and formatting
-ax.set_ylabel('Mean Total Execution Time (s)')
+ax.set_ylabel('Avgerage \n Response Time (s)')
 ax.set_xlabel('Data Size (MB)')
 ax.set_xticks(x)
 ax.set_xticklabels(df_ssh["object_size_MB"])
-ax.legend(frameon=True, facecolor='white', edgecolor='black')
+ax.legend(frameon=True)
 ax.grid(True, linestyle='--', alpha=0.6)
 
 # Save the figure

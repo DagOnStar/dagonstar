@@ -7,7 +7,7 @@ plt.style.use("../paper.mplstyle")
 pt = 1. / 72.27
 jour_sizes = {"PRD": {"onecol": 246. * pt, "twocol": 510. * pt}}
 my_width = jour_sizes["PRD"]["twocol"]
-golden = (1 + 5 ** 0.5) / 1.5
+golden = (1 + 5 ** 0.5) / 0.9
 plt.rcParams.update({
     'axes.labelsize': 14,
     'legend.fontsize': 14,
@@ -45,7 +45,7 @@ for system in subset['system'].unique():
     axes.fill_between(x, y - err, y + err, alpha=0.3)
 
 axes.set_xlabel('File Size (MB)')
-axes.set_ylabel('Average Time Per Object (s)')
+axes.set_ylabel('Average Time \n Per Object (s)')
 
 axes.set_xscale('log')
 
