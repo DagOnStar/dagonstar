@@ -134,7 +134,7 @@ The following initiatives support DAGonStar development:
 ```bash
 git clone https://github.com/DagOnStar/dagonstar.git  
 cd dagonstar  
-virtualenv venv  
+python3 -m venv venv  
 . venv/bin/activate  
 pip install -r requirements.txt  
 export PYTHONPATH=$PWD:$PYTHONPATH  
