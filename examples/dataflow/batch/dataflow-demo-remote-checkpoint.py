@@ -10,7 +10,7 @@ from dagon.task import DagonTask, TaskType
 if __name__ == '__main__':
 
     # Create the orchestration workflow
-    workflow = Workflow("DataFlow-Demo-Remote", checkpoint_file="last_run_remote.json")
+    workflow = Workflow("DataFlow-Checkpoint-Remote", checkpoint_file="last_run_remote.json")
 
     # Set the dry
     workflow.set_dry(False)
@@ -28,10 +28,10 @@ if __name__ == '__main__':
     taskD = DagonTask(TaskType.BATCH, "D", "cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt", ip="", ssh_username="")
 
     # Explicit checkpoint
-    taskCheckpoint = DagonTask(TaskType.CHECKPOINT, "Checkpoint_1", "workflow:///A/output/f1.txt", ip="", ssh_username="")
+    taskCheckpoint = DagonTask(TaskType.CHECKPOINT, "Checkpoint_1", "workflow:///D/f3.txt", ip="", ssh_username="")
     
     # The task e
-    taskE = DagonTask(TaskType.BATCH, "E", "mkdir output;cp workflow:///Checkpoint_1/DataFlow-Checkpoint-Demo/D/f3.txt output/f4.txt", ip="", ssh_username="")
+    taskE = DagonTask(TaskType.BATCH, "E", "mkdir output;cp workflow:///Checkpoint_1/DataFlow-Checkpoint-Remote/D/f3.txt output/f4.txt", ip="", ssh_username="")
 
     # The task f
     taskF = DagonTask(TaskType.BATCH, "F", "echo $RANDOM > f5.txt; cat workflow:///E/output/f4.txt >> f5.txt", ip="", ssh_username="")
