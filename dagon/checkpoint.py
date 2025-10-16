@@ -208,6 +208,7 @@ class RemoteCheckpoint(RemoteTask, Checkpoint):
         
         RemoteTask.__init__(self, name, command, ssh_username=ssh_username, keypath=keypath, ip=ip, working_dir=working_dir,
                             globusendpoint=globusendpoint)
+
     
     def on_garbage(self):
         """
