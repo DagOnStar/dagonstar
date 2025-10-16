@@ -94,7 +94,7 @@ class Checkpoint(Task):
         :rtype: dict() with the execution output (str) and code (int)
         """
 
-        script = script + """
+        script = script + r"""
 
 # Create the checkpoint.sh script        
 cat > checkpoint.sh << EOF
@@ -108,7 +108,7 @@ do
 done
 
 # Move the files in the root of the scratch directory
-mv """ + self.working_dir + """/.dagon/inputs/* """ + self.working_dir + """/
+mv """ + self.working_dir + """/.dagon/inputs/* """ + self.working_dir + r"""/
 EOF
 
 # Set the execution bit for the checkpoit script
@@ -245,7 +245,7 @@ class RemoteCheckpoint(RemoteTask, Checkpoint):
         :rtype: dict() with the execution output (str) and code (int)
         """
         
-        launcher_script = launcher_script + """
+        launcher_script = launcher_script + r"""
 
 # Create the checkpoint.sh script        
 cat > checkpoint.sh << EOF
@@ -259,10 +259,10 @@ do
 done
 
 # Move the files in the root of the scratch directory
-mv """ + self.working_dir + """/.dagon/inputs/* """ + self.working_dir + """/
+mv """ + self.working_dir + r"""/.dagon/inputs/* """ + self.working_dir + r"""/
 EOF
 
-# Set the execution bit for the checkpoit script
+# Set the execution bit for the checkpoint script
 chmod +x checkpoint.sh
 
 """

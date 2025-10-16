@@ -1,7 +1,7 @@
 requests==2.31.0
 fabric3
 boto3==1.28.62
-paramiko
+paramiko==3.4.1
 graphviz==0.20.1
 globus_sdk==3.28.0
 docker==7.1.0
