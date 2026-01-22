@@ -70,26 +70,17 @@ for station_id in edge_tasks.keys():
     task_fog = DagonTask(TaskType.BATCH, fog_id, fog_cmd)
     workflow.add_task(task_fog)
 
-<<<<<<< HEAD
-# *********** CLOUD TASKS ************
-=======
 # # *********** CLOUD TASKS ************
->>>>>>> 85fffad7698001b3405209fe3ab2fd9e0708c454
 cloud_tasks = []
 
 for i, fog_t in enumerate(fog_tasks):
     fog_id, station_id = fog_t["task_id"], fog_t["station_id"]
     cloud_cmd = (
-<<<<<<< HEAD
         "python3 " + current_dir + "/cloud/aggregator.py --input workflow:///" + fog_id + "/fog_summary_" + str(station_id) + ".csv " +
-=======
-        "python3 /home/ubuntu/cloud/aggregator.py --input workflow:///" + fog_id + "/fog_summary_" + str(station_id) + ".csv " +
->>>>>>> 85fffad7698001b3405209fe3ab2fd9e0708c454
         "--output monthly_avg_" + str(station_id) + ".csv " +
         "--alert alerts_" + str(station_id) + ".csv " +
         "--plots plots_" + str(station_id)
     )
-<<<<<<< HEAD
     task_cloud = DagonTask(TaskType.BATCH, f"cloud_{station_id}", cloud_cmd)
     workflow.add_task(task_cloud)
 
@@ -103,21 +94,6 @@ workflow.add_task(task_train)
 for station_id in stations_data.keys():
     inference_cmd = f"python3 {current_dir}/cloud/prediction.py --stations {station_id} --model workflow:///train_model/pollution_predictor_poly.pkl --features workflow:///train_model/poly_base_features.pkl --poly_transformer workflow:///train_model/poly_transformer.pkl  --data_dir {current_dir}/cloud/historical_data"
     task_inference = DagonTask(TaskType.BATCH, f"predict_pollution_{station_id}", inference_cmd)
-=======
-    task_cloud = DagonTask(TaskType.BATCH, f"cloud_{station_id}", cloud_cmd, ssh_username="ubuntu", ip="13.51.172.116", keypath="/home/cc/key_node_aws.key")
-    workflow.add_task(task_cloud)
-
-
-# # Training and inference
-training_cmd = f"python3 /home/ubuntu/cloud/train.py --data_dir /home/ubuntu/cloud/historical_data"
-task_train = DagonTask(TaskType.BATCH, "train_model", training_cmd, ssh_username="ubuntu", ip="13.51.172.116", keypath="/home/cc/key_node_aws.key")
-workflow.add_task(task_train)
-
-# # Inference command
-for station_id in stations_data.keys():
-    inference_cmd = f"python3 /home/ubuntu/cloud/prediction.py --stations {station_id} --model workflow:///train_model/pollution_predictor_poly.pkl --features workflow:///train_model/poly_base_features.pkl --poly_transformer workflow:///train_model/poly_transformer.pkl  --data_dir /home/ubuntu/cloud/historical_data"
-    task_inference = DagonTask(TaskType.BATCH, f"predict_pollution_{station_id}", inference_cmd, ssh_username="ubuntu", ip="13.51.172.116", keypath="/home/cc/key_node_aws.key")
->>>>>>> 85fffad7698001b3405209fe3ab2fd9e0708c454
     workflow.add_task(task_inference)
 
 # Workflow execution
