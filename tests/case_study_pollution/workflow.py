@@ -50,7 +50,7 @@ for station_id in stations_data.keys():
             edge_id = f"edge_{station_id}_{month:02d}_{day:02d}"
             edge_tasks[station_id].append(edge_id)
             # Edge task command
-            edge_cmd = f"python3 /home/cc/edge/ingest.py {day {month} {station_id} /home/cc/data/datos202412.csv {edge_id}.csv"
+            edge_cmd = f"python3 /home/cc/edge/ingest.py {day} {month} {station_id} /home/cc/data/datos202412.csv {edge_id}.csv"
             task_edge = DagonTask(TaskType.BATCH, edge_id, edge_cmd, ssh_username="cc", ip="129.114.108.6", keypath="/home/cc/key_node.key")
             workflow.add_task(task_edge)
 
