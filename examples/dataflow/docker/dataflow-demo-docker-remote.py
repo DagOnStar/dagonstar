@@ -1,4 +1,5 @@
 import json
+import configparser
 import os.path
 import time
 
@@ -7,20 +8,27 @@ from dagon.task import DagonTask, TaskType
 
 # Check if this is the main
 if __name__ == '__main__':
+    # Read SSH configuration from dagon.ini
+    config = configparser.ConfigParser()
+    config.read('dagon.ini')
+    REMOTE_IP = config.get('ssh', 'remote_ip')
+    SSH_USER = config.get('ssh', 'ssh_user')
+    SSH_PORT = config.getint('ssh', 'ssh_port')
+
     # Create the orchestration workflow
     workflow = Workflow("DataFlow-Demo-Docker-Remote")
 
     # The task a
-    taskA = DagonTask(TaskType.DOCKER, "A", "mkdir output;hostname > output/f1.txt", image="ubuntu:latest", ip="148.247.202.73", ssh_username="dsanchez")
+    taskA = DagonTask(TaskType.DOCKER, "A", "mkdir output;hostname > output/f1.txt", image="ubuntu:latest", ip=REMOTE_IP, ssh_username=SSH_USER)
 
     # The task b
-    taskB = DagonTask(TaskType.DOCKER, "B", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", image="ubuntu:latest", ip="148.247.202.73", ssh_username="dsanchez")
+    taskB = DagonTask(TaskType.DOCKER, "B", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", image="ubuntu:latest", ip=REMOTE_IP, ssh_username=SSH_USER)
 
     # The task c
-    taskC = DagonTask(TaskType.DOCKER, "C", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", image="ubuntu:latest", ip="148.247.202.73", ssh_username="dsanchez")
+    taskC = DagonTask(TaskType.DOCKER, "C", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", image="ubuntu:latest", ip=REMOTE_IP, ssh_username=SSH_USER)
 
     # The task d
-    taskD = DagonTask(TaskType.DOCKER, "D", "cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt", image="ubuntu:latest", ip="148.247.202.73", ssh_username="dsanchez")
+    taskD = DagonTask(TaskType.DOCKER, "D", "cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt", image="ubuntu:latest", ip=REMOTE_IP, ssh_username=SSH_USER)
 
     # add tasks to the workflow
     workflow.add_task(taskA)

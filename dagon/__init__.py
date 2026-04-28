@@ -538,49 +538,54 @@ class Stager(object):
         return command
 
     def generate_command(self, src, dst, cmd, mode):
+        # Sequential mode (StagerMover.NORMAL = 0)
+        if mode == 0 or mode == "0" or mode == StagerMover.NORMAL:
+            return """
+# --- Sequential Staging ---
+src="{src}"
+dst="{dst}"
+for file in $src; do
+  {cmd}
+done
+# --- End Sequential Staging ---
+""".format(src=src, dst=dst, cmd=cmd)
+
+        # Parallel/Slurm modes (StagerMover.PARALLEL = 1, StagerMover.SLURM = 2)
         return """
-#! /bin/bash
+# --- Advanced Staging (Parallel/Slurm) ---
+src={src}
+dst={dst}
+mode={mode}
+jobs={jobs}
+partition={partition}
 
-src={}
-dst={}
-mode={}
-jobs={}
-partition={}
-
-job_ids=()
+job_ids=""
 
 for file in $src
 do
-cmd="{}"
-case $mode in
+  case $mode in
     1)
-    # Run in parallel using local queue
-    find $src -type f,l | parallel -j$jobs "$cmd"
-    break
-    ;;
+      # Run in parallel using local queue
+      echo "$file" | parallel -j$jobs "{cmd}"
+      break
+      ;;
     2)
-    # Run in parallel using slurm
-    job_id=$(sbatch --job-name=stagein --partition=$partition --ntasks=1 --cpus-per-task=1 --mem=1024 --wrap="$cmd" | awk '{{print $4}}')
-    job_ids+=($job_id)
-    ;;
-    *)
-    # Run requentially
-    $cmd
-    ;;
-esac
+      # Run in parallel using slurm
+      new_job_id=$(sbatch --job-name=stagein --partition=$partition --ntasks=1 --cpus-per-task=1 --mem=1024 --wrap="{cmd}" | awk '{{print $4}}')
+      job_ids="$job_ids $new_job_id"
+      ;;
+  esac
 done
 
 # Wait for all sbatch jobs to complete
-if [ "${{#job_ids[@]}}" -gt 0 ]; then
+if [ -n "$job_ids" ]; then
     echo "Waiting for all copies to complete..."
-    while true; do
-        # Check if any jobs are still in the queue
-        pending_jobs=$(squeue -j "${{job_ids[*]}}" -h -o '%A')
-        if [ -z "$pending_jobs" ]; then
-            break
-        fi
-        # Wait a few seconds before checking again
-        sleep 5
+    for job_id in $job_ids; do
+        while squeue -j "$job_id" -h -o '%A' 2>/dev/null | grep -q .; do
+            sleep 5
+        done
     done
 fi
-        """.format(src, dst, mode, self.cfg["batch"]["threads"], self.cfg["slurm"]["partition"], cmd)
+# --- End Advanced Staging ---
+        """.format(src=src, dst=dst, mode=mode, jobs=self.cfg["batch"]["threads"], 
+                   partition=self.cfg["slurm"]["partition"], cmd=cmd)

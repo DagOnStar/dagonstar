@@ -18,13 +18,16 @@ class SSHManager:
 
     :ivar keypath: path to the private key
     :vartype keypath: str
+    
+    :ivar port: SSH port (default: 22)
+    :vartype port: int
 
     :ivar connection: connection with the remote machine
     :vartype connection: str
 
     """
 
-    def __init__(self, username, host, keypath):
+    def __init__(self, username, host, keypath, port=22):
 
         """
         :param username: ssh username
@@ -35,11 +38,15 @@ class SSHManager:
 
         :param keypath: path to the private key
         :type keypath: str
+        
+        :param port: SSH port (default: 22)
+        :type port: int
         """
 
         self.username = username
         self.host = host
         self.keypath = keypath
+        self.port = port
         self.connection = self.get_ssh_connection()
 
     def get_connection(self):
@@ -58,13 +65,24 @@ class SSHManager:
         :type filepath: str
 
         :param content: content of the file
-        :type filepath: str
+        :type content: str
         """
-
-        sftp = self.get_connection().open_sftp()
-        f = sftp.open(filepath, 'w')
-        f.write(content)
-        f.close()
+        import os
+        import shlex
+        
+        # Create the directory using SSH command
+        directory = os.path.dirname(filepath)
+        if directory:
+            self.execute_command(f"mkdir -p {directory}")
+        
+        # Write the file using SSH and heredoc (avoiding SFTP completely)
+        # This is more reliable than SFTP for script files
+        command = f"cat > {shlex.quote(filepath)} << 'DAGON_EOF'\n{content}\nDAGON_EOF"
+        
+        result = self.execute_command(command)
+        
+        if result['code'] != 0:
+            raise IOError(f"Failed to create file {filepath}: {result.get('message', 'Unknown error')}")
 
     def get_ssh_connection(self):
         """
@@ -75,12 +93,13 @@ class SSHManager:
 
         ssh = SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        while not is_port_open(self.host, 22):
+        # Esperar a que el puerto esté abierto (usa self.port en lugar de 22 hardcodeado)
+        while not is_port_open(self.host, self.port):
             continue
         if self.keypath is None:
-            ssh.connect(self.host, username=self.username)
+            ssh.connect(self.host, port=self.port, username=self.username)
         else:
-            ssh.connect(self.host, username=self.username, key_filename=self.keypath)
+            ssh.connect(self.host, port=self.port, username=self.username, key_filename=self.keypath)
         return ssh
 
     def execute_command(self, command):

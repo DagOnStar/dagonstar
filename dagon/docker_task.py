@@ -17,7 +17,7 @@ class DockerTask(Batch):
 
     """
 
-    def __init__(self, name, command, image=None, container_id=None, working_dir=None, globusendpoint=None, remove=True, volume=None, transversal_workflow=None):
+    def __init__(self, name, command, image=None, container_id=None, working_dir=None, globusendpoint=None, remove=True, volume=None, devices=None, transversal_workflow=None, pull=True):
         """
         :param name: task name
         :type name: str
@@ -36,6 +36,9 @@ class DockerTask(Batch):
 
         :param remove: if it's True the container is removed after the task ends its execution
         :type remove: bool
+        
+        :param pull: if it's True the image will be pulled from registry
+        :type pull: bool
         """
 
         Task.__init__(self, name, command, working_dir=working_dir,
@@ -46,7 +49,12 @@ class DockerTask(Batch):
         self.remove = remove
         self.image = image
         self.volume = volume
-        self.docker_client2 = docker.from_env()
+        self.devices = devices
+        self.pull = pull  # ← AÑADIDO
+        try:
+            self.docker_client2 = docker.from_env()
+        except Exception:
+            self.docker_client2 = None
 
         # self.docker_client = DockerClient()
 
@@ -66,10 +74,26 @@ class DockerTask(Batch):
         :return: Script body with the command
         :rtype: string
         """
-
-        body = super(DockerTask, self).include_command(body)
-        body = "cd " + self.working_dir + ";" + body
-        command = "docker exec -t " + self.container.id + " sh -c \"" + body.strip() + "\" \n"
+        
+        cd_command = f"cd {self.working_dir} && "
+        container_command = cd_command + body.strip()
+        
+        # Crear un script temporal para evitar problemas con heredocs anidados
+        temp_script = f"{self.working_dir}/.dagon/container_script.sh"
+        
+        # Paso 1: Crear el script en el host usando cat con un delimitador único
+        command = f"cat > {temp_script} << 'END_OF_CONTAINER_SCRIPT'\n"
+        command += f"#!/bin/bash\n"
+        command += f"{container_command}\n"
+        command += "END_OF_CONTAINER_SCRIPT\n"
+        
+        # Paso 2: Dar permisos de ejecución
+        command += f"chmod +x {temp_script}\n"
+        
+        # Paso 3: Copiar el script al contenedor y ejecutarlo
+        command += f"docker cp {temp_script} {self.container.id}:/tmp/task_script.sh\n"
+        command += f"docker exec -i {self.container.id} bash /tmp/task_script.sh | tee {self.working_dir}/.dagon/stdout.txt\n"
+        
         return command
 
     def pre_process_command(self, command):
@@ -104,38 +128,57 @@ class DockerTask(Batch):
             self.docker_client2.images.pull(image)  # Pull the Docker image
             self.workflow.logger.info(
                 "%s: Successfully pulled %s", self.name, image)
-        except docker.errors.APIError as e:
+        except Exception as e:
             self.workflow.logger.error(f"An error occurred: {e}")
 
         # return self.docker_client.pull_image(image)
 
-    # Create a Docker container
     def create_container(self):
         """
         Creates the container where the task will be executed
-
-        :return: container key
-        :rtype: string
-
-        :raises Exception: a problem occurred while container creation
         """
+        # ← MODIFICADO: Solo hacer pull si self.pull == True
+        if self.pull:
+            self.pull_image(self.image)
 
-        self.pull_image(self.image)  # pull image
-
-        volumes = {
-            self.workflow.get_scratch_dir_base(): {"bind": self.workflow.get_scratch_dir_base(), "mode": "rw"},
-        }
+        volumes = {}
+        
+        # Añadir scratch directory base normalizado
+        scratch_base = self.workflow.get_scratch_dir_base().rstrip('/')
+        volumes[scratch_base] = {"bind": scratch_base, "mode": "rw"}
 
         if self.volume is not None:
-            volumes[self.volume] = {"bind": self.volume, "mode": "rw"}
+            # Parse volume string (format: host_path:container_path or just host_path)
+            if ':' in self.volume:
+                host_path, container_path = self.volume.split(':', 1)
+                host_path = host_path.rstrip('/')
+                container_path = container_path.rstrip('/')
+                
+                if host_path not in volumes:
+                    volumes[host_path] = {"bind": container_path, "mode": "rw"}
+            else:
+                normalized_volume = self.volume.rstrip('/')
+                if normalized_volume not in volumes:
+                    volumes[normalized_volume] = {"bind": normalized_volume, "mode": "rw"}
 
+        # AÑADIR SOPORTE PARA DEVICES
         try:
-            container = self.docker_client2.containers.run(
-                self.image, detach=True, stdin_open=True, volumes=volumes)
-            self.workflow.logger.info(
-                "%s: Container created with %s", self.name, container.id)
+            container_kwargs = {
+                "image": self.image,
+                "detach": True,
+                "stdin_open": True,
+                "volumes": volumes
+            }
+            
+            # Añadir devices si están especificados
+            if self.devices:
+                container_kwargs["devices"] = self.devices
+            
+            container = self.docker_client2.containers.run(**container_kwargs)
+            self.workflow.logger.info("%s: Container created with %s", self.name, container.id)
             return container
         except Exception as e:
+            self.workflow.logger.error("%s: Failed to create container.", self.name)
             raise Exception(str(e))
 
     def get_running_container(self):
@@ -191,7 +234,7 @@ class DockerRemoteTask(RemoteTask, DockerTask):
     """
 
     def __init__(self, name, command, image=None, container_id=None, ip=None, ssh_username=None, keypath=None,
-                 working_dir=None, remove=True, globusendpoint=None):
+                 working_dir=None, remove=True, globusendpoint=None, volume=None, devices=None, ssh_port=22, pull=True):  # ← AÑADIDO pull=True
         """
         :param name: task name
         :type name: str
@@ -219,13 +262,29 @@ class DockerRemoteTask(RemoteTask, DockerTask):
 
         :param keypath: Path to the public key
         :type keypath: str
+        
+        :param volume: Volume to mount in the container (host_path:container_path)
+        :type volume: str
+        
+        :param ssh_port: SSH port (default: 22)
+        :type ssh_port: int
+        
+        :param pull: if it's True the image will be pulled from registry
+        :type pull: bool
         """
 
         DockerTask.__init__(self, name, command, container_id=container_id, working_dir=working_dir, image=image,
-                            remove=remove, globusendpoint=globusendpoint)
+                            remove=remove, globusendpoint=globusendpoint, volume=volume, devices=devices, pull=pull)  # ← AÑADIDO pull=pull
         RemoteTask.__init__(self, name=name, ssh_username=ssh_username, keypath=keypath, command=command, ip=ip,
-                            working_dir=working_dir, globusendpoint=globusendpoint)
-        self.docker_client2 = docker.DockerClient(base_url=f"ssh://{ssh_username}@{ip}")
+                            working_dir=working_dir, globusendpoint=globusendpoint, ssh_port=ssh_port)  
+        
+        # Construir la URL SSH con el puerto si no es el 22 por defecto
+        if ssh_port != 22:
+            base_url = f"ssh://{ssh_username}@{ip}:{ssh_port}"
+        else:
+            base_url = f"ssh://{ssh_username}@{ip}"
+            
+        self.docker_client2 = docker.DockerClient(base_url=base_url, timeout=300)
 
     def on_execute(self, launcher_script, script_name):
         """
