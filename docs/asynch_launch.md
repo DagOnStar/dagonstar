@@ -1,5 +1,10 @@
 # Asynchronous Workflow Launch
 
+## FAIR recording
+
+FAIR lifecycle capture works with `launch()` and `wait()` exactly as with
+`run()`: exports are finalized by the workflow-end hook when the background
+workflow actually ends, not when `launch()` returns.
 `Workflow.run()` executes a workflow in the calling thread. Use `launch()` to
 start it in a background thread, then use `wait()` when the caller needs its
 completion.

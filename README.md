@@ -1,5 +1,7 @@
 # DAGonStar
 
+## DAGonStar: FAIR by design
+
 DAGonStar, also written as DAGon\*, is a lightweight Python workflow engine for
 running directed acyclic graph (DAG) workflows across local machines, remote
 servers, HPC clusters, containers, and cloud infrastructure.
@@ -130,6 +132,28 @@ python -m pip install -e ".[all]"
 The base package does not install Docker, cloud, Globus, or Flask service
 libraries. If an integration is requested without its extra, DAGonStar reports
 the corresponding install command at the integration boundary.
+
+### Minimal FAIR workflow
+
+FAIR recording is opt-in and uses the standard library. It emits local RO-Crate
+JSON-LD, PROV JSON, citation/software metadata, fixity, and a report without
+changing workflows that do not enable it.
+
+```python
+from dagon import Workflow
+from dagon.task import DagonTask, TaskType
+from dagon.fair import Agent, Artifact, FairProfile
+workflow = Workflow("FAIR-Demo")
+workflow.enable_fair(FairProfile(title="FAIR demo", description="Local provenance.",
+    creators=[Agent(name="DAGonStar Team")], license="Apache-2.0"))
+workflow.add_task(DagonTask(TaskType.BATCH, "A", "echo hello > message.txt").declare_outputs(
+    Artifact("message.txt", media_type="text/plain", license="Apache-2.0")))
+workflow.run()
+```
+
+Outputs are written below `<scratch>/.dagon/fair/<workflow>/<run>/`, including
+`run.json`, `ro-crate-metadata.json`, `prov.json`, `checksums.sha256`, and a
+FAIRness report. See [Lesson 13](docs/tutorial/lesson_13_fair_by_design.md).
 
 `requirements.txt` remains a full development/demo environment that installs
 the optional integration dependencies together.

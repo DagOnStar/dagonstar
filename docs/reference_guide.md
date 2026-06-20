@@ -1,5 +1,13 @@
 # Reference Guide
 
+## FAIR API
+
+`Workflow.enable_fair(profile)` registers and returns a `FairRecorder`.
+`FairProfile` defines title, description, creators (`Agent`), license, keywords,
+`AccessPolicy`, strict validation and an optional output directory. `Artifact`
+describes a path and optional type, license, identifier, and semantic metadata.
+Tasks expose chainable `declare_inputs(*artifacts)`, `declare_outputs(*artifacts)`
+and `annotate(**metadata)` methods; they remain inert without FAIR mode.
 This guide summarizes the public API and important implementation classes in the
 current repository.
 

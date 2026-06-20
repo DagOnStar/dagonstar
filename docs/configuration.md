@@ -1,5 +1,11 @@
 # Configuration
 
+## FAIR environment capture
+
+FAIR mode has no required configuration key. Set `FairProfile.capture_environment`
+to an explicit variable-name allowlist when needed. Secret-like names (token,
+password, private key and cloud credential markers) are redacted even then;
+raw configuration secrets are never exported.
 DAGonStar reads configuration from an INI file, normally named `dagon.ini`.
 The sample file [../dagon.ini.sample](../dagon.ini.sample) documents the
 configuration keys currently recognized by the repository.

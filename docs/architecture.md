@@ -1,5 +1,12 @@
 # Architecture
 
+## FAIR recorder
+
+`dagon/fair/` is an optional standard-library package. `Workflow.enable_fair()`
+registers a recorder on lifecycle hooks; it has no effect otherwise. Dependency
+construction emits `on_dependencies_made`, allowing `workflow://` producer and
+consumer edges to be exported as PROV/RO-Crate relationships. Local exports live
+under the scratch directory and validation is permissive unless `strict=True`.
 This document describes the current DAGonStar implementation. It is descriptive,
 not aspirational: documentation must remain consistent with the software in this
 repository.

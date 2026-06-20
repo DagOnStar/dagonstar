@@ -15,6 +15,9 @@ local, remote, Slurm, Docker, cloud, and data-staging environments.
 - Treat `dagon.ini.sample` as documentation, not as a private configuration file.
 - Keep fixes conservative: many examples encode historical research workflows.
 - Prefer small, reviewable changes with an explicit verification command.
+- Keep `dagon/fair/` optional and dependency-free by default; FAIR metadata
+  must never include credentials. Update FAIR tests, examples, tutorials, and
+  affected documentation when its behavior changes.
 
 ## Important paths
 

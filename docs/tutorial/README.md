@@ -21,6 +21,7 @@ explicitly marked as optional integration exercises.
 10. [Compose meta-workflows](lesson_10_meta_workflows.md)
 11. [Launch a workflow asynchronously](lesson_11_asynchronous_launch.md)
 12. [Run an LLM task locally](lesson_12_llm_tasks.md)
+13. [Record FAIR metadata and provenance](lesson_13_fair_by_design.md)
 
 ## Verification convention
 
