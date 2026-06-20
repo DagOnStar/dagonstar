@@ -156,8 +156,9 @@ the computational method and honest about operational assumptions.
 - Public APIs now have broader annotations across workflow, task,
   configuration, staging, task-subclass, and API-client code; continue
   tightening type coverage when touching public methods.
-- Shell command construction has initial staging quoting helpers but should be
-  progressively hardened throughout task and integration code.
+- Shell command construction uses centralized POSIX quoting for core task
+  launchers, Slurm, Docker, remote lifecycle commands, and staging paths; it
+  should still be extended when touching legacy/site-specific integrations.
 - Optional integrations now have package extras, while `requirements.txt` remains
   a full development/demo environment. Continue preserving lazy imports and
   explicit extras for Docker, cloud, Globus, API, and other service-specific

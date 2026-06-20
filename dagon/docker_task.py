@@ -3,6 +3,7 @@ from typing import Any, Optional
 from dagon import Batch
 from dagon.remote import RemoteTask
 from dagon.task import ExecutionResult, Task
+from dagon.shell import join_command
 
 try:
     import docker
@@ -86,9 +87,8 @@ class DockerTask(Batch):
         """
 
         body = super(DockerTask, self).include_command(body)
-        body = "cd " + self.working_dir + ";" + body
-        command = "docker exec -t " + self.container.id + " sh -c \"" + body.strip() + "\" \n"
-        return command
+        body = join_command(("cd", self.working_dir)) + ";" + body
+        return join_command(("docker", "exec", "-t", self.container.id, "sh", "-c", body.strip())) + "\n"
 
     def pre_process_command(self, command: str) -> str:
         """
@@ -188,7 +188,7 @@ class DockerTask(Batch):
 
         # Invoke the base method
         Task.on_execute(self, script, script_name)
-        return Batch.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
+        return Batch.execute_command(join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
         # return self.docker_client.exec_command(self.working_dir + "/.dagon/" + script_name)"""
 
     def on_garbage(self) -> None:
@@ -271,7 +271,7 @@ class DockerRemoteTask(RemoteTask, DockerTask):
         """
 
         RemoteTask.on_execute(self, launcher_script, script_name)
-        return self.ssh_connection.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
+        return self.ssh_connection.execute_command(join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
 
     def on_garbage(self) -> None:
         """

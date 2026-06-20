@@ -1,4 +1,5 @@
-import os 
+import os
+from dagon.shell import join_command
 
 class GlobusManager:
     """
@@ -203,16 +204,18 @@ class SKYCDS:
     def upload_data(self, task, path, mode="single", encryption=False):
         self._validate_configuration()
         str_encryption = "true" if encryption else "false"
-        command = "tar -czvf %s/data.tar %s --exclude=*.tar &&  docker exec -i client java -jar -Xmx3g -Xmx3g CP-ABE_ST_Up.jar %s %s %s %s bob 2 %s test %s" % \
-                  (
-                  task.get_scratch_dir(), path, SKYCDS.CLIENT_TOKEN, SKYCDS.API_TOKEN, SKYCDS.CATALOG_TOKEN, mode, path,
-                  str_encryption)
+        archive = task.get_scratch_dir() + "/data.tar"
+        command = join_command(("tar", "-czvf", archive, path, "--exclude=*.tar")) + " && " + join_command((
+            "docker", "exec", "-i", "client", "java", "-jar", "-Xmx3g", "-Xmx3g", "CP-ABE_ST_Up.jar",
+            SKYCDS.CLIENT_TOKEN, SKYCDS.API_TOKEN, SKYCDS.CATALOG_TOKEN, mode, "bob", "2", path, "test",
+            str_encryption))
         result = task.execute_command(command)
         return result
 
     def download_data(self, task, path):
         self._validate_configuration()
-        command = "mkdir -p %s && docker exec -i client java -jar -Xmx3g -Xmx3g CP-ABE_ST_Dow.jar %s %s %s %s 2 1 test %s" % \
-                  (path, SKYCDS.CLIENT_TOKEN, SKYCDS.API_TOKEN, SKYCDS.CATALOG_TOKEN, SKYCDS.IP_SKYCDS, path)
+        command = join_command(("mkdir", "-p", path)) + " && " + join_command((
+            "docker", "exec", "-i", "client", "java", "-jar", "-Xmx3g", "-Xmx3g", "CP-ABE_ST_Dow.jar",
+            SKYCDS.CLIENT_TOKEN, SKYCDS.API_TOKEN, SKYCDS.CATALOG_TOKEN, SKYCDS.IP_SKYCDS, "2", "1", "test", path))
         result = task.execute_command(command)
         return result

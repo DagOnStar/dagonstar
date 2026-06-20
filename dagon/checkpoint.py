@@ -5,6 +5,8 @@ from dagon.remote import  RemoteTask
 from subprocess import Popen, PIPE, STDOUT
 import shutil
 import json
+import shlex
+from dagon.shell import join_command, quote
 
 class Checkpoint(Task):
     """
@@ -82,7 +84,7 @@ class Checkpoint(Task):
         # Implement here the code for the checkpoint saving
         # ...
 
-        p = Popen(command.split(" "), stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, bufsize=-1,
+        p = Popen(shlex.split(command), stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, bufsize=-1,
                   universal_newlines=True)
         
         out, err = p.communicate()
@@ -118,7 +120,7 @@ do
 done
 
 # Move the files in the root of the scratch directory
-mv """ + self.working_dir + """/.dagon/inputs/* """ + self.working_dir + r"""/
+mv """ + quote(self.working_dir + "/.dagon/inputs") + """/* """ + quote(self.working_dir) + r"""/
 EOF
 
 # Set the execution bit for the checkpoit script
@@ -136,7 +138,7 @@ chmod +x checkpoint.sh
 
         # Invoke the base method
         super(Checkpoint, self).on_execute(script, script_name)
-        return Checkpoint.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
+        return Checkpoint.execute_command(join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
 
     # returns public key
     def get_public_key(self) -> str:
@@ -146,7 +148,7 @@ chmod +x checkpoint.sh
         :return: public key
         :rtype: str with the public key
         """
-        command = "cat " + self.working_dir + "/.dagon/ssh_key.pub"
+        command = join_command(("cat", self.working_dir + "/.dagon/ssh_key.pub"))
         result = Checkpoint.execute_command(command)
         return result['output']
 
@@ -159,7 +161,7 @@ chmod +x checkpoint.sh
         :return: result of the execution
         :rtype: dict() with the execution output (str) and code (int)
         """
-        command = "echo " + key.strip() + "| cat >> ~/.ssh/authorized_keys"
+        command = "printf '%s\\n' " + quote(key.strip()) + " >> ~/.ssh/authorized_keys"
         result = Checkpoint.execute_command(command)
         return result
 
@@ -237,8 +239,8 @@ class RemoteCheckpoint(RemoteTask, Checkpoint):
         # Perform some logging
         self.workflow.logger.debug("Renaming %s", self.working_dir)
 
-        self.ssh_connection.execute_command('mv {0} {1}'.format(self.working_dir,
-                                            self.working_dir + "-checkpoint"))
+        self.ssh_connection.execute_command(join_command(("mv", self.working_dir,
+                                                          self.working_dir + "-checkpoint")))
 
         # Update the working directory
         self.working_dir = self.working_dir + "-checkpoint"
@@ -278,7 +280,7 @@ do
 done
 
 # Move the files in the root of the scratch directory
-mv """ + self.working_dir + r"""/.dagon/inputs/* """ + self.working_dir + r"""/
+mv """ + quote(self.working_dir + "/.dagon/inputs") + """/* """ + quote(self.working_dir) + r"""/
 EOF
 
 # Set the execution bit for the checkpoint script
@@ -289,5 +291,5 @@ chmod +x checkpoint.sh
         
         # Invoke the base method
         RemoteTask.on_execute(self, launcher_script, script_name)
-        result = self.ssh_connection.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
+        result = self.ssh_connection.execute_command(join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
         return result

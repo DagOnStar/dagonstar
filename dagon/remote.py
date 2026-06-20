@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 
 from dagon.communication.ssh import SSHManager
 from dagon.task import ExecutionResult, Task
+from dagon.shell import join_command, quote
 
 
 class RemoteTask(Task):
@@ -76,7 +77,7 @@ class RemoteTask(Task):
         :return: result of the execution
         :rtype: dict() with result of the execution
         """
-        command = "echo " + key.strip() + "| cat >> ~/.ssh/authorized_keys"
+        command = "printf '%s\\n' " + quote(key.strip()) + " >> ~/.ssh/authorized_keys"
         result = self.ssh_connection.execute_command(command)
         return result
 
@@ -105,7 +106,7 @@ class RemoteTask(Task):
 
         :raises Exception: a problem occurred while the creation of the directory
         """
-        res = self.ssh_connection.execute_command( "mkdir -p " + self.working_dir + "/.dagon")
+        res = self.ssh_connection.execute_command(join_command(("mkdir", "-p", self.working_dir + "/.dagon")))
         if res['code']:
             self.workflow.logger.error("%s: Error creating scratch directory on server %s", self.name, res['message'])
             raise Exception('Cannot create scratch directory on remote')
@@ -117,8 +118,7 @@ class RemoteTask(Task):
         """
         self.workflow.logger.debug("Removing %s", self.working_dir)
         
-        self.ssh_connection.execute_command('mv {0} {1}'.format(self.working_dir,
-                                            self.working_dir + "-removed"))
+        self.ssh_connection.execute_command(join_command(("mv", self.working_dir, self.working_dir + "-removed")))
 
         # Update the working directory
         self.working_dir = self.working_dir + "-removed"
@@ -133,14 +133,14 @@ class RemoteTask(Task):
         :return: Public ke
         :rtype: str with the public key
         """
-        command = "cat " + self.working_dir + "/.dagon/ssh_key.pub"
+        command = join_command(("cat", self.working_dir + "/.dagon/ssh_key.pub"))
         result = self.ssh_connection.execute_command(command)
         return result['output']
     
     def exists_dir(self, path: str) -> bool:
         try:
             # Run command to check if directory exists
-            command = f'if [ -d "{path}" ]; then echo "exists"; else echo "not exists"; fi'
+            command = f'if [ -d {quote(path)} ]; then echo "exists"; else echo "not exists"; fi'
             res = self.ssh_connection.execute_command(command)
         
             return res["output"] == "exists\n"
@@ -241,7 +241,7 @@ class CloudTask(RemoteTask):
         """
 
         RemoteTask.on_execute(self, script, script_name)
-        return self.ssh_connection.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
+        return self.ssh_connection.execute_command(join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
 
     def execute(self) -> None:
         """

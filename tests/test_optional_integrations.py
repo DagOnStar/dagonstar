@@ -40,7 +40,7 @@ class OptionalIntegrationTests(unittest.TestCase):
 
         command = task.generate_command("launcher.sh")
 
-        self.assertIn('sbatch --comment="first" --comment="second"', command)
+        self.assertIn("sbatch --comment=first --comment=second", command)
         self.assertIn("--partition=debug", command)
         self.assertIn("--ntasks=4", command)
         self.assertIn("--mem=2048", command)
@@ -50,6 +50,15 @@ class OptionalIntegrationTests(unittest.TestCase):
         self.assertIn("-J Analysis", command)
         self.assertIn("-D /scratch/work", command)
         self.assertIn("-W /scratch/work/.dagon/launcher.sh", command)
+
+    def test_slurm_command_quotes_all_user_controlled_values(self):
+        task = Slurm("job name; touch /tmp/pwned", "echo ok", comment="hello $(id)",
+                     partition="debug queue", working_dir="/scratch/work dir")
+        command = task.generate_command("launch script.sh")
+        self.assertIn("'--comment=hello $(id)'", command)
+        self.assertIn("'--partition=debug queue'", command)
+        self.assertIn("'job name; touch /tmp/pwned'", command)
+        self.assertIn("'/scratch/work dir/.dagon/launch script.sh'", command)
 
     def test_slurm_factory_returns_remote_slurm_when_ip_is_configured(self):
         with mock.patch("dagon.remote.SSHManager") as ssh_manager:

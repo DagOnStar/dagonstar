@@ -4,6 +4,7 @@ from typing import Any, List, Optional, Union
 from dagon.task import ExecutionResult, Task
 from dagon.remote import RemoteTask
 from subprocess import Popen, PIPE, STDOUT
+from dagon.shell import join_command, quote
 
 
 class Batch(Task):
@@ -101,7 +102,7 @@ class Batch(Task):
         """
         # Invoke the base method
         super(Batch, self).on_execute(script, script_name)
-        return Batch.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
+        return Batch.execute_command(join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
 
     # returns public key
     def get_public_key(self) -> str:
@@ -111,7 +112,7 @@ class Batch(Task):
         :return: public key
         :rtype: str with the public key
         """
-        command = "cat " + self.working_dir + "/.dagon/ssh_key.pub"
+        command = join_command(("cat", self.working_dir + "/.dagon/ssh_key.pub"))
         result = Batch.execute_command(command)
         return result['output']
 
@@ -124,7 +125,7 @@ class Batch(Task):
         :return: result of the execution
         :rtype: dict() with the execution output (str) and code (int)
         """
-        command = "echo " + key.strip() + "| cat >> ~/.ssh/authorized_keys"
+        command = "printf '%s\\n' " + quote(key.strip()) + " >> ~/.ssh/authorized_keys"
         result = Batch.execute_command(command)
         return result
 
@@ -183,7 +184,7 @@ class RemoteBatch(RemoteTask, Batch):
         """
         # Invoke the base method
         RemoteTask.on_execute(self, launcher_script, script_name)
-        result = self.ssh_connection.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
+        result = self.ssh_connection.execute_command(join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
         return result
 
 
@@ -303,45 +304,24 @@ class Slurm(Batch):
         :rtype: dict() with the execution output (str) and code (int)
         """
 
-        comment_text = ""
+        options = []
         if self.comment is not None:
-            if type(self.comment) == str:
-                comment_text += " --comment=\"" + self.comment.strip() + "\""
-            else:
-                for comment in self.comment:
-                    comment_text = comment_text + " --comment=\"" +comment.strip()+"\""
-
-            comment_text = comment_text.strip()
-
-        partition_text = ""
+            comments = [self.comment] if isinstance(self.comment, str) else self.comment
+            options.extend("--comment=" + comment.strip() for comment in comments)
         if self.partition is not None:
-            partition_text = "--partition=" + self.partition
-
-        ntasks_text = ""
+            options.append("--partition=" + self.partition)
         if self.ntasks is not None:
-            ntasks_text = "--ntasks=" + str(self.ntasks)
-
-        memory_text = ""
+            options.append("--ntasks=" + str(self.ntasks))
         if self.memory is not None:
-            memory_text = "--mem=" + str(self.memory)
-
-        time_text = ""
+            options.append("--mem=" + str(self.memory))
         if self.time is not None:
-            time_text = "--time=" + self.time
-        
-        nodes_text = ""
+            options.append("--time=" + self.time)
         if self.nodes is not None:
-            nodes_text = "--nodes=" + str(self.nodes)
-        
-        ntasks_per_node_text = ""
+            options.append("--nodes=" + str(self.nodes))
         if self.ntasks_per_node is not None:
-            ntasks_per_node_text = "--ntasks-per-node=" + str(self.ntasks_per_node)
-
-        # Add the slurm batch command
-        command = "sbatch " + comment_text + " " + partition_text + " " + ntasks_text + " " + memory_text + " " + time_text + " " + nodes_text + " " + ntasks_per_node_text + " " \
-                   + " -J " + self.name + " -D " + self.working_dir + " -W " + self.working_dir + "/.dagon/" + script_name
-        
-        return command
+            options.append("--ntasks-per-node=" + str(self.ntasks_per_node))
+        return join_command(["sbatch", *options, "-J", self.name, "-D", self.working_dir,
+                             "-W", self.working_dir + "/.dagon/" + script_name])
 
     def on_execute(self, script: str, script_name: str) -> ExecutionResult:
 
@@ -361,7 +341,7 @@ class Slurm(Batch):
         super(Batch, self).on_execute(script, script_name)
 
         if script_name == "context.sh":
-            return Batch.execute_command(self.working_dir + "/.dagon/" + script_name)
+            return Batch.execute_command(join_command((self.working_dir + "/.dagon/" + script_name,)))
 
         command = self.generate_command(script_name)
 
@@ -445,7 +425,8 @@ class RemoteSlurm(RemoteTask, Slurm):
 
         RemoteTask.on_execute(self, script, script_name)
         if script_name == "context.sh":
-            return self.ssh_connection.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
+            return self.ssh_connection.execute_command(
+                join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
 
         command = self.generate_command(script_name)
         # Execute the bash command
