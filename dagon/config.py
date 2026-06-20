@@ -1,12 +1,27 @@
 from configparser import ConfigParser
 from collections import defaultdict
+from typing import DefaultDict, Dict, Optional, Union, overload
 
 """
 Configuration functions
 """
 
 
-def read_config(file_config="dagon.ini", section=None):
+ConfigSection = Dict[str, str]
+ConfigData = DefaultDict[str, ConfigSection]
+
+
+@overload
+def read_config(file_config: str = "dagon.ini", section: None = None) -> ConfigData:
+    ...
+
+
+@overload
+def read_config(file_config: str = "dagon.ini", section: str = ...) -> Optional[ConfigSection]:
+    ...
+
+
+def read_config(file_config: str = "dagon.ini", section: Optional[str] = None) -> Union[ConfigData, ConfigSection, None]:
     """
     Reads the configuration file specified
 

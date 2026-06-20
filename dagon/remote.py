@@ -1,8 +1,8 @@
 from os.path import abspath
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from dagon.communication.ssh import SSHManager
-from dagon.task import Task
+from dagon.task import ExecutionResult, Task
 
 
 class RemoteTask(Task):
@@ -32,7 +32,7 @@ class RemoteTask(Task):
             ip: Optional[str] = None,
             working_dir: Optional[str] = None,
             globusendpoint: Optional[str] = None,
-            transversal_workflow: Optional[str] = None):
+            transversal_workflow: Optional[str] = None) -> None:
         """
 
         :param name: Name of the task
@@ -66,7 +66,7 @@ class RemoteTask(Task):
         if self.ip is not None and self.ssh_username is not None:
             self.ssh_connection = SSHManager(self.ssh_username, self.ip, self.keypath)
 
-    def add_public_key(self, key):
+    def add_public_key(self, key: str) -> ExecutionResult:
         """
         Add a SSH public key on the remote machine
 
@@ -80,7 +80,7 @@ class RemoteTask(Task):
         result = self.ssh_connection.execute_command(command)
         return result
 
-    def on_execute(self, script, script_name):
+    def on_execute(self, script: str, script_name: str) -> None:
         """
         Execute an script on the remote machine
 
@@ -96,7 +96,7 @@ class RemoteTask(Task):
         self.ssh_connection.create_file(script_name, script)
 
     # make dir
-    def mkdir_working_dir(self, path):
+    def mkdir_working_dir(self, path: str) -> None:
         """
         Make a directory on the remote machine
 
@@ -111,7 +111,7 @@ class RemoteTask(Task):
             raise Exception('Cannot create scratch directory on remote')
 
     # remove scratch directory
-    def on_garbage(self):
+    def on_garbage(self) -> None:
         """
         Remove the scratch directory on the remote machine
         """
@@ -126,7 +126,7 @@ class RemoteTask(Task):
         # Update the checkpoint
         self.workflow.checkpoints[self.workflow.name + "." + self.name]["working_dir"] = self.working_dir
         
-    def get_public_key(self):
+    def get_public_key(self) -> str:
         """
         Return the temporal public key to this machine
 
@@ -137,7 +137,7 @@ class RemoteTask(Task):
         result = self.ssh_connection.execute_command(command)
         return result['output']
     
-    def exists_dir(self, path):
+    def exists_dir(self, path: str) -> bool:
         try:
             # Run command to check if directory exists
             command = f'if [ -d "{path}" ]; then echo "exists"; else echo "not exists"; fi'
@@ -167,8 +167,18 @@ class CloudTask(RemoteTask):
     :ivar str instance_name: Name of the instance on the cloud provider
     """
 
-    def __init__(self, name, command, provider, ssh_username, key_options, instance_id=None, instance_flavour=None,
-                 instance_name=None, stop_instance=False, endpoint=None):
+    def __init__(
+            self,
+            name: str,
+            command: str,
+            provider: Any,
+            ssh_username: str,
+            key_options: Dict[str, Any],
+            instance_id: Optional[str] = None,
+            instance_flavour: Optional[Dict[str, Any]] = None,
+            instance_name: Optional[str] = None,
+            stop_instance: bool = False,
+            endpoint: Optional[str] = None) -> None:
         """
 
         :param name: name of the task
@@ -216,7 +226,7 @@ class CloudTask(RemoteTask):
         self.stop_instance = stop_instance
         self.instance_name = instance_name
 
-    def on_execute(self, script, script_name):
+    def on_execute(self, script: str, script_name: str) -> ExecutionResult:
         """
         Execute a script on the cloud instance
 
@@ -233,7 +243,7 @@ class CloudTask(RemoteTask):
         RemoteTask.on_execute(self, script, script_name)
         return self.ssh_connection.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
 
-    def execute(self):
+    def execute(self) -> None:
         """
         Execute the task on the remote cloud instance.
 
@@ -255,7 +265,7 @@ class CloudTask(RemoteTask):
         self.ssh_connection = SSHManager(self.ssh_username, self.ip, self.keypath)
         super(CloudTask, self).execute()
 
-    def decrement_reference_count(self):
+    def decrement_reference_count(self) -> None:
         """
         Decremet the reference count. When the number of references is equals to zero, the garbage collector is called
         """
@@ -268,7 +278,7 @@ class CloudTask(RemoteTask):
             # Perform some logging
             self.workflow.logger.debug("Removed instance %s", self.ip)
 
-    def on_garbage(self):
+    def on_garbage(self) -> None:
         """
         Call the garbage collector
 

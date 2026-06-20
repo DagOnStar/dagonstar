@@ -201,6 +201,7 @@ use = False
 - The repository has an initial unit test and CI baseline, but comprehensive
   workflow, checkpoint, staging, and integration coverage is still being
   expanded.
-- Public APIs now have initial annotations in workflow, task, configuration, and
-  staging code; broader typed interfaces remain a maintainability improvement.
+- Public APIs now have broader annotations across workflow, task,
+  configuration, staging, task-subclass, and API-client code; stricter static
+  checking remains a maintainability improvement.
 - Some examples depend on external systems and cannot be verified in generic CI.

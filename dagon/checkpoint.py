@@ -1,4 +1,6 @@
-from dagon.task import Task
+from typing import Any, Optional
+
+from dagon.task import ExecutionResult, Task
 from dagon.remote import  RemoteTask
 from subprocess import Popen, PIPE, STDOUT
 import shutil
@@ -9,8 +11,16 @@ class Checkpoint(Task):
     **Set an explicit Checkpoint saving the workflow status and enabling the resume**
     """
 
-    def __init__(self, name, command, ip=None, ssh_username=None, keypath=None, working_dir=None, 
-                 globusendpoint=None, transversal_workflow=None):
+    def __init__(
+            self,
+            name: str,
+            command: str,
+            ip: Optional[str] = None,
+            ssh_username: Optional[str] = None,
+            keypath: Optional[str] = None,
+            working_dir: Optional[str] = None,
+            globusendpoint: Optional[str] = None,
+            transversal_workflow: Optional[str] = None) -> None:
         """
         :param name: task name
         :type name: str
@@ -39,7 +49,7 @@ class Checkpoint(Task):
         Task.__init__(self, name, command, working_dir, transversal_workflow=transversal_workflow,
                       globusendpoint=globusendpoint)
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         """Create a local checkpoint task
 
            Keyword arguments:
@@ -59,7 +69,7 @@ class Checkpoint(Task):
             return super().__new__(cls)
 
     @staticmethod
-    def execute_command(command):
+    def execute_command(command: str) -> ExecutionResult:
         """
         Executes a local command
 
@@ -82,7 +92,7 @@ class Checkpoint(Task):
             code, message = 1, err
         return {"code": code, "message": message, "output": out}
 
-    def on_execute(self, script, script_name):
+    def on_execute(self, script: str, script_name: str) -> ExecutionResult:
         """
         Invoke the script specified
 
@@ -129,7 +139,7 @@ chmod +x checkpoint.sh
         return Checkpoint.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
 
     # returns public key
-    def get_public_key(self):
+    def get_public_key(self) -> str:
         """
         Return the temporal public key to this machine
 
@@ -140,7 +150,7 @@ chmod +x checkpoint.sh
         result = Checkpoint.execute_command(command)
         return result['output']
 
-    def add_public_key(self, key):
+    def add_public_key(self, key: str) -> ExecutionResult:
         """
         Add a SSH public key on the remote machine
 
@@ -153,7 +163,7 @@ chmod +x checkpoint.sh
         result = Checkpoint.execute_command(command)
         return result
 
-    def on_garbage(self):
+    def on_garbage(self) -> None:
         """
         Call garbage collector, removing the scratch directory, containers and instances related to the
         task
@@ -180,7 +190,15 @@ class RemoteCheckpoint(RemoteTask, Checkpoint):
     **Set an explicit Checkpoint saving the workflow status and enabling the resume on remote resources**
     """
 
-    def __init__(self, name, command, ssh_username=None, keypath=None, ip=None, working_dir=None, globusendpoint=None):
+    def __init__(
+            self,
+            name: str,
+            command: str,
+            ssh_username: Optional[str] = None,
+            keypath: Optional[str] = None,
+            ip: Optional[str] = None,
+            working_dir: Optional[str] = None,
+            globusendpoint: Optional[str] = None) -> None:
         """
         :param name: name of the task
         :type name: str
@@ -210,7 +228,7 @@ class RemoteCheckpoint(RemoteTask, Checkpoint):
                             globusendpoint=globusendpoint)
 
     
-    def on_garbage(self):
+    def on_garbage(self) -> None:
         """
         Call garbage collector, removing the scratch directory, containers and instances related to the
         task
@@ -232,7 +250,7 @@ class RemoteCheckpoint(RemoteTask, Checkpoint):
         fp.write(json.dumps(self.workflow.checkpoints, sort_keys=True, indent=4))
         fp.close()
         
-    def on_execute(self, launcher_script, script_name):
+    def on_execute(self, launcher_script: str, script_name: str) -> ExecutionResult:
         """
         Execute a script on the remote machine
 

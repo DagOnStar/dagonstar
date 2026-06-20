@@ -153,8 +153,9 @@ the computational method and honest about operational assumptions.
 - Automated tests cover core local behavior plus initial checkpoint, staging,
   and packaging-extra behavior; broader integration and failure-mode coverage is
   still needed.
-- Public APIs have initial annotations in workflow, task, configuration, and
-  staging code; continue extending type coverage when touching public methods.
+- Public APIs now have broader annotations across workflow, task,
+  configuration, staging, task-subclass, and API-client code; continue
+  tightening type coverage when touching public methods.
 - Shell command construction has initial staging quoting helpers but should be
   progressively hardened throughout task and integration code.
 - Optional integrations now have package extras, while `requirements.txt` remains

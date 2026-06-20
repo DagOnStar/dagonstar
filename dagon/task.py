@@ -6,7 +6,7 @@ from threading import Semaphore
 from os import makedirs, path, chmod
 from time import time, sleep
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from dagon.ftp_publisher import FTP_API
 import dagon
 from dagon.shell import quote
@@ -33,7 +33,12 @@ class TaskType(Enum):
 
 
 # Different types os tasks and their module and class name
-tasks_types = {
+ExecutionResult = Dict[str, Any]
+TaskInfo = Dict[str, Any]
+TaskTypeSpec = Tuple[str, str]
+
+
+tasks_types: Dict[TaskType, TaskTypeSpec] = {
     TaskType.CHECKPOINT: ("dagon.checkpoint", "Checkpoint"),
     TaskType.BATCH: ("dagon.batch", "Batch"),
     TaskType.CLOUD: ("dagon.remote", "CloudTask"),
@@ -47,7 +52,7 @@ class DagonTask(object):
     Create the instance for Dagon Tasks
     """
 
-    def __new__(cls, class_type, *args, **kwargs):
+    def __new__(cls, class_type: TaskType, *args: Any, **kwargs: Any) -> Any:
         """
         Choose the task type and returns an instance of the task type class
 
@@ -156,19 +161,19 @@ class Task(Thread):
         self.globusendpoint = globusendpoint
         self.new_tasks = []
 
-    def get_endpoint(self):
+    def get_endpoint(self) -> Optional[str]:
         return self.globusendpoint
 
-    def set_endpoint(self, globusendpoint):
+    def set_endpoint(self, globusendpoint: Optional[str]) -> None:
         self.globusendpoint = globusendpoint
 
-    def set_mode(self, mode):
+    def set_mode(self, mode: str) -> None:
         self.mode = mode
 
-    def get_mode(self):
+    def get_mode(self) -> str:
         return self.mode
 
-    def set_data_mover(self, data_mover):
+    def set_data_mover(self, data_mover: Any) -> None:
         """
         Change the mode of the stager. The information is used by
         :class:`dagon.Stager` to decide the mode (COPY/LINK)
@@ -178,14 +183,14 @@ class Task(Thread):
         """
         self.data_mover = data_mover
 
-    def set_stager_mover(self, stager_mover):
+    def set_stager_mover(self, stager_mover: Any) -> None:
         """
         :param data_mover: mode of the stager
         :type info: class:`dagon.StagerMover`
         """
         self.stager_mover = stager_mover
 
-    def set_info(self, info: Dict[str, Any]) -> None:
+    def set_info(self, info: TaskInfo) -> None:
         """
         Change the information of the machine where the task is going to be executed. The information is used by
         :class:`dagon.Stager` to decide the data transfer protocol/application
@@ -196,7 +201,7 @@ class Task(Thread):
 
         self.info = info
 
-    def get_ip(self):
+    def get_ip(self) -> str:
         """
         Returns the ip of the machine where the task is executed
 
@@ -210,7 +215,7 @@ class Task(Thread):
         else:
             return self.info["ip"] if self.ip == None else self.ip
 
-    def get_info(self):
+    def get_info(self) -> Optional[TaskInfo]:
         """
         Returns the complete information of the machine where the task is executed
 
@@ -219,7 +224,7 @@ class Task(Thread):
         """
         return self.info
 
-    def get_user(self):
+    def get_user(self) -> str:
         """
         Return the username who execute the task on the remote machine
 
@@ -229,7 +234,7 @@ class Task(Thread):
 
         return self.info["user"]
 
-    def get_scratch_dir(self):
+    def get_scratch_dir(self) -> Optional[str]:
         """
         Returns the task's scratch directory as soon as it's available
 
@@ -241,7 +246,7 @@ class Task(Thread):
             sleep(1)
         return self.working_dir
 
-    def get_scratch_name(self):
+    def get_scratch_name(self) -> str:
         """
         Generates a unique name for the task scratch directory name
 
@@ -269,7 +274,7 @@ class Task(Thread):
             json_task['prevs'].append(t.name)
         return json_task
 
-    def set_workflow(self, workflow):
+    def set_workflow(self, workflow: Any) -> None:
         """
         Set the workflow which execute this task
 
@@ -278,7 +283,7 @@ class Task(Thread):
         """
         self.workflow = workflow
 
-    def set_dag_tps(self, DAG_tps):
+    def set_dag_tps(self, DAG_tps: Any) -> None:
         """
         Set the DAG_tps workflow which execute this task
 
@@ -287,11 +292,11 @@ class Task(Thread):
         """
         self.dag_tps = DAG_tps
 
-    def exists_dir(self, path):
+    def exists_dir(self, path: str) -> Optional[bool]:
         pass
 
     # Set the current status
-    def set_status(self, status):
+    def set_status(self, status: Any) -> None:
         """
         Set the status for the current task
 
@@ -305,7 +310,7 @@ class Task(Thread):
                 self.workflow.api.update_task_status(
                     self.workflow.workflow_id, self.name, status.name)
 
-    def execute_command(self, command):
+    def execute_command(self, command: str) -> Optional[ExecutionResult]:
         """"
         Executes a command
         :param command: command to be executed
@@ -326,7 +331,7 @@ class Task(Thread):
             self.workflow.api.add_dependency(
                 self.workflow.workflow_id, self.name, task.name)
 
-    def add_transversal_point(self, task):
+    def add_transversal_point(self, task: Any) -> None:
         """
         Add a dependency from other task
 
@@ -340,7 +345,7 @@ class Task(Thread):
                 self.workflow.workflow_id, self.name, task.name)
 
     # Increment the reference count
-    def increment_reference_count(self):
+    def increment_reference_count(self) -> None:
         """
         Increments the reference count
         """
@@ -348,7 +353,7 @@ class Task(Thread):
 
     # Call garbage collector (remove scratch directory, container, cloud instance, etc)
     # implemented by each task class
-    def on_garbage(self):
+    def on_garbage(self) -> None:
         """
         Call garbage collector, removing the scratch directory, containers and instances related to the
         task
@@ -368,7 +373,7 @@ class Task(Thread):
 
     # Decrement the reference count
 
-    def decrement_reference_count(self):
+    def decrement_reference_count(self) -> None:
         """
         Decrement the reference count. When the number of references is equals to zero, the garbage collector is called
         """
@@ -385,11 +390,11 @@ class Task(Thread):
                          sort_keys=True, indent=4))
                 fp.close()
 
-    def set_semaphore(self, sem):
+    def set_semaphore(self, sem: Semaphore) -> None:
         self.semaphore = sem
 
     # Method overrided
-    def pre_run(self):
+    def pre_run(self) -> None:
         """
         Resolve task dependencies
         For each workflow:// in the command string

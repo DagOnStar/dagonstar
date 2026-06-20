@@ -1,5 +1,7 @@
 import shlex
-from dagon.task import Task
+from typing import Any, List, Optional, Union
+
+from dagon.task import ExecutionResult, Task
 from dagon.remote import RemoteTask
 from subprocess import Popen, PIPE, STDOUT
 
@@ -9,7 +11,13 @@ class Batch(Task):
     **Executes a Batch task**
     """
 
-    def __init__(self, name, command, working_dir=None, globusendpoint=None, transversal_workflow=None):
+    def __init__(
+            self,
+            name: str,
+            command: str,
+            working_dir: Optional[str] = None,
+            globusendpoint: Optional[str] = None,
+            transversal_workflow: Optional[str] = None) -> None:
         """
         :param name: task name
         :type name: str
@@ -25,7 +33,7 @@ class Batch(Task):
         """
         Task.__init__(self, name, command, working_dir,transversal_workflow = transversal_workflow, globusendpoint=globusendpoint)
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         """Create an Batch task local or remote
 
            Keyword arguments:
@@ -49,7 +57,7 @@ class Batch(Task):
             return super().__new__(cls)
 
     @staticmethod
-    def execute_command(command):
+    def execute_command(command: str) -> ExecutionResult:
         """
         Executes a local command
 
@@ -80,7 +88,7 @@ class Batch(Task):
         return {"code": code, "message": message, "output": out}
 
 
-    def on_execute(self, script, script_name):
+    def on_execute(self, script: str, script_name: str) -> ExecutionResult:
         """
         Invoke the script specified
 
@@ -96,7 +104,7 @@ class Batch(Task):
         return Batch.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
 
     # returns public key
-    def get_public_key(self):
+    def get_public_key(self) -> str:
         """
         Return the temporal public key to this machine
 
@@ -107,7 +115,7 @@ class Batch(Task):
         result = Batch.execute_command(command)
         return result['output']
 
-    def add_public_key(self, key):
+    def add_public_key(self, key: str) -> ExecutionResult:
         """
         Add a SSH public key on the remote machine
 
@@ -126,7 +134,15 @@ class RemoteBatch(RemoteTask, Batch):
     **Execute a Batch task on a remote machine**
     """
 
-    def __init__(self, name, command, ssh_username=None, keypath=None, ip=None, working_dir=None, globusendpoint=None):
+    def __init__(
+            self,
+            name: str,
+            command: str,
+            ssh_username: Optional[str] = None,
+            keypath: Optional[str] = None,
+            ip: Optional[str] = None,
+            working_dir: Optional[str] = None,
+            globusendpoint: Optional[str] = None) -> None:
         """
         :param name: name of the task
         :type name: str
@@ -152,7 +168,7 @@ class RemoteBatch(RemoteTask, Batch):
         RemoteTask.__init__(self, name, command, ssh_username=ssh_username, keypath=keypath, ip=ip, working_dir=working_dir,
                             globusendpoint=globusendpoint)
 
-    def on_execute(self, launcher_script, script_name):
+    def on_execute(self, launcher_script: str, script_name: str) -> ExecutionResult:
         """
         Execute a script on the remote machine
 
@@ -198,8 +214,19 @@ class Slurm(Batch):
 
     """
 
-    def __init__(self, name, command, comment=None, partition=None, ntasks=None, memory=None,
-                time=None, nodes=None, ntasks_per_node=None, working_dir=None, globusendpoint=None):
+    def __init__(
+            self,
+            name: str,
+            command: str,
+            comment: Optional[Union[str, List[str]]] = None,
+            partition: Optional[str] = None,
+            ntasks: Optional[int] = None,
+            memory: Optional[int] = None,
+            time: Optional[str] = None,
+            nodes: Optional[int] = None,
+            ntasks_per_node: Optional[int] = None,
+            working_dir: Optional[str] = None,
+            globusendpoint: Optional[str] = None) -> None:
         """
         :param name: name of the task
         :type name: str
@@ -244,7 +271,7 @@ class Slurm(Batch):
         self.nodes = nodes
         self.ntasks_per_node = ntasks_per_node
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         """Create a Slurm task local or remote
 
             Keyword arguments:
@@ -264,7 +291,7 @@ class Slurm(Batch):
         else:
             return super().__new__(cls)
 
-    def generate_command(self, script_name):
+    def generate_command(self, script_name: str) -> str:
 
         """
         Generates the Slurm command including the partition and number of task parameters
@@ -316,7 +343,7 @@ class Slurm(Batch):
         
         return command
 
-    def on_execute(self, script, script_name):
+    def on_execute(self, script: str, script_name: str) -> ExecutionResult:
 
         """
         Execute a script using slurm
@@ -348,8 +375,18 @@ class RemoteSlurm(RemoteTask, Slurm):
     ** Represent a task that runs on a remote slurm deployment **
     """
 
-    def __init__(self, name, command, partition=None, ntasks=None, memory=None, working_dir=None, ssh_username=None, keypath=None,
-                 ip=None, globusendpoint=None):
+    def __init__(
+            self,
+            name: str,
+            command: str,
+            partition: Optional[str] = None,
+            ntasks: Optional[int] = None,
+            memory: Optional[int] = None,
+            working_dir: Optional[str] = None,
+            ssh_username: Optional[str] = None,
+            keypath: Optional[str] = None,
+            ip: Optional[str] = None,
+            globusendpoint: Optional[str] = None) -> None:
         """
         :param name: name of the task
         :type name: str
@@ -392,7 +429,7 @@ class RemoteSlurm(RemoteTask, Slurm):
             globusendpoint=globusendpoint,
         )
 
-    def on_execute(self, script, script_name):
+    def on_execute(self, script: str, script_name: str) -> ExecutionResult:
         """
         Execute a script using slurm
 
