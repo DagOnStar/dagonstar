@@ -42,37 +42,41 @@ The full documentation set is available in `docs/`:
 
 ## Project status and quality assessment
 
-DAGonStar is usable for its original research and production workflows and now
-has a stronger documentation and regression-checking baseline. It remains a
-research-oriented Python package rather than a fully polished modern library.
-Its strongest parts are the compact workflow model, the direct Python API, the
-`workflow://` data-dependency mechanism, and broad execution-target coverage
-across local, remote, Slurm, Docker, cloud, and data-staging environments.
+DAGonStar is a research-oriented workflow engine with a useful, documented
+core, rather than a fully polished modern library. Its strongest areas are the
+compact Python workflow model, explicit and `workflow://`-derived dependencies,
+checkpointing, and a broad set of execution and staging integrations.
 
-The current quality baseline includes:
+The repository has a sound baseline for changes to the core behavior:
 
-- an expanded unit test suite for configuration parsing, workflow defaults,
-  dependency discovery, cycle validation, serialization, checkpoint reuse,
-  staging command generation, packaging extras, and runtime-secret validation;
-- GitHub Actions coverage for the unit tests and source compilation checks;
-- detailed user, developer, architecture, checkpointing, external-software,
-  schema, tutorial, and examples documentation;
-- safer sample configuration and removal of committed token-like defaults;
-- expanded public type annotations across workflow, task, configuration,
-  staging, batch, checkpoint, remote/cloud, Docker, and API interfaces;
-- packaging cleanup for included DAGonStar packages and optional integration
-  extras.
+- 27 unit tests cover configuration parsing, workflow defaults and dependency
+  discovery, cycle validation, JSON serialization, checkpoint reuse, staging
+  command generation, packaging extras, optional-integration boundaries, and
+  selected shell-quoting behavior;
+- GitHub Actions runs that suite and source compilation on Python 3.8 and
+  Python 3.12;
+- package extras keep Docker, cloud, Globus, and API dependencies out of the
+  base installation;
+- documentation covers configuration, architecture, checkpoints, examples,
+  and the incremental tutorial; and
+- sample configuration avoids committed credentials and the SKYCDS path checks
+  for required runtime configuration.
 
-The main engineering priorities are now:
+The test suite is intentionally fast and local: it validates command generation
+and integration boundaries, not live Docker, SSH, Slurm, cloud, Globus, or
+SKYCDS services. There is currently no configured coverage threshold, linter,
+or static type-checking job. Several legacy and site-specific code paths still
+construct shell commands, so changes around external execution should be kept
+small, quoted defensively, and verified at the boundary being changed.
 
-1. continue expanding automated tests from the current core/checkpoint/staging/
-   packaging coverage to broader workflow and optional-integration behavior;
-2. continue extending typed interfaces and introduce stricter static checking
-   where it can be done without disturbing legacy examples;
-3. extend the centralized shell-command helpers to the remaining legacy and
-   site-specific integrations; core task launchers, Slurm options, remote
-   lifecycle operations, Docker payloads, and staging paths are now quoted;
-4. keep optional integration dependencies isolated through extras such as
+The main engineering priorities are therefore:
+
+1. expand unit coverage for failure paths and optional integrations without
+   requiring external services;
+2. add progressive type checking and lightweight style/quality checks;
+3. continue consolidating and applying safe shell-command construction in
+   legacy integration paths; and
+4. keep optional dependencies isolated through extras such as
    `dagonstar[docker]`, `dagonstar[cloud]`, `dagonstar[globus]`, and
    `dagonstar[api]`.
 
