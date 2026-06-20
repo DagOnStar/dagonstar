@@ -1,7 +1,7 @@
 from os.path import abspath
+from typing import Optional
 
 from dagon.communication.ssh import SSHManager
-from dagon.cloud import CloudManager
 from dagon.task import Task
 
 
@@ -23,7 +23,16 @@ class RemoteTask(Task):
     :vartype ssh_connection: :class:`dagon.communDataFlow-Demication.ssh.SSHManager`
     """
 
-    def __init__(self, name, command, ssh_username=None, keypath=None, ip=None, working_dir=None, globusendpoint=None,transversal_workflow=None):
+    def __init__(
+            self,
+            name: str,
+            command: str,
+            ssh_username: Optional[str] = None,
+            keypath: Optional[str] = None,
+            ip: Optional[str] = None,
+            working_dir: Optional[str] = None,
+            globusendpoint: Optional[str] = None,
+            transversal_workflow: Optional[str] = None):
         """
 
         :param name: Name of the task
@@ -237,6 +246,8 @@ class CloudTask(RemoteTask):
         """
         self.instance_name = self.instance_name if self.instance_name is not None else self.workflow.name.strip() + \
                                                                                        "-" + self.name
+        from dagon.cloud import CloudManager
+
         self.node = CloudManager.get_instance(instance_id=self.instance_id, keyparams=self.key_options,
                                               flavour=self.instance_flavour, provider=self.provider,
                                               name=self.instance_name)

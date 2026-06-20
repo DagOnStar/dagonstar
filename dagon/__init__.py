@@ -6,6 +6,7 @@ from logging.config import fileConfig
 import threading
 from configparser import NoSectionError
 from enum import Enum
+from typing import Any, Dict, List, Optional
 from requests.exceptions import ConnectionError
 
 from time import time, sleep
@@ -13,13 +14,17 @@ from datetime import datetime
 
 from dagon.config import read_config
 from dagon.api import API
-from dagon.api.server import WorkflowServer
 from dagon.batch import Batch
 from dagon.batch import Slurm
-from dagon.communication.data_transfer import GlobusManager
-from dagon.communication.data_transfer import SKYCDS
-from dagon.docker_task import DockerRemoteTask
 from dagon.remote import RemoteTask
+from dagon.shell import quote
+
+
+def __getattr__(name):
+    if name == "WorkflowServer":
+        from dagon.api.server import WorkflowServer
+        return WorkflowServer
+    raise AttributeError(f"module 'dagon' has no attribute {name!r}")
 
 
 class Status(Enum):
@@ -62,7 +67,14 @@ class Workflow(object):
 
     SCHEMA = "workflow://"
 
-    def __init__(self, name, config=None, config_file='dagon.ini', max_threads=10, jsonload=None, checkpoint_file=None):
+    def __init__(
+            self,
+            name: str,
+            config: Optional[Dict[str, Dict[str, str]]] = None,
+            config_file: str = 'dagon.ini',
+            max_threads: int = 10,
+            jsonload: Optional[Dict[str, Any]] = None,
+            checkpoint_file: Optional[str] = None):
         """
         Create a workflow
 
@@ -91,8 +103,8 @@ class Workflow(object):
         self.logger = logging.getLogger()
         self.dag_tps = None
         self.dry = False
-        self.tasks = []
-        self.checkpoints = {}
+        self.tasks: List[Any] = []
+        self.checkpoints: Dict[str, Any] = {}
         self.workflow_id = 0
         self.is_api_available = False
         if jsonload is not None:  # load from json file
@@ -144,7 +156,7 @@ class Workflow(object):
     def set_stager_mover(self, stager_mover):
         self.stager_mover = stager_mover
 
-    def get_scratch_dir_base(self):
+    def get_scratch_dir_base(self) -> str:
         """
         Returns the path to the base scratch directory
 
@@ -166,7 +178,7 @@ class Workflow(object):
     
         return self._scratch_dir
 
-    def find_task_by_name(self, workflow_name, task_name):
+    def find_task_by_name(self, workflow_name: str, task_name: str) -> Optional[Any]:
         """
         Search for a task of an specific workflow
 
@@ -193,7 +205,7 @@ class Workflow(object):
 
         return None
 
-    def add_task(self, task):
+    def add_task(self, task: Any) -> None:
         """
         Add a task to this workflow
 
@@ -219,7 +231,7 @@ class Workflow(object):
         """
         self.dag_tps = DAG_tps
 
-    def make_dependencies(self):
+    def make_dependencies(self) -> None:
         """
         Looks for all the dependencies between tasks
         """
@@ -239,7 +251,7 @@ class Workflow(object):
         self.Validate_WF()
 
     # Return a json representation of the workflow
-    def as_json(self):
+    def as_json(self) -> Dict[str, Any]:
         """
         Return a json representation of the workflow
 
@@ -386,12 +398,12 @@ class Stager(object):
     Choose the transference protocol to move data between tasks
     """
 
-    def __init__(self, data_mover, stager_mover, cfg):
+    def __init__(self, data_mover: DataMover, stager_mover: StagerMover, cfg: Dict[str, Dict[str, str]]):
         self.data_mover = data_mover
         self.stager_mover = stager_mover
         self.cfg = cfg
 
-    def stage_in(self, dst_task, src_task, dst_path, local_path):
+    def stage_in(self, dst_task: Any, src_task: Any, dst_path: str, local_path: str) -> str:
         """
         Evaluates the context of the machines and choose the transfer protocol
 
@@ -445,6 +457,8 @@ class Stager(object):
 
         # Check if the symbolic link have to be used...
         if data_mover == DataMover.GRIDFTP:
+            from dagon.communication.data_transfer import GlobusManager
+
             # data could be copy using globus sdk
             ep1 = src_task.get_endpoint()
             ep2 = dst_task.get_endpoint()
@@ -462,6 +476,8 @@ class Stager(object):
             gm.copy_data(src, dst, intermediate_filename)# + "/" + "data.tar.gz")
 
         elif data_mover == DataMover.SKYCDS:
+            from dagon.communication.data_transfer import SKYCDS
+
             skycds = SKYCDS()
             upload_result = skycds.upload_data(src_task, src_task.get_scratch_dir(), encryption=True)
             download_result = skycds.download_data(dst_task, dst_path)
@@ -470,18 +486,18 @@ class Stager(object):
         elif data_mover == DataMover.LINK:
             # Add the link command
             command = command + "# Add the link command\n"
-            cmd = "ln -sf $file $dst"
+            cmd = "ln -sf \"$file\" \"$dst\""
             if StagerMover(self.stager_mover) == StagerMover.PARALLEL:
-                cmd = "ln -sf {} $dst"
+                cmd = "ln -sf {} \"$dst\""
             command = command + self.generate_command(src, dst, cmd, self.stager_mover.value)
                       
         # Check if the copy have to be used...
         elif data_mover == DataMover.COPY:
             # Add the copy command
             command = command + "# Add the copy command\n"
-            cmd = "cp -r $file $dst"
+            cmd = "cp -r \"$file\" \"$dst\""
             if StagerMover(self.stager_mover) == StagerMover.PARALLEL:
-                cmd = "cp -r {} $dst"
+                cmd = "cp -r {} \"$dst\""
             command = command + self.generate_command(src, dst, cmd, self.stager_mover.value)
 
         # Check if the secure copy have to be used...
@@ -507,7 +523,7 @@ class Stager(object):
                 key = src_task.get_public_key()
                 dst_task.add_public_key(key)
 
-                command_mkdir = "mkdir -p " + dst_path + "/" + os.path.dirname(local_path) + "\n\n"
+                command_mkdir = "mkdir -p " + quote(dst_path + "/" + os.path.dirname(local_path)) + "\n\n"
                 res = dst_task.ssh_connection.execute_command(command_mkdir)
 
                 if res['code']:
@@ -530,7 +546,11 @@ class Stager(object):
 
         return command
 
-    def generate_command(self, src, dst, cmd, mode):
+    def generate_command(self, src: str, dst: str, cmd: str, mode: int) -> str:
+        batch_cfg = self.cfg.get("batch", {})
+        slurm_cfg = self.cfg.get("slurm", {})
+        jobs = batch_cfg.get("threads", "1")
+        partition = slurm_cfg.get("partition", "")
         return """
 #! /bin/bash
 
@@ -576,4 +596,11 @@ if [ "${{#job_ids[@]}}" -gt 0 ]; then
         sleep 5
     done
 fi
-        """.format(src, dst, mode, self.cfg["batch"]["threads"], self.cfg["slurm"]["partition"], cmd)
+        """.format(
+            quote(src),
+            quote(dst),
+            int(mode),
+            quote(jobs),
+            quote(partition),
+            cmd.replace('"', '\\"'),
+        )

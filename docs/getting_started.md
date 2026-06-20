@@ -28,6 +28,17 @@ python -m pip install -r requirements.txt
 python -m pip install -e .
 ```
 
+For a smaller installation, install the package first and add only the optional
+integrations you need:
+
+```bash
+python -m pip install -e .
+python -m pip install -e ".[docker]"   # Docker tasks
+python -m pip install -e ".[cloud]"    # cloud tasks
+python -m pip install -e ".[globus]"   # Globus staging
+python -m pip install -e ".[api]"      # Flask workflow service
+```
+
 ## Create a configuration file
 
 ```bash

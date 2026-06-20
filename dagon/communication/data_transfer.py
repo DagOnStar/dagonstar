@@ -1,4 +1,3 @@
-import globus_sdk
 import os 
 
 class GlobusManager:
@@ -30,10 +29,20 @@ class GlobusManager:
         self._to = _to
         self.intermediate = intermediate
 
+        try:
+            import globus_sdk
+        except ImportError as exc:
+            raise ImportError(
+                "Globus support requires the 'globus' extra: "
+                "python -m pip install 'dagonstar[globus]'"
+            ) from exc
+
+        self.globus_sdk = globus_sdk
+
         # Initialize the Globus Native App Client to transfer data
         #print(client_id)
 
-        client = globus_sdk.NativeAppAuthClient(client_id)
+        client = self.globus_sdk.NativeAppAuthClient(client_id)
         client.oauth2_start_flow()
         authorize_url = client.oauth2_get_authorize_url()
         print(f"Please go to this URL and login:\n\n{authorize_url}\n")
@@ -47,8 +56,8 @@ class GlobusManager:
         globus_auth_token = globus_auth_data["access_token"]
         transfer_token = globus_transfer_data["access_token"]
         
-        authorizer = globus_sdk.AccessTokenAuthorizer(transfer_token)
-        self.transfer_client = globus_sdk.TransferClient(authorizer=authorizer)
+        authorizer = self.globus_sdk.AccessTokenAuthorizer(transfer_token)
+        self.transfer_client = self.globus_sdk.TransferClient(authorizer=authorizer)
         # Crea un cliente de transferencia de Globus
         #transfer_token = globus_sdk.RefreshTokenAuthorizer(globus_auth_token, client)
         #self.transfer_client = globus_sdk.TransferClient(authorizer=transfer_token)
@@ -71,7 +80,7 @@ class GlobusManager:
         :rtype: str
         """
 
-        task_data = globus_sdk.TransferData(
+        task_data = self.globus_sdk.TransferData(
             source_endpoint=self._from, destination_endpoint=self._to
         )
 
@@ -116,7 +125,7 @@ class GlobusManager:
 
         #copy the data from the source endpoint to the Globus intermediate endpoint
 
-        task_data = globus_sdk.TransferData(
+        task_data = self.globus_sdk.TransferData(
             source_endpoint=self._from, destination_endpoint=self.intermediate
         )
         
@@ -130,7 +139,7 @@ class GlobusManager:
 
         #copy the data from the source endpoint to the Globus intermediate endpoint
 
-        task_data = globus_sdk.TransferData(
+        task_data = self.globus_sdk.TransferData(
             source_endpoint=self.intermediate, destination_endpoint=self._to
         )
 

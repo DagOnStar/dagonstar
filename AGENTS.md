@@ -66,6 +66,17 @@ configuration validation separately from live integration behavior.
   planned, or preferred behavior as if it already exists. If behavior is not
   implemented, mark it explicitly as future work, an optional integration, or a
   manual/site-specific procedure.
+- Authoritative maintenance clause: whenever implementation behavior, public
+  APIs, configuration, packaging, dependencies, examples, tests, or operational
+  assumptions change, update all affected examples and tutorials in `examples/`
+  and `docs/tutorial/`.
+- Authoritative documentation clause: update all involved documentation for the
+  changed behavior, including relevant files in `docs/`, example READMEs, and
+  contributor guidance when applicable.
+- Authoritative README status clause: update the "Project status and quality
+  assessment" section in `README.md` whenever a change materially affects test
+  coverage, typed interfaces, shell-command safety, optional dependencies,
+  security posture, packaging, or overall project quality.
 - Keep `README.md` focused on installation, configuration, quick start, examples,
   development, and troubleshooting.
 - Keep example-specific setup in the relevant `examples/**/README.md`.
@@ -73,14 +84,15 @@ configuration validation separately from live integration behavior.
 
 ## Known quality gaps
 
-- The project has an initial unit test suite and CI baseline, but coverage is not
-  comprehensive yet. Prioritize checkpoint/resume, staging, command rewriting,
-  local batch integration, and mocked external-service boundaries.
-- Optional integrations are installed as hard dependencies. Prefer future
-  package extras for Docker, cloud, Globus, API, and other service-specific
-  dependencies.
-- Several shell command paths would benefit from safer quoting and command
-  construction helpers.
-- Public APIs are mostly untyped; add type annotations when touching workflow,
+- The project has a unit test suite and CI baseline, including initial
+  checkpoint, staging, packaging-extra, and core workflow checks, but coverage is
+  not comprehensive yet. Prioritize command rewriting, local batch integration,
+  failure modes, and mocked external-service boundaries.
+- Optional integrations have package extras, while `requirements.txt` remains a
+  full development/demo environment. Preserve lazy imports and explicit extras
+  for Docker, cloud, Globus, API, and other service-specific dependencies.
+- Several shell command paths still need safer quoting and command construction
+  helpers. Preserve and expand the existing staging quoting helpers.
+- Public APIs have initial type annotations; add more when touching workflow,
   task, configuration, and staging interfaces.
 - Some legacy examples may require external services or site-specific software.

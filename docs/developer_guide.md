@@ -19,6 +19,16 @@ python -m pip install --upgrade pip
 python -m pip install -e .
 ```
 
+Install optional integration dependencies only when needed:
+
+```bash
+python -m pip install -e ".[docker]"
+python -m pip install -e ".[cloud]"
+python -m pip install -e ".[globus]"
+python -m pip install -e ".[api]"
+python -m pip install -e ".[all]"
+```
+
 ## Test commands
 
 Run unit tests:
@@ -60,10 +70,11 @@ When adding features:
 4. Document manual integration verification commands in the change notes.
 
 The test suite is intentionally a starting point, not a complete quality gate.
-Priority areas for expansion are checkpoint/resume behavior, staging command
-generation, command rewriting for `workflow://` references, local batch
-integration workflows, and mocked boundaries for Docker, Slurm, SSH, Globus,
-cloud, and API integrations.
+It now includes checkpoint reuse, staging command generation, and packaging
+extras checks. Priority areas for further expansion are command rewriting for
+`workflow://` references, local batch integration workflows, failure-mode tests,
+and mocked boundaries for Docker, Slurm, SSH, Globus, cloud, and API
+integrations.
 
 ## Adding a new task type
 
@@ -139,12 +150,15 @@ the computational method and honest about operational assumptions.
 
 ## Current technical debt
 
-- Automated tests exist but remain focused on core local behavior; broader
-  checkpoint, staging, integration, and failure-mode coverage is still needed.
-- Public APIs are mostly untyped; workflow, task, configuration, and staging
-  interfaces should gain type annotations.
-- Shell command construction should be progressively hardened with safer quoting
-  and command-building helpers.
-- Optional integrations are installed as hard dependencies; package extras should
-  separate Docker, cloud, Globus, API, and other service-specific requirements.
+- Automated tests cover core local behavior plus initial checkpoint, staging,
+  and packaging-extra behavior; broader integration and failure-mode coverage is
+  still needed.
+- Public APIs have initial annotations in workflow, task, configuration, and
+  staging code; continue extending type coverage when touching public methods.
+- Shell command construction has initial staging quoting helpers but should be
+  progressively hardened throughout task and integration code.
+- Optional integrations now have package extras, while `requirements.txt` remains
+  a full development/demo environment. Continue preserving lazy imports and
+  explicit extras for Docker, cloud, Globus, API, and other service-specific
+  requirements.
 - Some legacy examples require site-specific data or services.

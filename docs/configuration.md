@@ -168,6 +168,12 @@ Cloud tasks use Apache Libcloud through `dagon.cloud`. Values are provider
 specific and should be treated as secrets. The sample placeholders must be
 replaced only in local, non-committed configuration files.
 
+Install cloud dependencies with:
+
+```bash
+python -m pip install "dagonstar[cloud]"
+```
+
 ## Logging sections
 
 The sample includes a standard Python `logging.config.fileConfig` setup:
@@ -220,6 +226,15 @@ export DAGON_GLOBUS_TRANSFER_TOKEN=...
 
 Current Globus transfer setup primarily uses the OAuth flow in
 `GlobusManager.__init__`, which prompts the user to authorize a native app.
+
+Install optional integration dependencies as needed:
+
+```bash
+python -m pip install "dagonstar[docker]"
+python -m pip install "dagonstar[globus]"
+python -m pip install "dagonstar[api]"
+python -m pip install "dagonstar[all]"
+```
 
 ## Configuration rules for reproducible science
 

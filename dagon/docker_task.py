@@ -2,7 +2,13 @@ from dagon import Batch
 from dagon.remote import RemoteTask
 from dagon.task import Task
 
-import docker
+try:
+    import docker
+except ImportError as exc:
+    raise ImportError(
+        "Docker support requires the 'docker' extra: "
+        "python -m pip install 'dagonstar[docker]'"
+    ) from exc
 
 
 class DockerTask(Batch):

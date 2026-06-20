@@ -6,8 +6,10 @@ from threading import Semaphore
 from os import makedirs, path, chmod
 from time import time, sleep
 from enum import Enum
+from typing import Any, Dict, List, Optional
 from dagon.ftp_publisher import FTP_API
 import dagon
+from dagon.shell import quote
 
 
 class TaskType(Enum):
@@ -110,7 +112,13 @@ class Task(Thread):
 
     """
 
-    def __init__(self, name, command, working_dir=None, transversal_workflow=None, globusendpoint=None):
+    def __init__(
+            self,
+            name: str,
+            command: str,
+            working_dir: Optional[str] = None,
+            transversal_workflow: Optional[str] = None,
+            globusendpoint: Optional[str] = None):
         """
         :param name: name of the task
         :type name: str
@@ -128,8 +136,8 @@ class Task(Thread):
         Thread.__init__(self)
         self.ssh_connection = None
         self.name = name
-        self.nexts = []
-        self.prevs = []
+        self.nexts: List[Any] = []
+        self.prevs: List[Any] = []
         self.reference_count = 0
         self.remove_scratch_dir = False
         self.ip = None
@@ -138,7 +146,7 @@ class Task(Thread):
         self.set_status(dagon.Status.READY)
         self.working_dir = working_dir
         self.command = command
-        self.info = None
+        self.info: Optional[Dict[str, Any]] = None
         self.dag_tps = None
         self.transversal_workflow = transversal_workflow
         self.workflows = None
@@ -177,7 +185,7 @@ class Task(Thread):
         """
         self.stager_mover = stager_mover
 
-    def set_info(self, info):
+    def set_info(self, info: Dict[str, Any]) -> None:
         """
         Change the information of the machine where the task is going to be executed. The information is used by
         :class:`dagon.Stager` to decide the data transfer protocol/application
@@ -243,7 +251,7 @@ class Task(Thread):
         millis = int(round(time() * 1000))
         return str(millis) + "-" + self.name
 
-    def as_json(self):
+    def as_json(self) -> Dict[str, Any]:
         """"
         Generates the JSON representation of the task
 
@@ -304,7 +312,7 @@ class Task(Thread):
         """
         pass
 
-    def add_dependency_to(self, task):
+    def add_dependency_to(self, task: Any) -> None:
         """
         Add a dependency to other task
 
@@ -616,8 +624,7 @@ class Task(Thread):
 
                 # Create the destination directory
                 header = header + "\n\n# Create the destination directory\n"
-                header = header + "mkdir -p " + dst_path + \
-                    "/" + path.dirname(local_path) + "\n"
+                header = header + "mkdir -p " + quote(dst_path + "/" + path.dirname(local_path)) + "\n"
                 header = header + "if [ $? -ne 0 ]; then code=1; fi\n\n"
                 # Add the move data command
                 header = header + \
@@ -682,7 +689,7 @@ class Task(Thread):
                     self.workflow.make_dependencies()
 
                     body = "echo \"Starting parallel tasks...\"\n"
-                    body += "ln -sf " + dst_path + "/" + local_path + " " + self.get_scratch_dir()
+                    body += "ln -sf " + quote(dst_path + "/" + local_path) + " " + quote(self.get_scratch_dir())
                 else:
                     # Change the body of the command
                     body = body.replace(
