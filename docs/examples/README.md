@@ -9,6 +9,8 @@ verification strategy.
 ## Example families
 
 - [Taskflow examples](taskflow.md): explicit dependency graphs.
+- [Asynchronous launch](../asynch_launch.md): local background execution and
+  lifecycle callbacks; source: `examples/asynchronous_launch.py`.
 - [Batch dataflow examples](dataflow_batch.md): local and remote dataflow,
   checkpointing, and `workflow://` file references.
 - [Docker dataflow examples](dataflow_docker.md): container-backed tasks.

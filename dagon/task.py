@@ -886,12 +886,19 @@ class Task(Thread):
                 "name": self.name
             }
 
-            # Apply some command pre processing
-            launcher_script = self.pre_process_command(self.command)
+            # ``pre_process_command`` creates the staging-in portion of the
+            # launcher.  The generated launcher performs that staging when it
+            # is subsequently executed.
+            self.workflow._fire_event("on_task_staging_in_start", self)
+            try:
+                launcher_script = self.pre_process_command(self.command)
+            finally:
+                self.workflow._fire_event("on_task_staging_in_end", self)
             # Apply some command post processing
             launcher_script = self.post_process_command(launcher_script)
 
             # Execute only if not dry
+            self.workflow._fire_event("on_task_execute_start", self)
             if self.workflow.dry is False:
 
                 # Invoke the actual executor
@@ -907,88 +914,91 @@ class Task(Thread):
                     raise Exception(
                         'Executable raised a execption ' + self.result['message'])
 
-        self.remove_reference_workflow()
+        # DAGonStar currently has no separate output-transfer phase.  These
+        # hooks bracket the existing post-execution output/reference cleanup.
+        self.workflow._fire_event("on_task_staging_out_start", self)
+        try:
+            self.remove_reference_workflow()
+        finally:
+            self.workflow._fire_event("on_task_staging_out_end", self)
 
     def run(self):
         """
         Runs the thread where the task will be executed
         """
         if self.workflow is not None:
-            # Change the status
+            self.workflow._fire_event("on_task_start", self)
+            try:
+                # Change the status
+                self.set_status(dagon.Status.WAITING)
+                self.workflow._fire_event("on_task_wait", self)
 
-            self.set_status(dagon.Status.WAITING)
-
-            # Wait for each previous tasks
-            for task in self.prevs:
-                # if its a process from other workflow
-                if self.workflow.find_task_by_name(self.workflow.name, task.name) is None:
-                    while True:
-                        if self.workflow.is_api_available and task.transversal_workflow is not None:  # when is an asynchronous execution
-                            try:
-                                transversal_task = self.workflow.api.get_task(task.transversal_workflow, task.name)[
-                                    'task']  # get the task from the external workflow using the api
-                                if transversal_task['status'] == dagon.Status.FINISHED.value or transversal_task[
-                                        'status'] == dagon.Status.FAILED.value:
+                # Wait for each previous tasks
+                for task in self.prevs:
+                    # if its a process from other workflow
+                    if self.workflow.find_task_by_name(self.workflow.name, task.name) is None:
+                        while True:
+                            if self.workflow.is_api_available and task.transversal_workflow is not None:  # when is an asynchronous execution
+                                try:
+                                    transversal_task = self.workflow.api.get_task(task.transversal_workflow, task.name)[
+                                        'task']  # get the task from the external workflow using the api
+                                    if transversal_task['status'] == dagon.Status.FINISHED.value or transversal_task[
+                                            'status'] == dagon.Status.FAILED.value:
+                                        break
+                                    else:
+                                        sleep(1)
+                                except Exception as e:
+                                    task.set_status(dagon.Status.FAILED)
+                                    self.workflow.logger.warning(
+                                        'Worflow dependence not found, Error: ' + str(e))
                                     break
-                                else:
-                                    sleep(1)
-                            except Exception as e:
-                                task.set_status(dagon.Status.FAILED)
-                                self.workflow.logger.warning(
-                                    'Worflow dependence not found, Error: ' + str(e))
+                            # when is used the dag_tps structure
+                            elif task.status == dagon.Status.FINISHED or task.status == dagon.Status.FAILED:
                                 break
-                        # when is used the dag_tps structure
-                        elif task.status == dagon.Status.FINISHED or task.status == dagon.Status.FAILED:
-                            break
-                        else:
-                            sleep(.5)
-                else:
-                    while True:
-                        # if this happends, the workflow is probably a meta-workflow
-                        if task.status == dagon.Status.WAITING or task.status == dagon.Status.READY:
-                            sleep(.5)
-                        else:
-                            task.join()
-                            break
+                            else:
+                                sleep(.5)
+                    else:
+                        while True:
+                            # if this happends, the workflow is probably a meta-workflow
+                            if task.status == dagon.Status.WAITING or task.status == dagon.Status.READY:
+                                sleep(.5)
+                            else:
+                                task.join()
+                                break
 
-            # Check if one of the previous tasks crashed
-            for task in self.prevs:
-                if task.status == dagon.Status.FAILED:
-                    self.set_status(dagon.Status.FAILED)
-                    return
+                # Check if one of the previous tasks crashed
+                for task in self.prevs:
+                    if task.status == dagon.Status.FAILED:
+                        self.set_status(dagon.Status.FAILED)
+                        return
 
-            # Change the status
-            self.set_status(dagon.Status.RUNNING)
-            # Execute the task Job
-            self.workflow.logger.debug("%s: Executing...", self.name)
-            # self.semaphore.acquire()
-            self.execute()
-            sleep(2)
-            # self.semaphore.release()
-            """try:
+                # Change the status
+                self.set_status(dagon.Status.RUNNING)
+                # Execute the task Job
                 self.workflow.logger.debug("%s: Executing...", self.name)
+                # self.semaphore.acquire()
                 self.execute()
-            except Exception, e:
-                self.workflow.logger.error("%s: Except: %s", self.name, str(e))
-                self.set_status(dagon.Status.FAILED)
+                sleep(2)
+                # Start all next task
+                for task in self.nexts:
+                    if task.status == dagon.Status.READY:
+                        self.workflow.logger.debug(
+                            "%s: Starting task: %s", self.name, task.name)
+                        try:
+                            task.start()
+                        except RuntimeError:
+                            self.workflow.logger.warning(
+                                "%s: Task %s already started.", self.name, task.name)
+
+                # Change the status
+                # self.workflow.api.update_task(self.workflow.workflow_id, self.name, "working_dir", self.working_dir)
+                self.set_status(dagon.Status.FINISHED)
                 return
-            # self.execute()"""
-
-            # Start all next task
-            for task in self.nexts:
-                if task.status == dagon.Status.READY:
-                    self.workflow.logger.debug(
-                        "%s: Starting task: %s", self.name, task.name)
-                    try:
-                        task.start()
-                    except RuntimeError:
-                        self.workflow.logger.warning(
-                            "%s: Task %s already started.", self.name, task.name)
-
-            # Change the status
-            # self.workflow.api.update_task(self.workflow.workflow_id, self.name, "working_dir", self.working_dir)
-            self.set_status(dagon.Status.FINISHED)
-            return
+            except Exception as exc:
+                self.workflow.logger.exception("%s: execution failed", self.name)
+                self.set_status(dagon.Status.FAILED)
+            finally:
+                self.workflow._fire_event("on_task_end", self)
 
     def get_public_key(self):
         """

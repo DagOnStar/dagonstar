@@ -35,6 +35,9 @@ Important methods:
 - `add_task(task)`
 - `make_dependencies()`
 - `run(resume_checkpoint_file=None)`
+- `launch(resume_checkpoint_file=None)` and `wait(timeout=None)` for
+  background execution; lifecycle hooks are described in
+  [Asynchronous Workflow Launch](asynch_launch.md).
 - `as_json()`
 - `find_task_by_name(workflow_name, task_name)`
 - `Validate_WF()`

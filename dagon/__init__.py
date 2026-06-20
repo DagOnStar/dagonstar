@@ -6,7 +6,7 @@ from logging.config import fileConfig
 import threading
 from configparser import NoSectionError
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from requests.exceptions import ConnectionError
 
 from time import time, sleep
@@ -51,6 +51,50 @@ class Status(Enum):
     RUNNING = "RUNNING"
     FINISHED = "FINISHED"
     FAILED = "FAILED"
+
+
+class EventHook:
+    """A thread-safe collection of callbacks for a workflow lifecycle event.
+
+    Callbacks receive the workflow for workflow events and the task for task
+    events.  Use ``hook += callback`` (or :meth:`Workflow.add_listener`) to
+    register a callback.
+    """
+
+    def __init__(self, workflow: "Workflow", name: str) -> None:
+        self._workflow = workflow
+        self.name = name
+        self._listeners: List[Callable[[Any], None]] = []
+        self._lock = threading.RLock()
+
+    def __iadd__(self, listener: Callable[[Any], None]) -> "EventHook":
+        self.add(listener)
+        return self
+
+    def __isub__(self, listener: Callable[[Any], None]) -> "EventHook":
+        self.remove(listener)
+        return self
+
+    def add(self, listener: Callable[[Any], None]) -> None:
+        if not callable(listener):
+            raise TypeError("Workflow event listeners must be callable")
+        with self._lock:
+            self._listeners.append(listener)
+
+    def remove(self, listener: Callable[[Any], None]) -> None:
+        with self._lock:
+            self._listeners.remove(listener)
+
+    def fire(self, subject: Any) -> None:
+        with self._lock:
+            listeners = tuple(self._listeners)
+        for listener in listeners:
+            try:
+                listener(subject)
+            except Exception:
+                # Observers must not be able to terminate workflow execution.
+                self._workflow.logger.exception(
+                    "Listener for workflow event %s failed", self.name)
 
 
 class Workflow(object):
@@ -118,6 +162,19 @@ class Workflow(object):
         self.data_mover = DataMover.COPY
         self.stager_mover = StagerMover.NORMAL
         self.name = name
+        self._dependencies_made = False
+        self._execution_thread: Optional[threading.Thread] = None
+        self._execution_lock = threading.RLock()
+        self._event_hooks = {
+            name: EventHook(self, name) for name in (
+                "on_workflow_start", "on_workflow_end", "on_task_start",
+                "on_task_end", "on_task_wait", "on_task_staging_in_start",
+                "on_task_staging_in_end", "on_task_execute_start",
+                "on_task_staging_out_start", "on_task_staging_out_end",
+            )
+        }
+        for event_name, hook in self._event_hooks.items():
+            setattr(self, event_name, hook)
         if jsonload is not None:  # load from json file
             self.load_json(jsonload)
 
@@ -226,6 +283,7 @@ class Workflow(object):
 
         self.tasks.append(task)
         task.set_workflow(self)
+        self._dependencies_made = False
         if self.is_api_available:
             self.api.add_task(self.workflow_id, task)
 
@@ -256,6 +314,28 @@ class Workflow(object):
             task.set_dag_tps(self.dag_tps)
             task.pre_run()
         self.Validate_WF()
+        self._dependencies_made = True
+
+    def add_listener(self, event_name: str, listener: Callable[[Any], None]) -> None:
+        """Register *listener* for a named workflow event."""
+        self._get_event_hook(event_name).add(listener)
+
+    def remove_listener(self, event_name: str, listener: Callable[[Any], None]) -> None:
+        """Remove a previously registered workflow event listener."""
+        self._get_event_hook(event_name).remove(listener)
+
+    def _get_event_hook(self, event_name: str) -> EventHook:
+        try:
+            return self._event_hooks[event_name]
+        except KeyError as exc:
+            raise ValueError("Unknown workflow event: %s" % event_name) from exc
+
+    def _fire_event(self, event_name: str, subject: Any) -> None:
+        self._get_event_hook(event_name).fire(subject)
+
+    def _prepare_run(self) -> None:
+        if not self._dependencies_made:
+            self.make_dependencies()
 
     # Return a json representation of the workflow
     def as_json(self) -> Dict[str, Any]:
@@ -272,6 +352,9 @@ class Workflow(object):
         return jsonWorkflow
 
     def run(self, resume_checkpoint_file = None):
+        """Run the workflow in the current thread."""
+        with self._execution_lock:
+            self._prepare_run()
 
         if resume_checkpoint_file is not None and os.path.isfile(resume_checkpoint_file) and os.stat(resume_checkpoint_file).st_size > 0:
             fp = open(resume_checkpoint_file, "r")
@@ -285,26 +368,52 @@ class Workflow(object):
             self.logger.debug("Running workflow: %s", self.name)
 
         start_time = time()
-        for task in self.tasks:
-            try:
-                task.start()
-            except RuntimeError:
-                self.logger.debug("Task %s was already started", task.name)
+        self._fire_event("on_workflow_start", self)
+        try:
+            for task in self.tasks:
+                try:
+                    task.start()
+                except RuntimeError:
+                    self.logger.debug("Task %s was already started", task.name)
 
-        for task in self.tasks:
-            try:
-                task.join()
-            except RuntimeError:
-                self.logger.debug("Task %s could not be joined before start", task.name)
-        
-        completed_in = (time() - start_time)
-        self.logger.info("Workflow '" + self.name + "' completed in %s seconds ---" % completed_in)
+            for task in self.tasks:
+                try:
+                    task.join()
+                except RuntimeError:
+                    self.logger.debug("Task %s could not be joined before start", task.name)
 
-        if self.checkpoint_file is not None:
-            self.checkpoints['_scratch_dir'] = self.get_scratch_dir_base()
-            fp = open(self.checkpoint_file, 'w')
-            fp.write(json.dumps(self.checkpoints, sort_keys=True, indent=4))
-            fp.close()
+            completed_in = (time() - start_time)
+            self.logger.info("Workflow '" + self.name + "' completed in %s seconds ---" % completed_in)
+
+            if self.checkpoint_file is not None:
+                self.checkpoints['_scratch_dir'] = self.get_scratch_dir_base()
+                with open(self.checkpoint_file, 'w') as fp:
+                    fp.write(json.dumps(self.checkpoints, sort_keys=True, indent=4))
+        finally:
+            self._fire_event("on_workflow_end", self)
+
+    def launch(self, resume_checkpoint_file=None) -> threading.Thread:
+        """Start the workflow in a background thread and return that thread."""
+        with self._execution_lock:
+            if self._execution_thread is not None and self._execution_thread.is_alive():
+                raise RuntimeError("Workflow %s is already running" % self.name)
+            self._prepare_run()
+            self._execution_thread = threading.Thread(
+                target=self.run,
+                args=(resume_checkpoint_file,),
+                name="DAGonStar-Workflow-%s" % self.name,
+            )
+            self._execution_thread.start()
+            return self._execution_thread
+
+    def wait(self, timeout: Optional[float] = None) -> bool:
+        """Block until a launched workflow ends; return ``True`` if it ended."""
+        with self._execution_lock:
+            execution_thread = self._execution_thread
+        if execution_thread is None:
+            return True
+        execution_thread.join(timeout)
+        return not execution_thread.is_alive()
 
     def load_json(self, Json_data):
         from dagon.task import DagonTask, TaskType

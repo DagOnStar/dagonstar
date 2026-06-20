@@ -16,6 +16,7 @@ repository.
 - [Running External Scientific Software](running_external_software.md)
 - [The `workflow://` Schema](the_workflow_schiema.md)
 - [Checkpoints](checkpoints.md)
+- [Asynchronous workflow launch](asynch_launch.md)
 - [Examples Catalog](examples/README.md)
 
 ## Tutorials
@@ -31,6 +32,7 @@ repository.
 - [Lesson 08: Run Docker-backed tasks](tutorial/lesson_08_docker_tasks.md)
 - [Lesson 09: Prepare remote and Slurm workflows](tutorial/lesson_09_remote_and_slurm.md)
 - [Lesson 10: Compose meta-workflows](tutorial/lesson_10_meta_workflows.md)
+- [Lesson 11: Launch a workflow asynchronously](tutorial/lesson_11_asynchronous_launch.md)
 
 ## Example family documentation
 

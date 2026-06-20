@@ -38,7 +38,11 @@ Selected methods:
 
 - `add_task(task)`: add a task and attach it to this workflow.
 - `make_dependencies()`: parse dataflow references and validate the graph.
-- `run(resume_checkpoint_file=None)`: start and join tasks.
+- `run(resume_checkpoint_file=None)`: run tasks in the current thread.
+- `launch(resume_checkpoint_file=None)`: run tasks in a background thread.
+- `wait(timeout=None)`: wait for a launched workflow; returns whether it ended.
+- `add_listener(event_name, callback)`: register a workflow or task lifecycle
+  callback. See [asynchronous launch](asynch_launch.md) for events and hooks.
 - `set_dry(dry)`: set dry-run flag.
 - `get_dry()`: return dry-run flag.
 - `set_data_mover(data_mover)`: set workflow default data mover.

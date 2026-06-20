@@ -24,8 +24,9 @@ The full documentation set is available in `docs/`:
 - [Running External Scientific Software](docs/running_external_software.md)
 - [The `workflow://` Schema](docs/the_workflow_schiema.md)
 - [Checkpoints](docs/checkpoints.md)
+- [Asynchronous workflow launch](docs/asynch_launch.md)
 - [Examples Catalog](docs/examples/README.md)
-- [Tutorials: ten incremental lessons](docs/tutorial/README.md)
+- [Tutorials: eleven incremental lessons](docs/tutorial/README.md)
 
 ## What DAGonStar supports
 
@@ -46,6 +47,8 @@ DAGonStar is a research-oriented workflow engine with a useful, documented
 core, rather than a fully polished modern library. Its strongest areas are the
 compact Python workflow model, explicit and `workflow://`-derived dependencies,
 checkpointing, and a broad set of execution and staging integrations.
+Workflows can also run in a background thread with lifecycle callbacks for
+local progress reporting.
 
 The repository has a sound baseline for changes to the core behavior:
 

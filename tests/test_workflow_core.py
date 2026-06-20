@@ -1,4 +1,7 @@
 import unittest
+import time
+import tempfile
+import threading
 
 import dagon
 from dagon.task import DagonTask, TaskType
@@ -126,6 +129,46 @@ class WorkflowCoreTests(unittest.TestCase):
         self.assertEqual(len(workflow.tasks), 1)
         self.assertEqual(workflow.tasks[0].command, "echo A")
         self.assertIs(workflow.tasks[0].workflow, workflow)
+
+    def test_launch_wait_and_lifecycle_events(self):
+        config = minimal_config()
+        with tempfile.TemporaryDirectory() as scratch_dir:
+            config["batch"]["scratch_dir_base"] = scratch_dir
+            workflow = dagon.Workflow("Async", config=config)
+            task = DagonTask(TaskType.BATCH, "A", "echo asynchronous")
+            workflow.add_task(task)
+
+            events = []
+            workflow.on_workflow_start += lambda subject: events.append(("workflow_start", subject))
+            workflow.on_workflow_end += lambda subject: events.append(("workflow_end", subject))
+            workflow.on_task_start += lambda subject: events.append(("task_start", subject))
+            workflow.on_task_wait += lambda subject: events.append(("task_wait", subject))
+            workflow.on_task_staging_in_start += lambda subject: events.append(("staging_in_start", subject))
+            workflow.on_task_staging_in_end += lambda subject: events.append(("staging_in_end", subject))
+            workflow.on_task_execute_start += lambda subject: events.append(("execute_start", subject))
+            workflow.on_task_staging_out_start += lambda subject: events.append(("staging_out_start", subject))
+            workflow.on_task_staging_out_end += lambda subject: events.append(("staging_out_end", subject))
+            workflow.on_task_end += lambda subject: events.append(("task_end", subject))
+
+            started = time.monotonic()
+            thread = workflow.launch()
+            self.assertIsInstance(thread, threading.Thread)
+            self.assertLess(time.monotonic() - started, 1)
+            self.assertTrue(workflow.wait(timeout=10))
+
+            self.assertTrue(workflow._dependencies_made)
+            self.assertEqual(task.status, dagon.Status.FINISHED)
+            self.assertEqual(
+                [name for name, _ in events],
+                [
+                    "workflow_start", "task_start", "task_wait", "staging_in_start",
+                    "staging_in_end", "execute_start", "staging_out_start",
+                    "staging_out_end", "task_end", "workflow_end",
+                ],
+            )
+            self.assertTrue(all(subject is task for name, subject in events[1:-1]))
+            self.assertIs(events[0][1], workflow)
+            self.assertIs(events[-1][1], workflow)
 
 
 if __name__ == "__main__":

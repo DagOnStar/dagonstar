@@ -204,7 +204,9 @@ For scientific workflows:
 
 ## Common mistakes
 
-- Forgetting `workflow.make_dependencies()` before `workflow.run()`.
+- Calling `make_dependencies()` is optional before `workflow.run()` or
+  `workflow.launch()`: both build dependencies automatically when needed. Call
+  it explicitly when you want to inspect or validate the graph before running.
 - Referencing a task name that does not exist.
 - Creating a dependency cycle.
 - Using remote tasks before SSH is verified.
