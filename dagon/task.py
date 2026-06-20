@@ -356,7 +356,7 @@ class Task(Thread):
 
         # Update the checkpoint
         self.workflow.checkpoints[self.workflow.name + "." +
-                                  self.getName()]["working_dir"] = self.working_dir
+                                  self.name]["working_dir"] = self.working_dir
 
     # Decrement the reference count
 
@@ -849,7 +849,7 @@ class Task(Thread):
 
         :raises Exception: a problem occurred during the task  execution
         """
-        key = self.workflow.name + "." + self.getName()
+        key = self.workflow.name + "." + self.name
 
         # Local checkpoint
         if key in self.workflow.checkpoints and "code" in self.workflow.checkpoints[key] and \
@@ -868,7 +868,7 @@ class Task(Thread):
         else:
             self.create_working_dir()
 
-            self.workflow.checkpoints[self.workflow.name + "." + self.getName()] = {
+            self.workflow.checkpoints[self.workflow.name + "." + self.name] = {
                 "working_dir": self.working_dir,
                 "workflow": self.workflow.name,
                 "name": self.name
@@ -969,8 +969,8 @@ class Task(Thread):
                         "%s: Starting task: %s", self.name, task.name)
                     try:
                         task.start()
-                    except:
-                        self.workflow.logger.warn(
+                    except RuntimeError:
+                        self.workflow.logger.warning(
                             "%s: Task %s already started.", self.name, task.name)
 
             # Change the status

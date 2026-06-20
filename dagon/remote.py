@@ -115,7 +115,7 @@ class RemoteTask(Task):
         self.working_dir = self.working_dir + "-removed"
         
         # Update the checkpoint
-        self.workflow.checkpoints[self.workflow.name + "." + self.getName()]["working_dir"] = self.working_dir
+        self.workflow.checkpoints[self.workflow.name + "." + self.name]["working_dir"] = self.working_dir
         
     def get_public_key(self):
         """
@@ -192,7 +192,13 @@ class CloudTask(RemoteTask):
         :param endpoint: Globus endpoint ID
         :type endpoint: str
         """
-        super(CloudTask, self).__init__(name, ssh_username, key_options['key_path'], command, endpoint=endpoint)
+        super(CloudTask, self).__init__(
+            name,
+            command,
+            ssh_username=ssh_username,
+            keypath=key_options['key_path'],
+            globusendpoint=endpoint,
+        )
         self.instance_id = instance_id
         self.provider = provider
         self.instance_flavour = instance_flavour

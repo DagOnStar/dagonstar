@@ -4,11 +4,7 @@ import os
 import json
 from logging.config import fileConfig
 import threading
-import collections
-from collections import abc
-
-collections.MutableMapping = abc.MutableMapping
-from backports.configparser import NoSectionError
+from configparser import NoSectionError
 from enum import Enum
 from requests.exceptions import ConnectionError
 
@@ -105,16 +101,13 @@ class Workflow(object):
 
         # ftp attributes
         self.ftpAtt = dict()
-        try:
-            self.ftpAtt['host'] = self.cfg['ftp_pub']['ip']
-            self.ftpAtt['user'] = "guess"
-            self.ftpAtt['password'] = "guess"
-            self.local_path = self.cfg['batch']['scratch_dir_base']
-        except KeyError:
-            self.logger.error("No ftp ip in config file")
+        self.ftpAtt['host'] = self.cfg.get('ftp_pub', {}).get('ip', 'localhost')
+        self.ftpAtt['user'] = self.cfg.get('ftp_pub', {}).get('user', 'anonymous')
+        self.ftpAtt['password'] = self.cfg.get('ftp_pub', {}).get('password', '')
+        self.local_path = self.cfg.get('batch', {}).get('scratch_dir_base', '/tmp/')
 
         # to regist in the dagon service
-        if self.cfg['dagon_service']['use'] == "True":
+        if self.cfg.get('dagon_service', {}).get('use', "False") == "True":
             try:
                 #self.logger.debug("verifing dagon service")
                 self.api = API(self.cfg['dagon_service']['route'])
@@ -254,7 +247,7 @@ class Workflow(object):
         :rtype: dict(str, object) with data class
         """
 
-        jsonWorkflow = {"tasks": {}, "name": self.name, "id": self.workflow_id, "host": self.ftpAtt["host"]}
+        jsonWorkflow = {"tasks": {}, "name": self.name, "id": self.workflow_id, "host": self.ftpAtt.get("host", "localhost")}
         for task in self.tasks:
             jsonWorkflow['tasks'][task.name] = task.as_json()
         return jsonWorkflow
@@ -276,14 +269,14 @@ class Workflow(object):
         for task in self.tasks:
             try:
                 task.start()
-            except:
-                pass
+            except RuntimeError:
+                self.logger.debug("Task %s was already started", task.name)
 
         for task in self.tasks:
             try:
                 task.join()
-            except:
-                pass
+            except RuntimeError:
+                self.logger.debug("Task %s could not be joined before start", task.name)
         
         completed_in = (time() - start_time)
         self.logger.info("Workflow '" + self.name + "' completed in %s seconds ---" % completed_in)

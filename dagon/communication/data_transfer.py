@@ -1,4 +1,3 @@
-from globus_sdk import TransferData, AccessTokenAuthorizer, TransferClient
 import globus_sdk
 import os 
 
@@ -14,7 +13,7 @@ class GlobusManager:
 
     """
 
-    TRANSFER_TOKEN = "Ag82ObxMdj80Gxd2ex7oVJWJnPv4dWQ8ndkpblOz51n42G6g96i8Cjqx5zKDE4jM5E2OzrJgMYMlNYC7NmMbYfk6VP"
+    TRANSFER_TOKEN = os.getenv("DAGON_GLOBUS_TRANSFER_TOKEN", "")
 
     def __init__(self, _from, _to, client_id, intermediate):
 
@@ -173,13 +172,27 @@ class GlobusManager:
 
 
 class SKYCDS:
-    #TODO: Read this from configuration file
-    CLIENT_TOKEN = "3c2d53762ec82cf4cb14f3c6d45601afaf4b2eb42c702fb9f9cc53fa874cf9a0"
-    CATALOG_TOKEN = "b341db39dc182f276a4685ad4c0c8eb64bef1e7e1217655ff3da6eb28095670e"
-    API_TOKEN = "16970b17feb38ad94a29443954487f8cde3221d2"
-    IP_SKYCDS = ""
+    CLIENT_TOKEN = os.getenv("DAGON_SKYCDS_CLIENT_TOKEN", "")
+    CATALOG_TOKEN = os.getenv("DAGON_SKYCDS_CATALOG_TOKEN", "")
+    API_TOKEN = os.getenv("DAGON_SKYCDS_API_TOKEN", "")
+    IP_SKYCDS = os.getenv("DAGON_SKYCDS_IP", "")
+
+    def _validate_configuration(self):
+        missing = [
+            name
+            for name, value in {
+                "DAGON_SKYCDS_CLIENT_TOKEN": self.CLIENT_TOKEN,
+                "DAGON_SKYCDS_CATALOG_TOKEN": self.CATALOG_TOKEN,
+                "DAGON_SKYCDS_API_TOKEN": self.API_TOKEN,
+                "DAGON_SKYCDS_IP": self.IP_SKYCDS,
+            }.items()
+            if not value
+        ]
+        if missing:
+            raise ValueError("Missing SKYCDS configuration: " + ", ".join(missing))
 
     def upload_data(self, task, path, mode="single", encryption=False):
+        self._validate_configuration()
         str_encryption = "true" if encryption else "false"
         command = "tar -czvf %s/data.tar %s --exclude=*.tar &&  docker exec -i client java -jar -Xmx3g -Xmx3g CP-ABE_ST_Up.jar %s %s %s %s bob 2 %s test %s" % \
                   (
@@ -189,6 +202,7 @@ class SKYCDS:
         return result
 
     def download_data(self, task, path):
+        self._validate_configuration()
         command = "mkdir -p %s && docker exec -i client java -jar -Xmx3g -Xmx3g CP-ABE_ST_Dow.jar %s %s %s %s 2 1 test %s" % \
                   (path, SKYCDS.CLIENT_TOKEN, SKYCDS.API_TOKEN, SKYCDS.CATALOG_TOKEN, SKYCDS.IP_SKYCDS, path)
         result = task.execute_command(command)
