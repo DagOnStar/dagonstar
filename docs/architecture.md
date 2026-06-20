@@ -192,8 +192,14 @@ use = False
 ## Known architectural constraints
 
 - Tasks are Python threads, not isolated processes.
-- Many command strings are assembled by concatenation; new code should quote
-  paths and user-controlled values carefully.
-- Optional integrations are currently hard dependencies in package metadata.
-- Comprehensive tests are still being expanded.
+- Many command strings are assembled by concatenation; shell-command safety and
+  path quoting are active improvement priorities.
+- Optional integrations are currently hard dependencies in package metadata;
+  install extras should eventually separate Docker, cloud, Globus, API, and
+  related service dependencies.
+- The repository has an initial unit test and CI baseline, but comprehensive
+  workflow, checkpoint, staging, and integration coverage is still being
+  expanded.
+- Public APIs are mostly untyped; typed interfaces are a future maintainability
+  improvement.
 - Some examples depend on external systems and cannot be verified in generic CI.

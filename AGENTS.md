@@ -73,8 +73,14 @@ configuration validation separately from live integration behavior.
 
 ## Known quality gaps
 
-- The project has an initial unit test suite, but coverage is not comprehensive yet.
-- Optional integrations are installed as hard dependencies.
-- Several shell command paths would benefit from safer quoting.
-- Public APIs are mostly untyped.
+- The project has an initial unit test suite and CI baseline, but coverage is not
+  comprehensive yet. Prioritize checkpoint/resume, staging, command rewriting,
+  local batch integration, and mocked external-service boundaries.
+- Optional integrations are installed as hard dependencies. Prefer future
+  package extras for Docker, cloud, Globus, API, and other service-specific
+  dependencies.
+- Several shell command paths would benefit from safer quoting and command
+  construction helpers.
+- Public APIs are mostly untyped; add type annotations when touching workflow,
+  task, configuration, and staging interfaces.
 - Some legacy examples may require external services or site-specific software.

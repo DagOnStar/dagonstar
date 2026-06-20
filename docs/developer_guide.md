@@ -59,6 +59,12 @@ When adding features:
    environment is explicitly provisioned.
 4. Document manual integration verification commands in the change notes.
 
+The test suite is intentionally a starting point, not a complete quality gate.
+Priority areas for expansion are checkpoint/resume behavior, staging command
+generation, command rewriting for `workflow://` references, local batch
+integration workflows, and mocked boundaries for Docker, Slurm, SSH, Globus,
+cloud, and API integrations.
+
 ## Adding a new task type
 
 To add a task type:
@@ -107,6 +113,10 @@ Risks:
 
 Prefer adding helpers and unit tests before broad rewrites.
 
+New staging or command-generation code should avoid raw string concatenation for
+paths or user-controlled values. Prefer explicit quoting helpers and tests that
+cover spaces, special characters, missing files, directories, and glob patterns.
+
 ## Security expectations
 
 - Never add real credentials to source files, docs, sample config, tests, or CI.
@@ -129,8 +139,12 @@ the computational method and honest about operational assumptions.
 
 ## Current technical debt
 
-- Optional integrations are installed as hard dependencies.
-- Shell command construction should be progressively hardened.
-- Type hints are sparse.
-- Unit test coverage is still early.
+- Automated tests exist but remain focused on core local behavior; broader
+  checkpoint, staging, integration, and failure-mode coverage is still needed.
+- Public APIs are mostly untyped; workflow, task, configuration, and staging
+  interfaces should gain type annotations.
+- Shell command construction should be progressively hardened with safer quoting
+  and command-building helpers.
+- Optional integrations are installed as hard dependencies; package extras should
+  separate Docker, cloud, Globus, API, and other service-specific requirements.
 - Some legacy examples require site-specific data or services.
