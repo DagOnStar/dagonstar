@@ -135,6 +135,7 @@ DAGonStar's public task types are defined in `dagon.task.TaskType`:
 - `SLURM`
 - `CLOUD`
 - `DOCKER`
+- `LLM`
 - `CHECKPOINT`
 
 Remote variants are selected by keyword arguments. For example, a batch task
@@ -144,6 +145,9 @@ This design keeps workflow code compact while preserving access to several
 execution environments. It also means that optional integrations may require
 site-specific services such as SSH, Docker, Slurm, Globus, or cloud provider
 credentials.
+
+`LLM` tasks call configured OpenAI-compatible Chat Completions providers and
+can consume local UTF-8 producer files with `workflow://`; see [LLM Tasks](llm_tasks.md).
 
 ## Documentation map
 

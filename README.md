@@ -26,7 +26,7 @@ The full documentation set is available in `docs/`:
 - [Checkpoints](docs/checkpoints.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
 - [Examples Catalog](docs/examples/README.md)
-- [Tutorials: eleven incremental lessons](docs/tutorial/README.md)
+- [Tutorials: twelve incremental lessons](docs/tutorial/README.md)
 
 ## What DAGonStar supports
 
@@ -37,6 +37,7 @@ The full documentation set is available in `docs/`:
 - Slurm tasks.
 - Docker tasks, locally or over SSH.
 - Cloud-backed tasks through Apache Libcloud providers.
+- OpenAI-compatible LLM tasks with JSON prompts and `workflow://` text inputs.
 - Data staging by link, copy, SCP, Globus, and SKYCDS.
 - Checkpoint/resume support.
 - Meta-workflows that coordinate multiple workflows.
@@ -52,7 +53,7 @@ local progress reporting.
 
 The repository has a sound baseline for changes to the core behavior:
 
-- 32 unit tests cover configuration parsing, workflow defaults and dependency
+- 39 unit tests cover configuration parsing, workflow defaults and dependency
   discovery, cycle validation, JSON serialization, checkpoint reuse, staging
   command generation, packaging extras, optional-integration boundaries, and
   selected shell-quoting behavior;
@@ -63,7 +64,8 @@ The repository has a sound baseline for changes to the core behavior:
 - documentation covers configuration, architecture, checkpoints, examples,
   and the incremental tutorial; and
 - sample configuration avoids committed credentials and the SKYCDS path checks
-  for required runtime configuration.
+  for required runtime configuration; and
+- the LLM task boundary has local tests and a fully local mock-provider example.
 
 The test suite is intentionally fast and local: it validates command generation,
 failure propagation, and integration boundaries, not live Docker, SSH, Slurm,
@@ -146,6 +148,7 @@ Important sections:
 - `[dagon_service]`: optional DAGon service registration.
 - `[slurm]`: default Slurm partition for Slurm staging or tasks.
 - `[ec2]`, `[digitalocean]`, `[gce]`: optional cloud credentials.
+- `[llm.<name>]`: optional OpenAI-compatible LLM provider configuration.
 
 Never commit real cloud keys, Globus tokens, SKYCDS tokens, SSH private keys, or
 site-specific passwords. SKYCDS values are read from these environment variables:

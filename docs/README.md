@@ -9,6 +9,7 @@ repository.
 - [Introduction to Scientific Workflows](introduction_to_scientific_workflow.md)
 - [Getting Started](getting_started.md)
 - [Configuration](configuration.md)
+- [LLM Tasks](llm_tasks.md)
 - [Architecture](architecture.md)
 - [User Guide](user_guide.md)
 - [Reference Guide](reference_guide.md)
@@ -17,6 +18,7 @@ repository.
 - [The `workflow://` Schema](the_workflow_schema.md)
 - [Checkpoints](checkpoints.md)
 - [Asynchronous workflow launch](asynch_launch.md)
+- [LLM task tutorial](tutorial/lesson_12_llm_tasks.md)
 - [Examples Catalog](examples/README.md)
 
 ## Tutorials
@@ -45,3 +47,4 @@ repository.
 - [Transversal and meta-workflow examples](examples/transversal.md)
 - [HiPES tutorial examples](examples/hipes_tutorial.md)
 - [Environmental application examples](examples/environmental_application.md)
+- [LLM task example](examples/llm.md)

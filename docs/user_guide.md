@@ -146,6 +146,28 @@ DagonTask(
 
 The Docker SDK must be able to connect to the Docker daemon.
 
+## LLM tasks
+
+`TaskType.LLM` sends a JSON Chat Completions request to a configured
+OpenAI-compatible provider. Prompt strings support named parameters, and
+`input_files` maps those parameters to UTF-8 text files referenced with
+`workflow://`.
+
+```python
+DagonTask(
+    TaskType.LLM,
+    "summarize",
+    {"messages": [{"role": "user", "content": "Summarize {report}"}]},
+    provider="research",
+    input_files={"report": "workflow:///prepare/output/report.txt"},
+)
+```
+
+Configure `[llm.research]` locally with an endpoint, model, and `api_key_env`.
+The response is saved as `response.json` in the task directory. Use the
+[local mock example](../examples/llm/local_mock_llm.py) or [Lesson 12](tutorial/lesson_12_llm_tasks.md)
+before connecting a real provider.
+
 ## Data movement
 
 Set the workflow default data mover:

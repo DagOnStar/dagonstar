@@ -25,6 +25,8 @@ verification strategy.
   configuration to map rendering.
 - [Environmental application examples](environmental_application.md): WRF/ROMS/
   WaComM++-oriented demonstration material.
+- [LLM task example](llm.md): a local OpenAI-compatible mock and a real-provider
+  skeleton.
 
 ## How to use this catalog
 

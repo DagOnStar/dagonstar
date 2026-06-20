@@ -73,6 +73,7 @@ Factory task types:
 - `TaskType.SLURM`
 - `TaskType.CLOUD`
 - `TaskType.DOCKER`
+- `TaskType.LLM`
 
 ## `dagon.task.DagonTask`
 
@@ -90,6 +91,7 @@ The concrete class is selected from `tasks_types`:
 | `BATCH` | `dagon.batch` | `Batch` |
 | `CLOUD` | `dagon.remote` | `CloudTask` |
 | `DOCKER` | `dagon.docker_task` | `DockerTask` |
+| `LLM` | `dagon.llm` | `LLMTask` |
 | `SLURM` | `dagon.batch` | `Slurm` |
 
 ## `dagon.task.Task`
@@ -209,6 +211,23 @@ Cloud tasks are backed by `dagon.remote.CloudTask` and Apache Libcloud. They
 require provider information, SSH user, key options, and either an existing
 instance or instance flavor data. Cloud behavior is provider-specific and should
 be tested in the target environment.
+
+## LLM tasks
+
+`LLMTask` invokes an OpenAI-compatible Chat Completions endpoint without an
+additional SDK. Its constructor is:
+
+```python
+DagonTask(TaskType.LLM, name, prompt, provider, params=None, input_files=None,
+          working_dir=None, output_file="response.json", timeout=120)
+```
+
+`prompt` is a JSON object (or a JSON string) containing `messages`; string
+values may use `{parameter}` placeholders from `params` or `input_files`.
+Provider configuration is read from `[llm.<provider>]`. `input_files` maps
+parameter names to `workflow://` references, which infer dependencies and stage
+local UTF-8 text before the request. See [LLM Tasks](llm_tasks.md) and the
+[local example](../examples/llm/local_mock_llm.py).
 
 ## Data movement enums
 

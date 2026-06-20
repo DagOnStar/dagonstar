@@ -147,6 +147,21 @@ task = DagonTask(
 
 ## Cloud provider sections
 
+## LLM provider sections
+
+`TaskType.LLM` reads an OpenAI-compatible provider from a section named `[llm.<name>]`; multiple provider sections are supported. See [LLM Tasks](llm_tasks.md) for the exact request and input-file behavior.
+
+```ini
+[llm.example]
+endpoint=https://api.example.org
+api_key_env=DAGON_LLM_EXAMPLE_API_KEY
+model=example-chat-model
+```
+
+Keep keys out of committed configuration. `api_key_env` reads the named runtime environment variable; `api_key` is available only for a local ignored config.
+
+## Cloud provider sections
+
 The sample includes:
 
 ```ini

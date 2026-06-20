@@ -421,7 +421,13 @@ class Workflow(object):
         self.workflow_id = Json_data['id']
         for task in Json_data['tasks']:
             temp = Json_data['tasks'][task]
-            tk = DagonTask(TaskType[temp['type'].upper()], temp['name'], temp['command'])
+            options = {}
+            if temp['type'].upper() == 'LLM':
+                options['provider'] = temp.get('provider')
+                options['params'] = temp.get('params')
+                options['input_files'] = temp.get('input_files')
+                options['output_file'] = temp.get('output_file', 'response.json')
+            tk = DagonTask(TaskType[temp['type'].upper()], temp['name'], temp['command'], **options)
             self.add_task(tk)
         # self.make_dependencies()
 

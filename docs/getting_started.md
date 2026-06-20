@@ -129,6 +129,9 @@ new features.
 
 - Read the [User Guide](user_guide.md) for task types and data movement.
 - Follow the [tutorial sequence](tutorial/README.md) for incremental lessons.
+- Run the [local LLM example](../examples/llm/local_mock_llm.py) and follow its
+  [step-by-step tutorial](tutorial/lesson_12_llm_tasks.md) for OpenAI-compatible
+  requests without external credentials.
 - Learn how to wrap command-line models in
   [Running External Scientific Software](running_external_software.md).
 - Read the [Architecture](architecture.md) document before modifying internals.

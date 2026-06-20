@@ -55,6 +55,8 @@ DAGonStar can launch external software through several task types:
 - `TaskType.SLURM`: scheduler-submitted shell command.
 - `TaskType.DOCKER`: command wrapped in Docker execution.
 - `TaskType.CLOUD`: command executed on a cloud-backed remote node.
+- `TaskType.LLM`: OpenAI-compatible JSON request; use this for API-based text
+  analysis rather than a locally installed command-line program.
 - remote batch/Slurm/Docker variants selected by SSH parameters.
 
 Choose the backend according to the scientific software's operational needs:

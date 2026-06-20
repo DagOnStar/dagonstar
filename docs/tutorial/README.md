@@ -1,6 +1,6 @@
 # DAGonStar Tutorial Sequence
 
-This tutorial contains eleven incremental lessons. The lessons are designed to be
+This tutorial contains twelve incremental lessons. The lessons are designed to be
 read in order and to remain consistent with the current DAGonStar implementation.
 
 Most lessons use local batch workflows so they can be verified on a normal
@@ -20,6 +20,7 @@ explicitly marked as optional integration exercises.
 9. [Prepare remote and Slurm workflows](lesson_09_remote_and_slurm.md)
 10. [Compose meta-workflows](lesson_10_meta_workflows.md)
 11. [Launch a workflow asynchronously](lesson_11_asynchronous_launch.md)
+12. [Run an LLM task locally](lesson_12_llm_tasks.md)
 
 ## Verification convention
 

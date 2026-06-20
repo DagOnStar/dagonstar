@@ -180,6 +180,14 @@ by the workflow or task data mover:
 For local workflows, `COPY` is the safest default. Specialized movers require
 external services or remote configuration.
 
+## LLM task inputs
+
+`TaskType.LLM` also accepts these references. It parses `workflow://` values in
+its JSON prompt and in its `input_files` mapping, infers the producer
+dependency, and copies local UTF-8 text inputs into its `.dagon/inputs` folder
+before including their content in the API request. See [LLM Tasks](llm_tasks.md)
+for the provider configuration and prompt form.
+
 ## Best practices
 
 - Use stable task names.
