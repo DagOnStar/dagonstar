@@ -22,7 +22,7 @@ The full documentation set is available in `docs/`:
 - [Reference Guide](docs/reference_guide.md)
 - [Developer Guide](docs/developer_guide.md)
 - [Running External Scientific Software](docs/running_external_software.md)
-- [The `workflow://` Schema](docs/the_workflow_schiema.md)
+- [The `workflow://` Schema](docs/the_workflow_schema.md)
 - [Checkpoints](docs/checkpoints.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
 - [Examples Catalog](docs/examples/README.md)

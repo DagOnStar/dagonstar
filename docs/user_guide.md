@@ -77,7 +77,7 @@ workflow.make_dependencies()
 DAGonStar will infer that `simulation` depends on `prepare`.
 
 For a full definition of this syntax, see
-[The `workflow://` Schema](the_workflow_schiema.md).
+[The `workflow://` Schema](the_workflow_schema.md).
 
 ## Local batch tasks
 

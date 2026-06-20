@@ -113,7 +113,7 @@ For cross-workflow references:
 workflow://WorkflowName/producer/path/file.nc
 ```
 
-See [The Workflow Schema](the_workflow_schiema.md) for the formal description.
+See [The Workflow Schema](the_workflow_schema.md) for the formal description.
 
 ## Preparing launcher scripts
 

@@ -246,7 +246,7 @@ If a requested section does not exist, `read_config(..., section)` returns
 ## Workflow schema
 
 The `workflow://` schema is documented in detail in
-[The `workflow://` Schema](the_workflow_schiema.md). In brief:
+[The `workflow://` Schema](the_workflow_schema.md). In brief:
 
 ```text
 workflow://<workflow-name>/<task-name>/<path-inside-task-working-directory>

@@ -1,7 +1,6 @@
 # The `workflow://` Schema
 
-This document defines the DAGonStar workflow schema. The filename intentionally
-uses `schiema` to match the requested documentation path.
+This document defines the DAGonStar workflow schema.
 
 ## Purpose
 

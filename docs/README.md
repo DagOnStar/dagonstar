@@ -14,7 +14,7 @@ repository.
 - [Reference Guide](reference_guide.md)
 - [Developer Guide](developer_guide.md)
 - [Running External Scientific Software](running_external_software.md)
-- [The `workflow://` Schema](the_workflow_schiema.md)
+- [The `workflow://` Schema](the_workflow_schema.md)
 - [Checkpoints](checkpoints.md)
 - [Asynchronous workflow launch](asynch_launch.md)
 - [Examples Catalog](examples/README.md)
