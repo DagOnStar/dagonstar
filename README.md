@@ -20,6 +20,7 @@ The full documentation set is available in `docs/`:
 - [Getting Started](docs/getting_started.md)
 - [Configuration](docs/configuration.md)
 - [Architecture](docs/architecture.md)
+- [FAIR by Design](docs/fair_principles.md)
 - [User Guide](docs/user_guide.md)
 - [Reference Guide](docs/reference_guide.md)
 - [Developer Guide](docs/developer_guide.md)
@@ -28,7 +29,7 @@ The full documentation set is available in `docs/`:
 - [Checkpoints](docs/checkpoints.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
 - [Examples Catalog](docs/examples/README.md)
-- [Tutorials: twelve incremental lessons](docs/tutorial/README.md)
+- [Tutorials: thirteen incremental lessons](docs/tutorial/README.md)
 
 ## What DAGonStar supports
 
@@ -42,6 +43,8 @@ The full documentation set is available in `docs/`:
 - OpenAI-compatible LLM tasks with JSON prompts and `workflow://` text inputs.
 - Data staging by link, copy, SCP, Globus, and SKYCDS.
 - Checkpoint/resume support.
+- Native, opt-in FAIR metadata and provenance recording with RO-Crate, PROV,
+  DataCite, CodeMeta, local output fixity, validation, and reports.
 - Meta-workflows that coordinate multiple workflows.
 
 ## Project status and quality assessment
@@ -51,23 +54,30 @@ core, rather than a fully polished modern library. Its strongest areas are the
 compact Python workflow model, explicit and `workflow://`-derived dependencies,
 checkpointing, and a broad set of execution and staging integrations.
 Workflows can also run in a background thread with lifecycle callbacks for
-local progress reporting.
+local progress reporting. The opt-in FAIR recorder makes lifecycle, task,
+dependency, output, fixity, and checkpoint-reuse metadata available in standard
+local exports without adding dependencies or changing existing workflows.
 
 The repository has a sound baseline for changes to the core behavior:
 
-- 39 unit tests cover configuration parsing, workflow defaults and dependency
+- 44 unit tests cover configuration parsing, workflow defaults and dependency
   discovery, cycle validation, JSON serialization, checkpoint reuse, staging
   command generation, packaging extras, optional-integration boundaries, and
-  selected shell-quoting behavior;
+  selected shell-quoting behavior, plus FAIR profiles, artifact declarations,
+  recorder exports, validation, safe environment defaults, and checkpoint reuse;
 - GitHub Actions runs that suite and source compilation on Python 3.8 and
   Python 3.12, plus focused Ruff and mypy checks on Python 3.12;
 - package extras keep Docker, cloud, Globus, and API dependencies out of the
   base installation;
 - documentation covers configuration, architecture, checkpoints, examples,
-  and the incremental tutorial; and
+  FAIR principles, and the incremental tutorial; and
 - sample configuration avoids committed credentials and the SKYCDS path checks
   for required runtime configuration; and
 - the LLM task boundary has local tests and a fully local mock-provider example.
+
+FAIR exports are local metadata artifacts, not repository publication: they do
+not copy large outputs, obtain remote checksums, or validate every optional
+external profile. Credential capture remains disabled by default.
 
 The test suite is intentionally fast and local: it validates command generation,
 failure propagation, and integration boundaries, not live Docker, SSH, Slurm,

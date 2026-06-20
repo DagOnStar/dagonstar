@@ -1,6 +1,6 @@
 # DAGonStar Tutorial Sequence
 
-This tutorial contains twelve incremental lessons. The lessons are designed to be
+This tutorial contains thirteen incremental lessons. The lessons are designed to be
 read in order and to remain consistent with the current DAGonStar implementation.
 
 Most lessons use local batch workflows so they can be verified on a normal

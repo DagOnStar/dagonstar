@@ -11,6 +11,7 @@ repository.
 - [Configuration](configuration.md)
 - [LLM Tasks](llm_tasks.md)
 - [Architecture](architecture.md)
+- [FAIR by Design](fair_principles.md)
 - [User Guide](user_guide.md)
 - [Reference Guide](reference_guide.md)
 - [Developer Guide](developer_guide.md)
@@ -35,6 +36,7 @@ repository.
 - [Lesson 09: Prepare remote and Slurm workflows](tutorial/lesson_09_remote_and_slurm.md)
 - [Lesson 10: Compose meta-workflows](tutorial/lesson_10_meta_workflows.md)
 - [Lesson 11: Launch a workflow asynchronously](tutorial/lesson_11_asynchronous_launch.md)
+- [Lesson 13: FAIR by design](tutorial/lesson_13_fair_by_design.md)
 
 ## Example family documentation
 
