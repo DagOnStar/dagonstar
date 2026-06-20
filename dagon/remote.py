@@ -256,7 +256,15 @@ class CloudTask(RemoteTask):
         """
         self.instance_name = self.instance_name if self.instance_name is not None else self.workflow.name.strip() + \
                                                                                        "-" + self.name
-        from dagon.cloud import CloudManager
+        try:
+            from dagon.cloud import CloudManager
+        except ImportError as exc:
+            if exc.name and (exc.name == "libcloud" or exc.name.startswith("libcloud.")):
+                raise ImportError(
+                    "Cloud support requires the 'cloud' extra: "
+                    "python -m pip install 'dagonstar[cloud]'"
+                ) from exc
+            raise
 
         self.node = CloudManager.get_instance(instance_id=self.instance_id, keyparams=self.key_options,
                                               flavour=self.instance_flavour, provider=self.provider,

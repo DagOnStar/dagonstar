@@ -95,6 +95,33 @@ class OptionalIntegrationTests(unittest.TestCase):
         self.assertIsNone(task.ssh_connection)
         self.assertTrue(task.stop_instance)
 
+    def test_cloud_task_reports_missing_optional_extra(self):
+        task = CloudTask(
+            "Cloud", "hostname", provider="dummy", ssh_username="cloud-user",
+            key_options={"key_path": "/tmp/key"},
+        )
+        task.workflow = mock.Mock(name="workflow")
+        task.workflow.name = "workflow"
+        real_import = builtins.__import__
+
+        def import_without_libcloud(name, *args, **kwargs):
+            if name == "libcloud" or name.startswith("libcloud."):
+                error = ImportError("No module named 'libcloud'")
+                error.name = "libcloud"
+                raise error
+            return real_import(name, *args, **kwargs)
+
+        previous_cloud = sys.modules.pop("dagon.cloud", None)
+        try:
+            with mock.patch("builtins.__import__", side_effect=import_without_libcloud):
+                with self.assertRaisesRegex(ImportError, r"dagonstar\[cloud\]"):
+                    task.execute()
+        finally:
+            if previous_cloud is not None:
+                sys.modules["dagon.cloud"] = previous_cloud
+            else:
+                sys.modules.pop("dagon.cloud", None)
+
     def test_docker_task_reports_missing_optional_extra(self):
         real_import = builtins.__import__
 

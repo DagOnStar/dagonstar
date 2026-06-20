@@ -117,6 +117,10 @@ python -m pip install -e ".[api]"
 python -m pip install -e ".[all]"
 ```
 
+The base package does not install Docker, cloud, Globus, or Flask service
+libraries. If an integration is requested without its extra, DAGonStar reports
+the corresponding install command at the integration boundary.
+
 `requirements.txt` remains a full development/demo environment that installs
 the optional integration dependencies together.
 
