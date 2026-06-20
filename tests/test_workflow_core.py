@@ -3,7 +3,7 @@ import unittest
 import dagon
 from dagon.task import DagonTask, TaskType
 
-from tests.helpers import make_workflow
+from tests.helpers import make_workflow, minimal_config
 
 
 class WorkflowCoreTests(unittest.TestCase):
@@ -40,6 +40,47 @@ class WorkflowCoreTests(unittest.TestCase):
         self.assertIn(task_a, task_b.prevs)
         self.assertEqual(task_a.reference_count, 1)
 
+    def test_make_dependencies_rebuilds_graph_from_current_commands(self):
+        workflow = make_workflow("Rebuild")
+        task_a = DagonTask(TaskType.BATCH, "A", "echo A")
+        task_b = DagonTask(TaskType.BATCH, "B", "cat workflow:///A/result.txt")
+
+        workflow.add_task(task_a)
+        workflow.add_task(task_b)
+        workflow.make_dependencies()
+
+        task_b.command = "echo independent"
+        workflow.make_dependencies()
+
+        self.assertEqual(task_a.nexts, [])
+        self.assertEqual(task_b.prevs, [])
+        self.assertEqual(task_a.reference_count, 0)
+
+    def test_transversal_references_resolve_across_loaded_workflows(self):
+        producer = make_workflow("Producer")
+        consumer = make_workflow("Consumer")
+        task_a = DagonTask(TaskType.BATCH, "A", "echo A")
+        task_b = DagonTask(TaskType.BATCH, "B", "cat workflow://Producer/A/out.txt")
+        dag_tps = type("DagTps", (), {"workflows": [producer, consumer]})()
+
+        producer.add_task(task_a)
+        consumer.add_task(task_b)
+        consumer.set_dag_tps(dag_tps)
+        consumer.make_dependencies()
+
+        self.assertEqual(task_a.nexts, [])
+        self.assertIn(task_a, task_b.prevs)
+        self.assertEqual(task_a.reference_count, 1)
+
+    def test_unknown_reference_requires_api_service(self):
+        workflow = make_workflow("Offline")
+        task = DagonTask(TaskType.BATCH, "NeedsExternal", "cat workflow://Other/Missing/out.txt")
+
+        workflow.add_task(task)
+
+        with self.assertRaisesRegex(ConnectionError, "Dagon service is not available"):
+            workflow.make_dependencies()
+
     def test_explicit_cycle_is_rejected(self):
         workflow = make_workflow("Cycle")
         task_a = DagonTask(TaskType.BATCH, "A", "echo A")
@@ -64,6 +105,27 @@ class WorkflowCoreTests(unittest.TestCase):
         self.assertEqual(payload["host"], "localhost")
         self.assertIn("A", payload["tasks"])
         self.assertEqual(payload["tasks"]["A"]["status"], dagon.Status.READY.name)
+
+    def test_load_json_recreates_task_instances(self):
+        payload = {
+            "name": "Loaded",
+            "id": 42,
+            "tasks": {
+                "A": {
+                    "name": "A",
+                    "command": "echo A",
+                    "type": "batch",
+                },
+            },
+        }
+
+        workflow = dagon.Workflow("Initial", config=minimal_config(), jsonload=payload)
+
+        self.assertEqual(workflow.name, "Loaded")
+        self.assertEqual(workflow.workflow_id, 42)
+        self.assertEqual(len(workflow.tasks), 1)
+        self.assertEqual(workflow.tasks[0].command, "echo A")
+        self.assertIs(workflow.tasks[0].workflow, workflow)
 
 
 if __name__ == "__main__":

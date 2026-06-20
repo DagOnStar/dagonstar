@@ -107,9 +107,11 @@ class Workflow(object):
         self.checkpoints: Dict[str, Any] = {}
         self.workflow_id = 0
         self.is_api_available = False
+        self.data_mover = DataMover.COPY
+        self.stager_mover = StagerMover.NORMAL
+        self.name = name
         if jsonload is not None:  # load from json file
             self.load_json(jsonload)
-        self.name = name
 
         # ftp attributes
         self.ftpAtt = dict()
@@ -137,9 +139,6 @@ class Workflow(object):
                 self.logger.debug("Workflow registration success id = %s" % self.workflow_id)
             except Exception as e:
                 raise Exception(e)
-
-        self.data_mover = DataMover.COPY
-        self.stager_mover = StagerMover.NORMAL
 
     def get_dry(self):
         return self.dry

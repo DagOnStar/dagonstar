@@ -381,7 +381,16 @@ class RemoteSlurm(RemoteTask, Slurm):
         """
         Slurm.__init__(self, name, command, working_dir=working_dir, partition=partition, ntasks=ntasks, memory=memory,
                        globusendpoint=globusendpoint)
-        RemoteTask.__init__(self, name, ssh_username, keypath, command, ip, working_dir, globusendpoint=None)
+        RemoteTask.__init__(
+            self,
+            name,
+            command,
+            ssh_username=ssh_username,
+            keypath=keypath,
+            ip=ip,
+            working_dir=working_dir,
+            globusendpoint=globusendpoint,
+        )
 
     def on_execute(self, script, script_name):
         """
