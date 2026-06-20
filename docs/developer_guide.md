@@ -43,6 +43,14 @@ Compile source and tests:
 python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py tests/*.py
 ```
 
+Run the lightweight quality checks (install `mypy==1.13.0` and
+`ruff==0.6.9` first if they are not already available):
+
+```bash
+python -m ruff check dagon/shell.py tests
+python -m mypy dagon/shell.py
+```
+
 When packaging metadata changes:
 
 ```bash
@@ -70,11 +78,12 @@ When adding features:
 4. Document manual integration verification commands in the change notes.
 
 The test suite is intentionally a starting point, not a complete quality gate.
-It now includes checkpoint reuse, staging command generation, and packaging
-extras checks. Priority areas for further expansion are command rewriting for
-`workflow://` references, local batch integration workflows, failure-mode tests,
-and mocked boundaries for Docker, Slurm, SSH, Globus, cloud, and API
-integrations.
+It includes checkpoint reuse, staging command generation, command failure
+propagation, packaging extras, and mocked Docker, cloud, Globus, and API-extra
+boundaries. CI applies Ruff to the tests and shell helper, and mypy to the shell
+helper; expand both scopes gradually as modules gain annotations. Priority areas
+for further expansion are command rewriting for `workflow://` references, local
+batch integration workflows, and mocked SSH and Slurm boundaries.
 
 ## Adding a new task type
 
@@ -150,15 +159,16 @@ the computational method and honest about operational assumptions.
 
 ## Current technical debt
 
-- Automated tests cover core local behavior plus initial checkpoint, staging,
-  and packaging-extra behavior; broader integration and failure-mode coverage is
-  still needed.
+- Automated tests cover core local behavior, checkpointing, staging, command
+  failure propagation, packaging extras, and selected mocked optional-boundary
+  behavior; broader integration coverage is still needed.
 - Public APIs now have broader annotations across workflow, task,
   configuration, staging, task-subclass, and API-client code; continue
   tightening type coverage when touching public methods.
 - Shell command construction uses centralized POSIX quoting for core task
-  launchers, Slurm, Docker, remote lifecycle commands, and staging paths; it
-  should still be extended when touching legacy/site-specific integrations.
+  launchers, Slurm, Docker, remote lifecycle commands, staging paths, and SCP
+  remote endpoint prefixes; it should still be extended when touching
+  legacy/site-specific integrations.
 - Optional integrations now have package extras, while `requirements.txt` remains
   a full development/demo environment. Continue preserving lazy imports and
   explicit extras for Docker, cloud, Globus, API, and other service-specific

@@ -49,12 +49,12 @@ checkpointing, and a broad set of execution and staging integrations.
 
 The repository has a sound baseline for changes to the core behavior:
 
-- 27 unit tests cover configuration parsing, workflow defaults and dependency
+- 32 unit tests cover configuration parsing, workflow defaults and dependency
   discovery, cycle validation, JSON serialization, checkpoint reuse, staging
   command generation, packaging extras, optional-integration boundaries, and
   selected shell-quoting behavior;
 - GitHub Actions runs that suite and source compilation on Python 3.8 and
-  Python 3.12;
+  Python 3.12, plus focused Ruff and mypy checks on Python 3.12;
 - package extras keep Docker, cloud, Globus, and API dependencies out of the
   base installation;
 - documentation covers configuration, architecture, checkpoints, examples,
@@ -62,12 +62,13 @@ The repository has a sound baseline for changes to the core behavior:
 - sample configuration avoids committed credentials and the SKYCDS path checks
   for required runtime configuration.
 
-The test suite is intentionally fast and local: it validates command generation
-and integration boundaries, not live Docker, SSH, Slurm, cloud, Globus, or
-SKYCDS services. There is currently no configured coverage threshold, linter,
-or static type-checking job. Several legacy and site-specific code paths still
-construct shell commands, so changes around external execution should be kept
-small, quoted defensively, and verified at the boundary being changed.
+The test suite is intentionally fast and local: it validates command generation,
+failure propagation, and integration boundaries, not live Docker, SSH, Slurm,
+cloud, Globus, or SKYCDS services. CI also runs focused style checks and a
+progressive type check over the shell-command helper. Several legacy and
+site-specific code paths still construct shell commands, so changes around
+external execution should be kept small, quoted defensively, and verified at
+the boundary being changed.
 
 The main engineering priorities are therefore:
 
@@ -208,6 +209,8 @@ Useful checks:
 ```bash
 python -m unittest discover -s tests -v
 python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py
+python -m ruff check dagon/shell.py tests
+python -m mypy dagon/shell.py
 python -m pip install -e .
 ```
 

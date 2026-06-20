@@ -89,9 +89,11 @@ class Checkpoint(Task):
         
         out, err = p.communicate()
 
-        code, message = 0, ""
-        if len(err):
-            code, message = 1, err
+        code, message = p.returncode, ""
+        if err:
+            message = err
+        elif code:
+            message = out
         return {"code": code, "message": message, "output": out}
 
     def on_execute(self, script: str, script_name: str) -> ExecutionResult:

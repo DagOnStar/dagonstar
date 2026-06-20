@@ -17,12 +17,20 @@ from dagon.api import API
 from dagon.batch import Batch
 from dagon.batch import Slurm
 from dagon.remote import RemoteTask
-from dagon.shell import quote
+from dagon.shell import quote, remote_target
 
 
 def __getattr__(name):
     if name == "WorkflowServer":
-        from dagon.api.server import WorkflowServer
+        try:
+            from dagon.api.server import WorkflowServer
+        except ImportError as exc:
+            if exc.name in {"flask", "flask_api", "werkzeug"}:
+                raise ImportError(
+                    "API server support requires the 'api' extra: "
+                    "python -m pip install 'dagonstar[api]'"
+                ) from exc
+            raise
         return WorkflowServer
     raise AttributeError(f"module 'dagon' has no attribute {name!r}")
 
@@ -507,13 +515,16 @@ class Stager(object):
                 # copy my public key
                 key = dst_task.get_public_key()
                 src_task.add_public_key(key)
-                cmd = "scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i " + dst_task.working_dir + \
-                          "/.dagon/ssh_key -r " + src_task.get_user() + "@" + src_task.get_ip() + ":" + \
-                           "$file $dst \n\n"
+                key_path = dst_task.working_dir + "/.dagon/ssh_key"
+                source = remote_target(src_task.get_user(), src_task.get_ip(), '"$file"')
+                cmd = ("scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no "
+                       "-o UserKnownHostsFile=/dev/null -i " + quote(key_path) +
+                       " -r " + source + ' "$dst"\n\n')
                 if StagerMover(self.stager_mover) == StagerMover.PARALLEL:
-                    cmd = "scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i " + dst_task.working_dir + \
-                          "/.dagon/ssh_key -r " + src_task.get_user() + "@" + src_task.get_ip() + ":" + \
-                           "{} $dst \n\n"
+                    source = remote_target(src_task.get_user(), src_task.get_ip(), "{}")
+                    cmd = ("scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no "
+                           "-o UserKnownHostsFile=/dev/null -i " + quote(key_path) +
+                           " -r " + source + ' "$dst"\n\n')
                 command = command + self.generate_command(src, dst, cmd, self.stager_mover.value)
                 command += "\nif [ $? -ne 0 ]; then code=1; fi"
                 # command += "\n rm " + dst_task.working_dir + "/.dagon/ssh_key"
@@ -528,13 +539,16 @@ class Stager(object):
                 if res['code']:
                     raise Exception("Couldn't create directory %s" % dst_path + "/" + os.path.dirname(local_path))
 
-                cmd = "scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i " + src_task.working_dir + \
-                                "/.dagon/ssh_key -r " + " $file " + \
-                                dst_task.get_user() + "@" + dst_task.get_ip() + ":$dst \n\n"
+                key_path = src_task.working_dir + "/.dagon/ssh_key"
+                destination = remote_target(dst_task.get_user(), dst_task.get_ip(), '"$dst"')
+                cmd = ("scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no "
+                       "-o UserKnownHostsFile=/dev/null -i " + quote(key_path) +
+                       ' -r "$file" ' + destination + "\n\n")
                 if StagerMover(self.stager_mover) == StagerMover.PARALLEL:
-                    cmd = "scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i " + src_task.working_dir + \
-                                "/.dagon/ssh_key -r " + " {} " + \
-                                dst_task.get_user() + "@" + dst_task.get_ip() + ":$dst \n\n"
+                    destination = remote_target(dst_task.get_user(), dst_task.get_ip(), '"$dst"')
+                    cmd = ("scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no "
+                           "-o UserKnownHostsFile=/dev/null -i " + quote(key_path) +
+                           " -r {} " + destination + "\n\n")
                 command_local = self.generate_command(src, dst, cmd, self.stager_mover.value)
                 res = Batch.execute_command(command_local)
 
