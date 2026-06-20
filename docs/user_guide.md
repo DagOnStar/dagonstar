@@ -76,6 +76,9 @@ workflow.make_dependencies()
 
 DAGonStar will infer that `simulation` depends on `prepare`.
 
+For a full definition of this syntax, see
+[The `workflow://` Schema](the_workflow_schiema.md).
+
 ## Local batch tasks
 
 Local batch tasks are the most portable starting point:
@@ -173,6 +176,8 @@ workflow.run(resume_checkpoint_file="checkpoint.json")
 
 Checkpoint behavior depends on stable task names and preserved task working
 directories.
+
+For detailed semantics and limitations, see [Checkpoints](checkpoints.md).
 
 ## Dry runs
 

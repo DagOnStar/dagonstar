@@ -21,6 +21,10 @@ The full documentation set is available in `docs/`:
 - [User Guide](docs/user_guide.md)
 - [Reference Guide](docs/reference_guide.md)
 - [Developer Guide](docs/developer_guide.md)
+- [Running External Scientific Software](docs/running_external_software.md)
+- [The `workflow://` Schema](docs/the_workflow_schiema.md)
+- [Checkpoints](docs/checkpoints.md)
+- [Examples Catalog](docs/examples/README.md)
 - [Tutorials: ten incremental lessons](docs/tutorial/README.md)
 
 ## What DAGonStar supports

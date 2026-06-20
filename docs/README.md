@@ -13,6 +13,10 @@ repository.
 - [User Guide](user_guide.md)
 - [Reference Guide](reference_guide.md)
 - [Developer Guide](developer_guide.md)
+- [Running External Scientific Software](running_external_software.md)
+- [The `workflow://` Schema](the_workflow_schiema.md)
+- [Checkpoints](checkpoints.md)
+- [Examples Catalog](examples/README.md)
 
 ## Tutorials
 
@@ -27,3 +31,15 @@ repository.
 - [Lesson 08: Run Docker-backed tasks](tutorial/lesson_08_docker_tasks.md)
 - [Lesson 09: Prepare remote and Slurm workflows](tutorial/lesson_09_remote_and_slurm.md)
 - [Lesson 10: Compose meta-workflows](tutorial/lesson_10_meta_workflows.md)
+
+## Example family documentation
+
+- [Taskflow examples](examples/taskflow.md)
+- [Batch dataflow examples](examples/dataflow_batch.md)
+- [Docker dataflow examples](examples/dataflow_docker.md)
+- [Slurm dataflow examples](examples/dataflow_slurm.md)
+- [Cloud dataflow examples](examples/dataflow_cloud.md)
+- [Globus dataflow example](examples/dataflow_globus.md)
+- [Transversal and meta-workflow examples](examples/transversal.md)
+- [HiPES tutorial examples](examples/hipes_tutorial.md)
+- [Environmental application examples](examples/environmental_application.md)

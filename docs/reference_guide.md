@@ -239,6 +239,16 @@ batch = read_config("dagon.ini", "batch")
 If a requested section does not exist, `read_config(..., section)` returns
 `None`.
 
+## Workflow schema
+
+The `workflow://` schema is documented in detail in
+[The `workflow://` Schema](the_workflow_schiema.md). In brief:
+
+```text
+workflow://<workflow-name>/<task-name>/<path-inside-task-working-directory>
+workflow:///<task-name>/<path-inside-task-working-directory>
+```
+
 ## Meta-workflows
 
 `dagon.dag_tps.DAG_TPS` coordinates multiple workflows. Typical usage:

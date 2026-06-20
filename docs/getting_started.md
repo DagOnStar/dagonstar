@@ -118,4 +118,6 @@ new features.
 
 - Read the [User Guide](user_guide.md) for task types and data movement.
 - Follow the [tutorial sequence](tutorial/README.md) for incremental lessons.
+- Learn how to wrap command-line models in
+  [Running External Scientific Software](running_external_software.md).
 - Read the [Architecture](architecture.md) document before modifying internals.
