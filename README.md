@@ -10,6 +10,19 @@ DAGonStar workflows are ordinary Python programs. Tasks can depend explicitly on
 other tasks, or implicitly through `workflow://` data references that DAGonStar
 resolves into task dependencies and staging operations.
 
+## Documentation
+
+The full documentation set is available in `docs/`:
+
+- [Introduction to Scientific Workflows](docs/introduction_to_scientific_workflow.md)
+- [Getting Started](docs/getting_started.md)
+- [Configuration](docs/configuration.md)
+- [Architecture](docs/architecture.md)
+- [User Guide](docs/user_guide.md)
+- [Reference Guide](docs/reference_guide.md)
+- [Developer Guide](docs/developer_guide.md)
+- [Tutorials: ten incremental lessons](docs/tutorial/README.md)
+
 ## What DAGonStar supports
 
 - Python-defined workflows.
