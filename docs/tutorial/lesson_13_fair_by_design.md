@@ -2,7 +2,7 @@
 
 Enable FAIR recording with `workflow.enable_fair(FairProfile(...))`, then use
 `declare_inputs()`, `declare_outputs()`, and `annotate()` to make task intent
-machine-actionable. Run [the local example](../../examples/fair_local.py) with
+machine-actionable. Run [the local example](../../examples/fair/fair_local.py) with
 a configured `dagon.ini`; it needs no external service or new dependency.
 
 The recorder observes normal workflow lifecycle hooks and writes `run.json`,

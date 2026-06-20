@@ -8,7 +8,7 @@ verification strategy.
 
 ## Example families
 
-- [`fair_local.py`](../../examples/fair_local.py): local two-task FAIR metadata,
+- [`fair_local.py`](../../examples/fair/fair_local.py): local two-task FAIR metadata,
   checksum, RO-Crate, and provenance export without external services.
 
 - [Taskflow examples](taskflow.md): explicit dependency graphs.
