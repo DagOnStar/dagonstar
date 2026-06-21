@@ -1,3 +1,4 @@
+import logging
 import shutil
 import glob
 from json import loads, dumps
@@ -162,6 +163,7 @@ class Task(Thread):
         self.mode = "sequential"
         self.globusendpoint = globusendpoint
         self.new_tasks = []
+        self.logger = logging.getLogger()
 
     def get_endpoint(self) -> Optional[str]:
         return self.globusendpoint
@@ -767,13 +769,13 @@ class Task(Thread):
         """
         Create the working directory
         """
+
+        self.remove_scratch_dir = self.workflow.get_remove_dir_op()
+
         if self.working_dir is None:
             # Set a scratch directory as working directory
             self.working_dir = self.workflow.get_scratch_dir_base() + "/" + \
                 self.get_scratch_name()
-
-            # Set to remove the scratch directory
-            self.remove_scratch_dir = True
 
         # Create scratch directory
         self.mkdir_working_dir(self.working_dir + "/.dagon")
@@ -853,6 +855,8 @@ class Task(Thread):
             # Go to the next element
             pos = pos2
 
+        self.workflow.logger.debug("***** self.remove_scratch_dir=%s, %s", self.remove_scratch_dir, type(self.remove_scratch_dir))
+        self.workflow.logger.debug("***** self.nexts=%s, %d", self.nexts, len(self.nexts))
         if len(self.nexts) == 0 and self.remove_scratch_dir is True:
             self.on_garbage()
 

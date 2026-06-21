@@ -242,6 +242,26 @@ class Workflow(object):
                 self._scratch_dir = base_dir
     
         return self._scratch_dir
+    
+    def get_remove_dir_op(self) -> bool:
+        """
+        Returns whether the scratch directory should be removed.
+        Strictly accepts only True, False, 'True', 'False', 'true', or 'false'.
+        """
+        val = self.cfg['batch']['remove_dir']
+
+        if isinstance(val, bool):
+            return val
+
+        if val in ("True", "true"):
+            return True
+        elif val in ("False", "false"):
+            return False
+        else:
+            self.logger.warning("Invalid value for 'remove_dir': '%s'. " \
+            "Expected values: True, False, 'true' or 'false'", val)
+            self.logger.warning("Using remove_dir=False")
+            return False
 
     def find_task_by_name(self, workflow_name: str, task_name: str) -> Optional[Any]:
         """
@@ -525,6 +545,7 @@ class Stager(object):
         self.data_mover = data_mover
         self.stager_mover = stager_mover
         self.cfg = cfg
+        self.logger = logging.getLogger()
 
     def stage_in(self, dst_task: Any, src_task: Any, dst_path: str, local_path: str) -> str:
         """
@@ -613,7 +634,7 @@ class Stager(object):
             if StagerMover(self.stager_mover) == StagerMover.PARALLEL:
                 cmd = "ln -sf {} \"$dst\""
             command = command + self.generate_command(src, dst, cmd, self.stager_mover.value)
-                      
+
         # Check if the copy have to be used...
         elif data_mover == DataMover.COPY:
             # Add the copy command
