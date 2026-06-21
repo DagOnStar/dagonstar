@@ -29,6 +29,8 @@ verification strategy.
   skeleton.
 - [Native Python task example](native.md): staged files, scalar parameters, and declared outputs.
 - [Web task example](web_tasks.md): local HTTP execution, staged uploads, and response outputs.
+- [Tutorial source programs](../../examples/tutorial/README.md): runnable local
+  sources for the advanced LLM and web lessons.
 
 ## How to use this catalog
 

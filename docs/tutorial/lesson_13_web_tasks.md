@@ -19,10 +19,17 @@ the dataflow model.
 
 ## Complete local example
 
-Save the following program as `lesson_13_web_tasks.py` and run
-`python3 lesson_13_web_tasks.py` from the repository root. It starts a local
-server bound only to `127.0.0.1`; no network service, account, or credential is
-required.
+The maintained, executable source is
+[`examples/tutorial/lesson_13_web_tasks.py`](../../examples/tutorial/lesson_13_web_tasks.py).
+Run it from the repository root with:
+
+```bash
+python3 examples/tutorial/lesson_13_web_tasks.py
+```
+
+It starts a local server bound only to `127.0.0.1`; no network service, account,
+or credential is required. The following listing is a copy-pasteable standalone
+version of the same workflow.
 
 ```python
 import json

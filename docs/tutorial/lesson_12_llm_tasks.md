@@ -18,10 +18,18 @@ or Internet access.
 
 ## Complete reproducible source
 
-Save the following program as `lesson_12_llm_tasks.py` and run
-`python3 lesson_12_llm_tasks.py`. It is deliberately self-contained: the local
-server implements only the small OpenAI-compatible surface needed for the
-lesson, and the workflow configuration uses a temporary scratch directory.
+The maintained, executable source is
+[`examples/tutorial/lesson_12_llm_tasks.py`](../../examples/tutorial/lesson_12_llm_tasks.py).
+Run it from the repository root with:
+
+```bash
+python3 examples/tutorial/lesson_12_llm_tasks.py
+```
+
+It is deliberately self-contained: the local server implements only the small
+OpenAI-compatible surface needed for the lesson, and the workflow configuration
+uses a temporary scratch directory. The following listing is identical in
+purpose and may be copied into a standalone file.
 
 ```python
 import json
