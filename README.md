@@ -290,6 +290,7 @@ Example groups:
 - `examples/transversal`: meta-workflow and transversal processing examples.
 - `examples/hipes-tutorial`: tutorial material for HiPES workflows.
 - `examples/envapp`: environmental application workflows and utilities.
+- `examples/async`: local asynchronous launch and lifecycle-callback example.
 - `examples/native`: importable Python functions with staged `workflow://` inputs.
 - `examples/web`: local HTTP request, staged upload, and downstream native processing.
 

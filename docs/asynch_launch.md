@@ -59,5 +59,5 @@ Run the local example after creating a local configuration:
 
 ```bash
 cp dagon.ini.sample dagon.ini
-python3 examples/asynchronous_launch.py
+python3 examples/async/asynchronous_launch.py
 ```
