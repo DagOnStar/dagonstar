@@ -10,6 +10,109 @@ DAGonStar workflows are ordinary Python programs. Tasks can depend explicitly on
 other tasks, or implicitly through `workflow://` data references that DAGonStar
 resolves into task dependencies and staging operations.
 
+DAGonStar is used as the primary workflow engine to run real-world production-level
+applications.
+
+DAGonStar is in production at the [Center for Monitoring and Modeling Marine and Atmosphere](https:/meteo.uniparthenope.it)
+applications hosted at the University of Naples "Parthenope".
+
+# Motivation
+Thanks to the advent of public, private, and hybrid clouds, the democratization of
+Computational resources changed the rules in many scientific fields.
+For decades, one of the efforts of computer scientists and computer engineers was the
+development of tools able to simplify access to high-end computational resources by
+computational scientists. However, nowadays, any science field can be considered
+"computational" if the availability of powerful but easy-to-manage workflow
+engines is crucial.
+
+# Acknowledgments
+The following initiatives support DAGonStar development:
+
+* Research agreement "Modelling mytilus farming at scale"
+  (MytilX, CUP D13C24000470002, funded by the Istituto Zooprofilattico Sperimentale dell’Umbria e delle Marche) -
+  DAGonStar orchestrates the production workflow to deliver use cases, study zones specific to weather, marine, pollutants,
+  and farmed mussels contamination forecasts and predictions.
+
+
+* Research contract "Mytilus farming System with High-Performance Computing and Artificial Intelligence"
+  (MytilEx, CUP I63C23000180002, funded by the Campania Region, Veterinary sector) -
+  DAGonStar orchestrates the production workflow to deliver daily 168 weather, marine, pollutants,
+  and farmed mussels contamination forecasts and predictions. [PWA](http://meteo.uniparthenope.it/mytilex/)
+
+
+* EuroHPC H2020 project "Adaptative Multi-tier Intelligent data manager for Exascale"
+  (ADMIRE, 956748-ADMIRE-H2020-JTI-EuroHPC-2019-1, funded by the European Commission) - 
+  WP7: DAGonStar orchestrates the Environmental Application, delivering on-demand weather, marine,
+  and pollutants simulations and forecasts on the Campania Region (Italy).
+  [link](https://www.admire-eurohpc.eu)
+
+# Cite DAGonStar
+
+## Workflow engine
+
+* Sánchez-Gallegos, Dante Domizzi, Diana Di Luccio, Sokol Kosta, J. L. Gonzalez-Compean, and Raffaele Montella.
+  "An efficient pattern-based approach for workflow supporting large-scale science: The DagOnStar experience."
+  Future Generation Computer Systems 122 (2021): 187-203.
+  [link](https://www.sciencedirect.com/science/article/pii/S0167739X21000984)
+
+
+* Barron-Lugo, J.A., Gonzalez-Compean, J. L., Carretero, J., Lopez-Arevalo, I., & Montella, R. (2021).
+  A novel transversal processing model to build environmental big data services in the cloud. 
+  Environmental Modelling & Software, 144, 105173.
+  [link](https://www.sciencedirect.com/science/article/abs/pii/S1364815221002152)
+
+
+* Sánchez-Gallegos, Dante D., Diana Di Luccio, José Luis Gonzalez-Compean, and Raffaele Montella.
+  "Internet of things orchestration using dagon workflow engine."
+  In 2019 IEEE 5th world forum on internet of things (WF-IoT), pp. 95-100. IEEE, 2019.
+  [link](https://ieeexplore.ieee.org/abstract/document/8767199)
+
+
+* Sánchez-Gallegos, Dante D., Diana Di Luccio, J. L. Gonzalez-Compean, and Raffaele Montella.
+  "A microservice-based building block approach for scientific workflow engines: Processing large data volumes with dagonstar."
+  In 2019 15th International Conference on Signal-Image Technology & Internet-Based Systems (SITIS), pp. 368-375. IEEE, 2019.
+  [link](https://ieeexplore.ieee.org/abstract/document/9067951)
+
+
+* Montella, Raffaele, Diana Di Luccio, and Sokol Kosta.
+  "Dagon: Executing direct acyclic graphs as parallel jobs on anything."
+  In 2018 IEEE/ACM Workflows in Support of Large-Scale Science (WORKS), pp. 64-73. IEEE, 2018.
+  [link](https://ieeexplore.ieee.org/abstract/document/8638376)
+
+## Applications
+* Mellone, Gennaro, Ciro Giuseppe De Vita, Enrico Zambianchi, David Expósito Singh,
+  Diana Di Luccio, and Raffaele Montella.
+  "Democratizing the computational environmental marine data science: using the high-performance cloud-native computing for inert transport and diffusion lagrangian modelling."
+  In 2022 IEEE International Workshop on Metrology for the Sea; Learning to Measure Sea Health Parameters (MetroSea), pp. 267-272. IEEE, 2022.
+  [link](https://ieeexplore.ieee.org/abstract/document/9950862)
+
+
+* De Vita, Ciro Giuseppe, Gennaro Mellone, Aniello Florio,
+  Catherine Alessandra Torres Charles, Diana Di Luccio,
+  Marco Lapegna, Guido Benassai, Giorgio Budillon, and Raffaele Montella.
+  "Parallel and hierarchically-distributed Shoreline Alert Model (SAM)." 
+  In 2023 31st Euromicro International Conference on Parallel, Distributed and Network-Based Processing (PDP), pp. 109-113. IEEE, 2023.
+  [link](https://ieeexplore.ieee.org/abstract/document/10136945)
+
+
+* Montella, Raffaele, Diana Di Luccio, Ciro Giuseppe De Vita, Gennaro Mellone,
+  Marco Lapegna, Gloria Ortega, Livia Marcellino, Enrico Zambianchi, and Giulio Giunta.
+  "A highly scalable high-performance Lagrangian transport and diffusion model for marine pollutants assessment."
+  In 2023 31st Euromicro International Conference on Parallel, Distributed and Network-Based Processing (PDP), pp. 17-26. IEEE, 2023.
+  [link](https://ieeexplore.ieee.org/abstract/document/10137219)
+
+
+## Surveys
+
+* Aldinucci, Marco, Giovanni Agosta, Antonio Andreini, Claudio A. Ardagna,
+  Andrea Bartolini, Alessandro Cilardo, Biagio Cosenza et al.
+  "The Italian research on HPC key technologies across EuroHPC."
+  In Proceedings of the 18th ACM international conference on computing frontiers, pp. 178-184. 2021.
+  [link](https://dl.acm.org/doi/abs/10.1145/3457388.3458508)
+
+## License
+
+DAGonStar is distributed under the Apache License 2.0. See `LICENSE`.
 ## Documentation
 
 The full documentation set is available in `docs/`:
@@ -53,9 +156,9 @@ local progress reporting.
 
 The repository has a sound baseline for changes to the core behavior:
 
-- 39 unit tests cover configuration parsing, workflow defaults and dependency
+- 39 unit tests cover configuration parsing, workflow defaults, and dependency
   discovery, cycle validation, JSON serialization, checkpoint reuse, staging
-  command generation, packaging extras, optional-integration boundaries, and
+  command generation, packaging extras, optional integration boundaries, and
   selected shell-quoting behavior;
 - GitHub Actions runs that suite and source compilation on Python 3.8 and
   Python 3.12, plus focused Ruff and mypy checks on Python 3.12;
@@ -74,29 +177,6 @@ progressive type check over the shell-command helper. Several legacy and
 site-specific code paths still construct shell commands, so changes around
 external execution should be kept small, quoted defensively, and verified at
 the boundary being changed.
-
-The main engineering priorities are therefore:
-
-1. expand unit coverage for failure paths and optional integrations without
-   requiring external services;
-2. add progressive type checking and lightweight style/quality checks;
-3. continue consolidating and applying safe shell-command construction in
-   legacy integration paths; and
-4. keep optional dependencies isolated through extras such as
-   `dagonstar[docker]`, `dagonstar[cloud]`, `dagonstar[globus]`, and
-   `dagonstar[api]`.
-
-Recent cleanup in this repository:
-
-- Removed committed sample credentials and token-like defaults from source files.
-- Made optional configuration sections safer by using defaults where possible.
-- Fixed package metadata so all DAGonStar packages are included.
-- Removed an unnecessary Python 2 compatibility dependency.
-- Replaced deprecated thread-name usage in checkpoint keys.
-- Avoided silently swallowing task start/join errors.
-- Fixed cloud task constructor argument ordering.
-- Added unit tests, CI checks, comprehensive documentation, and contributor
-  guidance in `AGENTS.md`.
 
 ## Installation
 
@@ -275,24 +355,4 @@ Confirm the integration-specific credentials and endpoint IDs are configured.
 SKYCDS values must be supplied through environment variables, not committed in
 source files.
 
-## Citation
 
-If you use DAGonStar in academic work, please cite the workflow-engine paper:
-
-Sánchez-Gallegos, Dante Domizzi, Diana Di Luccio, Sokol Kosta,
-J. L. Gonzalez-Compean, and Raffaele Montella. “An efficient pattern-based
-approach for workflow supporting large-scale science: The DagOnStar experience.”
-Future Generation Computer Systems 122 (2021): 187–203.
-
-Additional DAGonStar-related publications are listed in the older project
-documentation and example material.
-
-## License
-
-DAGonStar is distributed under the Apache License 2.0. See `LICENSE`.
-
-## Acknowledgments
-
-DAGonStar development has been supported by research initiatives including
-MytilX, MytilEx, and the EuroHPC H2020 ADMIRE project, and is used in production
-environmental workflow applications at the University of Naples “Parthenope”.
