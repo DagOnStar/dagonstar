@@ -22,6 +22,7 @@ explicitly marked as optional integration exercises.
 11. [Launch a workflow asynchronously](lesson_11_asynchronous_launch.md)
 12. [Run an LLM task locally](lesson_12_llm_tasks.md)
 13. [Run a native Python task](native_tasks.md)
+14. [Run web tasks](lesson_13_web_tasks.md)
 
 ## Verification convention
 

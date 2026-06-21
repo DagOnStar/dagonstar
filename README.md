@@ -142,6 +142,7 @@ The full documentation set is available in `docs/`:
 - Cloud-backed tasks through Apache Libcloud providers.
 - OpenAI-compatible LLM tasks with JSON prompts and `workflow://` text inputs.
 - Native Python-function tasks with staged file bindings and JSON result metadata.
+- Web tasks for structured HTTP/HTTPS requests with scratch-local response outputs.
 - Data staging by link, copy, SCP, Globus, and SKYCDS.
 - Checkpoint/resume support.
 - Meta-workflows that coordinate multiple workflows.
@@ -290,6 +291,17 @@ Example groups:
 - `examples/hipes-tutorial`: tutorial material for HiPES workflows.
 - `examples/envapp`: environmental application workflows and utilities.
 - `examples/native`: importable Python functions with staged `workflow://` inputs.
+- `examples/web`: local HTTP request, staged upload, and downstream native processing.
+
+## Web tasks
+
+`TaskType.WEB` executes a JSON-serializable HTTP request through the task executor:
+
+```python
+DagonTask(TaskType.WEB, "fetch", {"method": "GET", "url": "https://example.org/data", "outputs": {"body": "data.json"}})
+```
+
+Responses are written below `outputs/` and request metadata is stored in `.dagon/`. Web tasks use the existing local or Slurm executor mode. Use environment-variable auth fields, never literal secrets. See the [example](examples/web/README.md), [example guide](docs/examples/web_tasks.md), and [tutorial](docs/tutorial/lesson_13_web_tasks.md).
 
 ## Native Python tasks
 
@@ -367,4 +379,3 @@ ssh -i /path/to/key user@host hostname
 Confirm the integration-specific credentials and endpoint IDs are configured.
 SKYCDS values must be supplied through environment variables, not committed in
 source files.
-

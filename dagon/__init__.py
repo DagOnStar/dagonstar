@@ -455,6 +455,11 @@ class Workflow(object):
                                executor=temp.get('executor', 'local'), resources=temp.get('resources'),
                                python=temp.get('python', 'python'), environment=temp.get('environment'),
                                working_dir=temp.get('working_dir'))
+            elif temp['type'].upper() == 'WEB':
+                tk = DagonTask(TaskType.WEB, temp['name'], temp['specification'],
+                               executor=temp.get('executor', 'local'), resources=temp.get('resources'),
+                               python=temp.get('python', 'python'), environment=temp.get('environment'),
+                               working_dir=temp.get('working_dir'))
             else:
                 tk = DagonTask(TaskType[temp['type'].upper()], temp['name'], temp['command'], **options)
             self.add_task(tk)

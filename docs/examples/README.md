@@ -28,6 +28,7 @@ verification strategy.
 - [LLM task example](llm.md): a local OpenAI-compatible mock and a real-provider
   skeleton.
 - [Native Python task example](native.md): staged files, scalar parameters, and declared outputs.
+- [Web task example](web_tasks.md): local HTTP execution, staged uploads, and response outputs.
 
 ## How to use this catalog
 
