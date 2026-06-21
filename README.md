@@ -129,7 +129,7 @@ The full documentation set is available in `docs/`:
 - [Checkpoints](docs/checkpoints.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
 - [Examples Catalog](docs/examples/README.md)
-- [Tutorials: twelve incremental lessons](docs/tutorial/README.md)
+- [Tutorials: fourteen incremental lessons](docs/tutorial/README.md)
 
 ## What DAGonStar supports
 
@@ -312,7 +312,7 @@ Responses are written below `outputs/` and request metadata is stored in `.dagon
 DagonTask(TaskType.NATIVE, "transform", "myworkflow.tasks:transform", inputs={"input_file": "workflow:///prepare/data.csv", "scale": 0.7}, outputs={"output_file": "clean.csv"})
 ```
 
-File arguments are staged below `inputs/`, outputs are paths below `outputs/`, and the JSON return value is written to `.dagon/native_result.json`. See the [native example](examples/native/README.md) and [tutorial lesson](docs/tutorial/native_tasks.md).
+File arguments are staged below `inputs/`, outputs are paths below `outputs/`, and the JSON return value is written to `.dagon/native_result.json`. See the [native example](examples/native/README.md) and [tutorial lesson](docs/tutorial/lesson_14_native_tasks.md).
 
 ## Development
 

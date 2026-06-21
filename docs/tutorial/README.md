@@ -1,6 +1,6 @@
 # DAGonStar Tutorial Sequence
 
-This tutorial contains twelve incremental lessons. The lessons are designed to be
+This tutorial contains fourteen incremental lessons. The lessons are designed to be
 read in order and to remain consistent with the current DAGonStar implementation.
 
 Most lessons use local batch workflows so they can be verified on a normal
@@ -21,12 +21,12 @@ explicitly marked as optional integration exercises.
 10. [Compose meta-workflows](lesson_10_meta_workflows.md)
 11. [Launch a workflow asynchronously](lesson_11_asynchronous_launch.md)
 12. [Run an LLM task locally](lesson_12_llm_tasks.md)
-13. [Run a native Python task](native_tasks.md)
-14. [Run web tasks](lesson_13_web_tasks.md)
+13. [Execute a web task locally](lesson_13_web_tasks.md)
+14. [Execute native Python tasks](lesson_14_native_tasks.md)
 
 ## Verification convention
 
-Each lesson includes:
+Each lesson includes a self-contained, copy-pasteable source example, as well as:
 
 - objective;
 - concept;
