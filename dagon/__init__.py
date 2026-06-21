@@ -229,6 +229,7 @@ class Workflow(object):
         """
         if self._scratch_dir is None:
             base_dir = self.cfg['batch']['scratch_dir_base']
+            base_dir = os.path.abspath(base_dir)
             run_base = self.cfg['batch'].get('run_base', '')
 
             if run_base:
