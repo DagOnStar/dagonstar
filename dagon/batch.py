@@ -80,7 +80,7 @@ class Batch(Task):
         #
         #     return {"code": code, "message": message, "output": result.stdout}
         p = Popen(shlex.split(command), stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, bufsize=-1, universal_newlines=True)
-        
+
         out, err = p.communicate()
 
         code, message = p.returncode, ""
