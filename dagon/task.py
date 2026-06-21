@@ -32,6 +32,7 @@ class TaskType(Enum):
     CLOUD = "cloud"
     DOCKER = "docker"
     LLM = "llm"
+    NATIVE = "native"
 
 
 # Different types os tasks and their module and class name
@@ -47,6 +48,7 @@ tasks_types: Dict[TaskType, TaskTypeSpec] = {
     TaskType.DOCKER: ("dagon.docker_task", "DockerTask"),
     TaskType.SLURM: ("dagon.batch", "Slurm"),
     TaskType.LLM: ("dagon.llm", "LLMTask"),
+    TaskType.NATIVE: ("dagon.native", "NativeTask"),
 }
 
 

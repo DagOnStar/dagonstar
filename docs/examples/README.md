@@ -27,6 +27,7 @@ verification strategy.
   WaComM++-oriented demonstration material.
 - [LLM task example](llm.md): a local OpenAI-compatible mock and a real-provider
   skeleton.
+- [Native Python task example](native.md): staged files, scalar parameters, and declared outputs.
 
 ## How to use this catalog
 

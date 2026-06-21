@@ -74,6 +74,7 @@ Factory task types:
 - `TaskType.CLOUD`
 - `TaskType.DOCKER`
 - `TaskType.LLM`
+- `TaskType.NATIVE`
 
 ## `dagon.task.DagonTask`
 
@@ -92,6 +93,7 @@ The concrete class is selected from `tasks_types`:
 | `CLOUD` | `dagon.remote` | `CloudTask` |
 | `DOCKER` | `dagon.docker_task` | `DockerTask` |
 | `LLM` | `dagon.llm` | `LLMTask` |
+| `NATIVE` | `dagon.native` | `NativeTask` |
 | `SLURM` | `dagon.batch` | `Slurm` |
 
 ## `dagon.task.Task`
@@ -228,6 +230,18 @@ Provider configuration is read from `[llm.<provider>]`. `input_files` maps
 parameter names to `workflow://` references, which infer dependencies and stage
 local UTF-8 text before the request. See [LLM Tasks](llm_tasks.md) and the
 [local example](../examples/llm/local_mock_llm.py).
+
+## Native tasks
+
+`NativeTask` executes an importable `module:function` through a JSON runner:
+
+```python
+DagonTask(TaskType.NATIVE, name, function, inputs=None, outputs=None,
+          executor="local", resources=None, python=sys.executable,
+          working_dir=None, environment=None)
+```
+
+Inputs may be JSON scalars, existing local files, or `workflow://` file references. File values are staged below `inputs/`; `outputs` maps parameter names to safe relative paths below `outputs/`. JSON return metadata is written to `.dagon/native_result.json`. `executor` accepts `local` and `slurm`; use existing Slurm settings in `resources`. Functions must be importable module-level callables.
 
 ## Data movement enums
 

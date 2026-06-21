@@ -136,6 +136,7 @@ DAGonStar's public task types are defined in `dagon.task.TaskType`:
 - `CLOUD`
 - `DOCKER`
 - `LLM`
+- `NATIVE`
 - `CHECKPOINT`
 
 Remote variants are selected by keyword arguments. For example, a batch task
