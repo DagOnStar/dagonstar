@@ -700,7 +700,7 @@ case $mode in
     ;;
     *)
     # Run requentially
-    $cmd
+    eval "$cmd"
     ;;
 esac
 done
