@@ -855,8 +855,6 @@ class Task(Thread):
             # Go to the next element
             pos = pos2
 
-        self.workflow.logger.debug("***** self.remove_scratch_dir=%s, %s", self.remove_scratch_dir, type(self.remove_scratch_dir))
-        self.workflow.logger.debug("***** self.nexts=%s, %d", self.nexts, len(self.nexts))
         if len(self.nexts) == 0 and self.remove_scratch_dir is True:
             self.on_garbage()
 

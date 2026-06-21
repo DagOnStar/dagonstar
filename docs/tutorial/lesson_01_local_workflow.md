@@ -52,6 +52,11 @@ Then inspect the printed directory:
 ls /tmp/*-hello
 ```
 
+To print the content of the latest execution:
+```bash
+cat $(find /tmp -maxdepth 1 -type d -name '*-hello' | tail -n 1)/hello.txt
+```
+
 ## Scientific practice note
 
 Even a one-task workflow is useful when the task has scientific meaning, such as
