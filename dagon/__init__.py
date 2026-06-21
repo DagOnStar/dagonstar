@@ -246,9 +246,10 @@ class Workflow(object):
     def get_remove_dir_op(self) -> bool:
         """
         Returns whether the scratch directory should be removed.
-        Strictly accepts only True, False, 'True', 'False', 'true', or 'false'.
+        Expects True, False, 'True', 'False', 'true', or 'false'.
+        Defaults to False if the key is missing or invalid.
         """
-        val = self.cfg['batch']['remove_dir']
+        val = self.cfg['batch'].get('remove_dir', False)
 
         if isinstance(val, bool):
             return val
