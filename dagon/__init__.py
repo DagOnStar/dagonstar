@@ -730,23 +730,25 @@ class Stager(object):
         jobs = batch_cfg.get("threads", "1")
         partition = slurm_cfg.get("partition", "")
         return """
-# --- Advanced Staging (Parallel/Slurm) ---
+#! /bin/bash
+
 src={src}
 dst={dst}
 mode={mode}
 jobs={jobs}
 partition={partition}
 
-job_ids=""
+job_ids=()
 
 for file in $src
 do
-  case $mode in
+cmd="{cmd}"
+case $mode in
     1)
-      # Run in parallel using local queue
-      echo "$file" | parallel -j$jobs "{cmd}"
-      break
-      ;;
+    # Run in parallel using local queue
+    find $src -type f,l | parallel -j$jobs "$cmd"
+    break
+    ;;
     2)
     # Run in parallel using slurm
     job_id=$(sbatch --job-name=stagein --partition=$partition --ntasks=1 --cpus-per-task=1 --mem=1024 --wrap="$cmd" | awk '{{print $4}}')
@@ -760,19 +762,23 @@ esac
 done
 
 # Wait for all sbatch jobs to complete
-if [ -n "$job_ids" ]; then
+if [ "${{#job_ids[@]}}" -gt 0 ]; then
     echo "Waiting for all copies to complete..."
-    for job_id in $job_ids; do
-        while squeue -j "$job_id" -h -o '%A' 2>/dev/null | grep -q .; do
-            sleep 5
-        done
+    while true; do
+        # Check if any jobs are still in the queue
+        pending_jobs=$(squeue -j "${{job_ids[*]}}" -h -o '%A')
+        if [ -z "$pending_jobs" ]; then
+            break
+        fi
+        # Wait a few seconds before checking again
+        sleep 5
     done
 fi
         """.format(
-            quote(src),
-            quote(dst),
-            int(mode),
-            quote(jobs),
-            quote(partition),
-            cmd.replace('"', '\\"'),
+            src=quote(src),
+            dst=quote(dst),
+            mode=int(mode),
+            jobs=quote(jobs),
+            partition=quote(partition),
+            cmd=cmd.replace('"', '\\"'),
         )

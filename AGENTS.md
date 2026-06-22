@@ -106,7 +106,9 @@ configuration validation separately from live integration behavior.
 - The project has a unit test suite and CI baseline, including initial
   checkpoint, staging, packaging-extra, and core workflow checks, but coverage is
   not comprehensive yet. Prioritize command rewriting, local batch integration,
-  failure modes, and mocked external-service boundaries.
+  failure modes, and mocked external-service boundaries. When changing remote or
+  container task constructors, cover both the default and a non-default SSH port
+  without opening a real network connection.
 - Optional integrations have package extras, while `requirements.txt` remains a
   full development/demo environment. Preserve lazy imports and explicit extras
   for Docker, cloud, Globus, API, and other service-specific dependencies.

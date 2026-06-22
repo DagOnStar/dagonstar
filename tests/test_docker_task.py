@@ -54,6 +54,18 @@ class TestDockerTask(unittest.TestCase):
         self.mock_client.containers.run.assert_called_once()
         self.mock_workflow.logger.info.assert_called()
 
+    def test_constructor_supports_optional_devices_and_pull_control(self):
+        task = DockerTask(
+            name="device_task",
+            command="echo hello",
+            image="ubuntu:20.04",
+            devices=["/dev/null:/dev/null:rwm"],
+            pull=False,
+        )
+
+        self.assertEqual(task.devices, ["/dev/null:/dev/null:rwm"])
+        self.assertFalse(task.pull)
+
     def test_create_container_failure(self):
         """Should raise exception when container creation fails."""
         self.mock_client.containers.run.side_effect = Exception("Run failed")
@@ -179,6 +191,32 @@ class TestDockerRemoteTask(unittest.TestCase):
         
         # Assign the workflow
         self.task.workflow = self.mock_workflow
+
+    def test_constructor_accepts_custom_ssh_port_and_docker_options(self):
+        task = DockerRemoteTask(
+            name="custom-port",
+            command="echo hello",
+            image="ubuntu:20.04",
+            ip="192.168.1.10",
+            ssh_username="user",
+            keypath="/path/to/key",
+            working_dir="/home/user/work",
+            ssh_port=2200,
+            volume="/host:/container",
+            devices=["/dev/null:/dev/null:rwm"],
+            pull=False,
+        )
+
+        self.assertEqual(task.ssh_port, 2200)
+        self.assertEqual(task.volume, "/host:/container")
+        self.assertEqual(task.devices, ["/dev/null:/dev/null:rwm"])
+        self.assertFalse(task.pull)
+        self.mock_ssh_manager_class.assert_called_with(
+            "user", "192.168.1.10", "/path/to/key", port=2200
+        )
+        self.mock_docker_client_class.assert_called_with(
+            base_url="ssh://user@192.168.1.10:2200", timeout=300
+        )
 
     def test_on_execute_runs_remote_command(self):
         """Should execute remote bash command."""

@@ -34,6 +34,7 @@ class RemoteTask(Task):
             ssh_username: Optional[str] = None,
             keypath: Optional[str] = None,
             ip: Optional[str] = None,
+            ssh_port: int = 22,
             working_dir: Optional[str] = None,
             globusendpoint: Optional[str] = None,
             transversal_workflow: Optional[str] = None) -> None:

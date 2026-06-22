@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from dagon import Batch
 from dagon.remote import RemoteTask
@@ -36,6 +36,8 @@ class DockerTask(Batch):
             globusendpoint: Optional[str] = None,
             remove: bool = True,
             volume: Optional[str] = None,
+            devices: Optional[List[str]] = None,
+            pull: bool = True,
             transversal_workflow: Optional[str] = None) -> None:
         """
         :param name: task name
@@ -58,6 +60,9 @@ class DockerTask(Batch):
         
         :param pull: if it's True the image will be pulled from registry
         :type pull: bool
+
+        :param devices: device mappings accepted by the Docker SDK
+        :type devices: list(str)
         """
 
         Task.__init__(self, name, command, working_dir=working_dir,
@@ -68,8 +73,8 @@ class DockerTask(Batch):
         self.remove = remove
         self.image = image
         self.volume = volume
-        self.devices = devices
-        self.pull = pull  # ← AÑADIDO
+        self.devices = devices or []
+        self.pull = pull
         try:
             self.docker_client2 = docker.from_env()
         except Exception:
@@ -247,7 +252,11 @@ class DockerRemoteTask(RemoteTask, DockerTask):
             keypath: Optional[str] = None,
             working_dir: Optional[str] = None,
             remove: bool = True,
-            globusendpoint: Optional[str] = None) -> None:
+            globusendpoint: Optional[str] = None,
+            volume: Optional[str] = None,
+            devices: Optional[List[str]] = None,
+            pull: bool = True,
+            ssh_port: int = 22) -> None:
         """
         :param name: task name
         :type name: str
@@ -287,9 +296,9 @@ class DockerRemoteTask(RemoteTask, DockerTask):
         """
 
         DockerTask.__init__(self, name, command, container_id=container_id, working_dir=working_dir, image=image,
-                            remove=remove, globusendpoint=globusendpoint, volume=volume, devices=devices, pull=pull)  # ← AÑADIDO pull=pull
+                            remove=remove, globusendpoint=globusendpoint, volume=volume, devices=devices, pull=pull)
         RemoteTask.__init__(self, name=name, ssh_username=ssh_username, keypath=keypath, command=command, ip=ip,
-                            working_dir=working_dir, globusendpoint=globusendpoint, ssh_port=ssh_port)  
+                            working_dir=working_dir, globusendpoint=globusendpoint, ssh_port=ssh_port)
         
         # Construir la URL SSH con el puerto si no es el 22 por defecto
         if ssh_port != 22:
