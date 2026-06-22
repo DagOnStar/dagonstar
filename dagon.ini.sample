@@ -17,9 +17,16 @@ threads=1
 [slurm]
 partition=
 
+; Define any number of OpenAI-compatible LLM providers as [llm.<name>].
+; Keep real keys in an ignored local dagon.ini or environment variable.
+; [llm.example]
+; endpoint=https://api.example.com
+; api_key_env=DAGON_LLM_EXAMPLE_API_KEY
+; model=example-chat-model
+
 [ec2]
-key=AKIAJHPEAY3YIIDMG2NQ
-secret=
+key=<aws_access_key_id>
+secret=<aws_secret_access_key>
 region=
 
 [digitalocean]

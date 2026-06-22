@@ -1,16 +1,28 @@
-from dagon.task import Task
+from typing import Any, Optional
+
+from dagon.task import ExecutionResult, Task
 from dagon.remote import  RemoteTask
 from subprocess import Popen, PIPE, STDOUT
 import shutil
 import json
+import shlex
+from dagon.shell import join_command, quote
 
 class Checkpoint(Task):
     """
     **Set an explicit Checkpoint saving the workflow status and enabling the resume**
     """
 
-    def __init__(self, name, command, ip=None, ssh_username=None, keypath=None, working_dir=None, 
-                 globusendpoint=None, transversal_workflow=None):
+    def __init__(
+            self,
+            name: str,
+            command: str,
+            ip: Optional[str] = None,
+            ssh_username: Optional[str] = None,
+            keypath: Optional[str] = None,
+            working_dir: Optional[str] = None,
+            globusendpoint: Optional[str] = None,
+            transversal_workflow: Optional[str] = None) -> None:
         """
         :param name: task name
         :type name: str
@@ -39,7 +51,7 @@ class Checkpoint(Task):
         Task.__init__(self, name, command, working_dir, transversal_workflow=transversal_workflow,
                       globusendpoint=globusendpoint)
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         """Create a local checkpoint task
 
            Keyword arguments:
@@ -59,7 +71,7 @@ class Checkpoint(Task):
             return super().__new__(cls)
 
     @staticmethod
-    def execute_command(command):
+    def execute_command(command: str) -> ExecutionResult:
         """
         Executes a local command
 
@@ -72,17 +84,19 @@ class Checkpoint(Task):
         # Implement here the code for the checkpoint saving
         # ...
 
-        p = Popen(command.split(" "), stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, bufsize=-1,
+        p = Popen(shlex.split(command), stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, bufsize=-1,
                   universal_newlines=True)
         
         out, err = p.communicate()
 
-        code, message = 0, ""
-        if len(err):
-            code, message = 1, err
+        code, message = p.returncode, ""
+        if err:
+            message = err
+        elif code:
+            message = out
         return {"code": code, "message": message, "output": out}
 
-    def on_execute(self, script, script_name):
+    def on_execute(self, script: str, script_name: str) -> ExecutionResult:
         """
         Invoke the script specified
 
@@ -108,7 +122,7 @@ do
 done
 
 # Move the files in the root of the scratch directory
-mv """ + self.working_dir + """/.dagon/inputs/* """ + self.working_dir + r"""/
+mv """ + quote(self.working_dir + "/.dagon/inputs") + """/* """ + quote(self.working_dir) + r"""/
 EOF
 
 # Set the execution bit for the checkpoit script
@@ -126,21 +140,21 @@ chmod +x checkpoint.sh
 
         # Invoke the base method
         super(Checkpoint, self).on_execute(script, script_name)
-        return Checkpoint.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
+        return Checkpoint.execute_command(join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
 
     # returns public key
-    def get_public_key(self):
+    def get_public_key(self) -> str:
         """
         Return the temporal public key to this machine
 
         :return: public key
         :rtype: str with the public key
         """
-        command = "cat " + self.working_dir + "/.dagon/ssh_key.pub"
+        command = join_command(("cat", self.working_dir + "/.dagon/ssh_key.pub"))
         result = Checkpoint.execute_command(command)
         return result['output']
 
-    def add_public_key(self, key):
+    def add_public_key(self, key: str) -> ExecutionResult:
         """
         Add a SSH public key on the remote machine
 
@@ -149,11 +163,11 @@ chmod +x checkpoint.sh
         :return: result of the execution
         :rtype: dict() with the execution output (str) and code (int)
         """
-        command = "echo " + key.strip() + "| cat >> ~/.ssh/authorized_keys"
+        command = "printf '%s\\n' " + quote(key.strip()) + " >> ~/.ssh/authorized_keys"
         result = Checkpoint.execute_command(command)
         return result
 
-    def on_garbage(self):
+    def on_garbage(self) -> None:
         """
         Call garbage collector, removing the scratch directory, containers and instances related to the
         task
@@ -180,7 +194,15 @@ class RemoteCheckpoint(RemoteTask, Checkpoint):
     **Set an explicit Checkpoint saving the workflow status and enabling the resume on remote resources**
     """
 
-    def __init__(self, name, command, ssh_username=None, keypath=None, ip=None, working_dir=None, globusendpoint=None):
+    def __init__(
+            self,
+            name: str,
+            command: str,
+            ssh_username: Optional[str] = None,
+            keypath: Optional[str] = None,
+            ip: Optional[str] = None,
+            working_dir: Optional[str] = None,
+            globusendpoint: Optional[str] = None) -> None:
         """
         :param name: name of the task
         :type name: str
@@ -210,7 +232,7 @@ class RemoteCheckpoint(RemoteTask, Checkpoint):
                             globusendpoint=globusendpoint)
 
     
-    def on_garbage(self):
+    def on_garbage(self) -> None:
         """
         Call garbage collector, removing the scratch directory, containers and instances related to the
         task
@@ -219,8 +241,8 @@ class RemoteCheckpoint(RemoteTask, Checkpoint):
         # Perform some logging
         self.workflow.logger.debug("Renaming %s", self.working_dir)
 
-        self.ssh_connection.execute_command('mv {0} {1}'.format(self.working_dir,
-                                            self.working_dir + "-checkpoint"))
+        self.ssh_connection.execute_command(join_command(("mv", self.working_dir,
+                                                          self.working_dir + "-checkpoint")))
 
         # Update the working directory
         self.working_dir = self.working_dir + "-checkpoint"
@@ -232,7 +254,7 @@ class RemoteCheckpoint(RemoteTask, Checkpoint):
         fp.write(json.dumps(self.workflow.checkpoints, sort_keys=True, indent=4))
         fp.close()
         
-    def on_execute(self, launcher_script, script_name):
+    def on_execute(self, launcher_script: str, script_name: str) -> ExecutionResult:
         """
         Execute a script on the remote machine
 
@@ -260,7 +282,7 @@ do
 done
 
 # Move the files in the root of the scratch directory
-mv """ + self.working_dir + r"""/.dagon/inputs/* """ + self.working_dir + r"""/
+mv """ + quote(self.working_dir + "/.dagon/inputs") + """/* """ + quote(self.working_dir) + r"""/
 EOF
 
 # Set the execution bit for the checkpoint script
@@ -271,5 +293,5 @@ chmod +x checkpoint.sh
         
         # Invoke the base method
         RemoteTask.on_execute(self, launcher_script, script_name)
-        result = self.ssh_connection.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
+        result = self.ssh_connection.execute_command(join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
         return result

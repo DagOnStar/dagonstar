@@ -6,7 +6,6 @@ graphviz==0.20.1
 globus_sdk==3.28.0
 docker==7.1.0
 apache-libcloud==3.8.0
-configparser==6.0.0
 flask==2.2.2
 Flask-API==3.1
 werkzeug==2.2.2
