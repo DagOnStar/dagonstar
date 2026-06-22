@@ -2,6 +2,21 @@
 
 > Colab compatibility: supported. Use `/content` or mounted Google Drive when scratch outputs must persist.
 
+## Run in Google Colab
+
+Copy the **Code** into `lesson_04.py` using `%%writefile lesson_04.py`, then:
+
+```python
+!git clone https://github.com/DagOnStar/dagonstar.git
+%cd dagonstar
+!pip install -e .
+!cp dagon.ini.sample dagon.ini
+!python3 lesson_04.py
+```
+
+For persistent inspection, configure `scratch_dir_base` under mounted Google
+Drive instead of the default temporary runtime storage.
+
 ## Objective
 
 Understand what DAGonStar writes during execution.

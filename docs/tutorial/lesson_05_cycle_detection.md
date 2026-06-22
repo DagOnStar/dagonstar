@@ -2,6 +2,18 @@
 
 > Colab compatibility: supported. This is a local structural check.
 
+## Run in Google Colab
+
+Copy the **Code** into a `%%writefile lesson_05_cycle.py` cell, then use:
+
+```python
+!git clone https://github.com/DagOnStar/dagonstar.git
+%cd dagonstar
+!pip install -e .
+!cp dagon.ini.sample dagon.ini
+!python3 lesson_05_cycle.py
+```
+
 ## Objective
 
 Learn how DAGonStar rejects invalid workflow graphs.

@@ -2,6 +2,20 @@
 
 > Colab compatibility: supported. The example starts its local HTTP service in the runtime.
 
+## Run in Google Colab
+
+Run the included local HTTP example from a fresh runtime:
+
+```python
+!git clone https://github.com/DagOnStar/dagonstar.git
+%cd dagonstar
+!pip install -e .
+!python3 examples/tutorial/lesson_13_web_tasks.py
+```
+
+The service is bound inside the Colab runtime and is only used by the workflow;
+it is not exposed as a public endpoint.
+
 ## Objective
 
 Construct a reproducible workflow in which a local HTTP service receives a file

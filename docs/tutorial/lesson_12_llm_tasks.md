@@ -2,6 +2,20 @@
 
 > Colab compatibility: supported. The documented local mock provider does not require credentials.
 
+## Run in Google Colab
+
+Run the included, credential-free local mock example:
+
+```python
+!git clone https://github.com/DagOnStar/dagonstar.git
+%cd dagonstar
+!pip install -e .
+!python3 examples/tutorial/lesson_12_llm_tasks.py
+```
+
+Do not put real provider API keys in notebook cells. Use a runtime secret or
+short-lived environment configuration when adapting the example to a real LLM.
+
 ## Objective
 
 Build a two-task workflow that produces a text report, passes it to an

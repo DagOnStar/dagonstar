@@ -2,6 +2,13 @@
 
 > Colab compatibility: not supported in hosted Colab. This lesson requires a Docker daemon.
 
+## Run in Google Colab
+
+Hosted Colab does not provide a supported Docker daemon, so this example cannot
+be run there as written. Run it on a local machine or remote VM with Docker
+installed, or use Colab only as a client for a separately configured remote
+Docker-capable backend.
+
 ## Objective
 
 Run a task inside a Docker container.

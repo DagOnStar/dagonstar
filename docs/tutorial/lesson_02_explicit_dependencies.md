@@ -2,6 +2,19 @@
 
 > Colab compatibility: supported. Runs as local batch tasks in hosted Colab.
 
+## Run in Google Colab
+
+Clone and install DAGonStar, copy the lesson's **Code** into a cell beginning
+with `%%writefile lesson_02.py`, then run:
+
+```python
+!git clone https://github.com/DagOnStar/dagonstar.git
+%cd dagonstar
+!pip install -e .
+!cp dagon.ini.sample dagon.ini
+!python3 lesson_02.py
+```
+
 ## Objective
 
 Create a workflow where tasks execute in a controlled order.

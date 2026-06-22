@@ -2,6 +2,22 @@
 
 > Colab compatibility: partially supported. Local staging works; remote data movers need their configured service.
 
+## Run in Google Colab
+
+The local staging mode can run in Colab. Copy the **Code** into
+`lesson_07.py` with `%%writefile lesson_07.py`, then run:
+
+```python
+!git clone https://github.com/DagOnStar/dagonstar.git
+%cd dagonstar
+!pip install -e .
+!cp dagon.ini.sample dagon.ini
+!python3 lesson_07.py
+```
+
+Do not select SCP, Globus, or SKYCDS modes unless their remote service and
+credentials have been configured separately.
+
 ## Objective
 
 Control how DAGonStar stages files between tasks.

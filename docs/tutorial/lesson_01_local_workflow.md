@@ -2,6 +2,22 @@
 
 > Colab compatibility: supported. Runs as a local batch workflow in hosted Colab.
 
+## Run in Google Colab
+
+In a fresh notebook, install the current repository version, then copy the
+code below into a cell beginning with `%%writefile lesson_01.py` and run it:
+
+```python
+!git clone https://github.com/DagOnStar/dagonstar.git
+%cd dagonstar
+!pip install -e .
+!cp dagon.ini.sample dagon.ini
+!python3 lesson_01.py
+```
+
+The scratch output is ephemeral; set `scratch_dir_base` to mounted Drive if it
+must survive a runtime reset.
+
 ## Objective
 
 Create and run the smallest useful DAGonStar workflow.
