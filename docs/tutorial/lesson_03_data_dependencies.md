@@ -1,5 +1,7 @@
 # Lesson 03: Use `workflow://` Data Dependencies
 
+> Colab compatibility: supported. `workflow://` references work for files created in the Colab runtime.
+
 ## Objective
 
 Let DAGonStar infer dependencies from data references.

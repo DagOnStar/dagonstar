@@ -1,5 +1,7 @@
 # Lesson 08: Run Docker-Backed Tasks
 
+> Colab compatibility: not supported in hosted Colab. This lesson requires a Docker daemon.
+
 ## Objective
 
 Run a task inside a Docker container.

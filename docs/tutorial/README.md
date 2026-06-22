@@ -24,6 +24,41 @@ explicitly marked as optional integration exercises.
 13. [Execute a web task locally](lesson_13_web_tasks.md)
 14. [Execute native Python tasks](lesson_14_native_tasks.md)
 
+## Google Colab compatibility
+
+The following is the Colab compatibility statement for every tutorial lesson.
+Hosted Colab is a local, ephemeral runtime: use it for the supported lessons,
+and treat remote services as separately configured backends.
+
+| Lesson | Colab compatibility | Notes |
+|---|---|---|
+| 01 Local workflow | Supported | Local batch task. |
+| 02 Explicit dependencies | Supported | Local batch tasks. |
+| 03 Data dependencies | Supported | `workflow://` works within the runtime. |
+| 04 Scratch and launchers | Supported | Use `/content` or Drive for persistence. |
+| 05 Cycle detection | Supported | Local structural behavior. |
+| 06 Checkpointing | Supported with care | Store checkpoints in Drive to survive resets. |
+| 07 Data staging | Partially supported | Local copy works; remote movers need their service. |
+| 08 Docker tasks | Not supported in hosted Colab | Requires a Docker daemon. |
+| 09 Remote and Slurm | Partially supported | Colab can be an SSH client, not a cluster. |
+| 10 Meta-workflows | Supported | Local workflow composition. |
+| 11 Asynchronous launch | Supported with care | The runtime can disconnect or reset. |
+| 12 Local LLM task | Supported | Uses the included local mock provider. |
+| 13 Local web task | Supported | Starts its local service in the runtime. |
+| 14 Native Python tasks | Supported | Local Python functions. |
+
+For supported lessons, first choose one installation method in a Colab cell:
+
+```python
+!pip install dagonstar                 # packaged stable release
+# or
+!pip install git+https://github.com/DagOnStar/dagonstar.git  # latest main
+```
+
+Clone the repository and use `pip install -e .` when a lesson needs repository
+files. See [the Colab guide](../colab.md) for persistence, security, and backend
+limitations.
+
 ## Verification convention
 
 Each lesson includes a self-contained, copy-pasteable source example, as well as:

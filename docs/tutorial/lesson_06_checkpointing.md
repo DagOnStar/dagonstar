@@ -1,5 +1,7 @@
 # Lesson 06: Use Checkpoint Files
 
+> Colab compatibility: supported with care. Store checkpoints in Google Drive if they must survive a runtime reset.
+
 ## Objective
 
 Record task completion metadata and resume a workflow.

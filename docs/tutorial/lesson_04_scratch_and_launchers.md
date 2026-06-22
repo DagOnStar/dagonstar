@@ -1,5 +1,7 @@
 # Lesson 04: Inspect Scratch Directories and Generated Launchers
 
+> Colab compatibility: supported. Use `/content` or mounted Google Drive when scratch outputs must persist.
+
 ## Objective
 
 Understand what DAGonStar writes during execution.

@@ -1,5 +1,7 @@
 # Lesson 02: Add Explicit Task Dependencies
 
+> Colab compatibility: supported. Runs as local batch tasks in hosted Colab.
+
 ## Objective
 
 Create a workflow where tasks execute in a controlled order.

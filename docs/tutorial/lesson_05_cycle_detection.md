@@ -1,5 +1,7 @@
 # Lesson 05: Detect and Fix Dependency Cycles
 
+> Colab compatibility: supported. This is a local structural check.
+
 ## Objective
 
 Learn how DAGonStar rejects invalid workflow graphs.

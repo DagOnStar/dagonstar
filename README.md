@@ -128,6 +128,8 @@ The full documentation set is available in `docs/`:
 - [The `workflow://` Schema](docs/the_workflow_schema.md)
 - [Checkpoints](docs/checkpoints.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
+- [Using DAGonStar from Jupyter Notebook](docs/jupyter_notebook.md)
+- [Running DAGonStar demos in Google Colab](docs/colab.md)
 - [Examples Catalog](docs/examples/README.md)
 - [Tutorials: fourteen incremental lessons](docs/tutorial/README.md)
 

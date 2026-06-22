@@ -31,6 +31,9 @@ verification strategy.
 - [Web task example](web_tasks.md): local HTTP execution, staged uploads, and response outputs.
 - [Tutorial source programs](../../examples/tutorial/README.md): runnable local
   sources for the advanced LLM and web lessons.
+- [Colab notebook authoring](colab_notebooks.md): how to pair DAGonStar Python
+  scripts with fresh-runtime Google Colab notebooks; source examples:
+  [`examples/colab/`](../../examples/colab/README.md).
 
 ## How to use this catalog
 

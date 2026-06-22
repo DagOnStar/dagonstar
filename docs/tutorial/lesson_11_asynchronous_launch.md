@@ -1,5 +1,7 @@
 # Lesson 11: Launch a Workflow Asynchronously
 
+> Colab compatibility: supported with care. A hosted runtime may disconnect or reset while work is running.
+
 ## Objective
 
 Start a workflow without blocking the main Python thread, observe its lifecycle,

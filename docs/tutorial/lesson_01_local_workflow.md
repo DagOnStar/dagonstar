@@ -1,5 +1,7 @@
 # Lesson 01: Create a Local Workflow
 
+> Colab compatibility: supported. Runs as a local batch workflow in hosted Colab.
+
 ## Objective
 
 Create and run the smallest useful DAGonStar workflow.
