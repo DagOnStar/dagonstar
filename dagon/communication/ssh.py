@@ -1,3 +1,5 @@
+import logging
+
 import paramiko
 from paramiko import SSHClient
 
@@ -41,6 +43,7 @@ class SSHManager:
         self.host = host
         self.keypath = keypath
         self.connection = self.get_ssh_connection()
+        self.logger = logging.getLogger()
 
     def get_connection(self):
         """

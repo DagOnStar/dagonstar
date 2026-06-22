@@ -1,10 +1,14 @@
-# DAGonStar (aka DAGon\*)
-DAGonStar (Direct acyclic graph On anything) is a lightweight Python library implementing
-a workflow engine able to execute parallel jobs represented by direct acyclic graphs on
-any combination of local machines, on-premise high-performance computing clusters,
-containers, and cloud-based virtual infrastructures.
+# DAGonStar
 
- ![The DAGonStar Logo](/figures/DAGonStar_Logo01.png)
+DAGonStar, also written as DAGon\*, is a lightweight Python workflow engine for
+running directed acyclic graph (DAG) workflows across local machines, remote
+servers, HPC clusters, containers, and cloud infrastructure.
+
+![The DAGonStar logo](figures/DAGonStar_Logo01.png)
+
+DAGonStar workflows are ordinary Python programs. Tasks can depend explicitly on
+other tasks, or implicitly through `workflow://` data references that DAGonStar
+resolves into task dependencies and staging operations.
 
 DAGonStar is used as the primary workflow engine to run real-world production-level
 applications.
@@ -14,42 +18,19 @@ applications hosted at the University of Naples "Parthenope".
 
 # Motivation
 Thanks to the advent of public, private, and hybrid clouds, the democratization of
-Computational resources changed the rules in many science fields.
+Computational resources changed the rules in many scientific fields.
 For decades, one of the efforts of computer scientists and computer engineers was the
 development of tools able to simplify access to high-end computational resources by
 computational scientists. However, nowadays, any science field can be considered
 "computational" if the availability of powerful but easy-to-manage workflow
 engines is crucial.
 
-# Features
-
-* Workflows described as a Python script
-* Fully supporting the workflow:// schema
-* Supported task types:
-  * Local
-  * Bash
-  * Remote
-  * Slurm
-  * REST
-  * Cloud (AWS, Digital Ocean, Google Grid, Azure, OpenStack)
-  * Container (Docker)
-  * IoT (Compute Continuum)
-* Task related data locality
-* Transparent staging technologies
-  * Link
-  * Copy
-  * Secure Copy
-  * Globus
-* Parallel patterns
-* Implicit and explicit checkpoint system
-* Garbage collector for scratch directory footprint minimization
-
 # Acknowledgments
 The following initiatives support DAGonStar development:
 
 * Research agreement "Modelling mytilus farming at scale"
   (MytilX, CUP D13C24000470002, funded by the Istituto Zooprofilattico Sperimentale dell’Umbria e delle Marche) -
-  DAGonStar orchestrates the production workflow to deliver use case, study zones specific, weather, marine, pollutants,
+  DAGonStar orchestrates the production workflow to deliver use cases, study zones specific to weather, marine, pollutants,
   and farmed mussels contamination forecasts and predictions.
 
 
@@ -61,7 +42,7 @@ The following initiatives support DAGonStar development:
 
 * EuroHPC H2020 project "Adaptative Multi-tier Intelligent data manager for Exascale"
   (ADMIRE, 956748-ADMIRE-H2020-JTI-EuroHPC-2019-1, funded by the European Commission) - 
-  WP7: DAGonStar orchestrates the Environmental Application delivering on-demand weather, marine,
+  WP7: DAGonStar orchestrates the Environmental Application, delivering on-demand weather, marine,
   and pollutants simulations and forecasts on the Campania Region (Italy).
   [link](https://www.admire-eurohpc.eu)
 
@@ -129,159 +110,278 @@ The following initiatives support DAGonStar development:
   In Proceedings of the 18th ACM international conference on computing frontiers, pp. 178-184. 2021.
   [link](https://dl.acm.org/doi/abs/10.1145/3457388.3458508)
 
-# Installation 
+## License
+
+DAGonStar is distributed under the Apache License 2.0. See `LICENSE`.
+## Documentation
+
+The full documentation set is available in `docs/`:
+
+- [Introduction to Scientific Workflows](docs/introduction_to_scientific_workflow.md)
+- [Getting Started](docs/getting_started.md)
+- [Configuration](docs/configuration.md)
+- [Architecture](docs/architecture.md)
+- [User Guide](docs/user_guide.md)
+- [Reference Guide](docs/reference_guide.md)
+- [Developer Guide](docs/developer_guide.md)
+- [Running External Scientific Software](docs/running_external_software.md)
+- [The `workflow://` Schema](docs/the_workflow_schema.md)
+- [Checkpoints](docs/checkpoints.md)
+- [Asynchronous workflow launch](docs/asynch_launch.md)
+- [Using DAGonStar from Jupyter Notebook](docs/jupyter_notebook.md)
+- [Running DAGonStar demos in Google Colab](docs/colab.md)
+- [Examples Catalog](docs/examples/README.md)
+- [Tutorials: fourteen incremental lessons](docs/tutorial/README.md)
+
+## What DAGonStar supports
+
+- Python-defined workflows.
+- Explicit task graphs and data-driven dependency discovery.
+- Local batch tasks.
+- Remote SSH tasks.
+- Slurm tasks.
+- Docker tasks, locally or over SSH.
+- Cloud-backed tasks through Apache Libcloud providers.
+- OpenAI-compatible LLM tasks with JSON prompts and `workflow://` text inputs.
+- Native Python-function tasks with staged file bindings and JSON result metadata.
+- Web tasks for structured HTTP/HTTPS requests with scratch-local response outputs.
+- Data staging by link, copy, SCP, Globus, and SKYCDS.
+- Checkpoint/resume support.
+- Meta-workflows that coordinate multiple workflows.
+
+## Project status and quality assessment
+
+DAGonStar is a research-oriented workflow engine with a useful, documented
+core, rather than a fully polished modern library. Its strongest areas are the
+compact Python workflow model, explicit and `workflow://`-derived dependencies,
+checkpointing, and a broad set of execution and staging integrations.
+Workflows can also run in a background thread with lifecycle callbacks for
+local progress reporting.
+
+The repository has a sound baseline for changes to the core behavior:
+
+- 47 unit tests cover configuration parsing, workflow defaults, and dependency
+  discovery, cycle validation, JSON serialization, checkpoint reuse, staging
+  command generation, packaging extras, optional integration boundaries, and
+  selected shell-quoting behavior;
+- GitHub Actions runs that suite and source compilation on Python 3.8 and
+  Python 3.12, plus focused Ruff and mypy checks on Python 3.12;
+- package extras keep Docker, cloud, Globus, and API dependencies out of the
+  base installation;
+- base `requests` and `graphviz` requirements use compatible version ranges,
+  allowing hosted notebook environments such as Google Colab to retain their
+  platform dependencies;
+- documentation covers configuration, architecture, checkpoints, examples,
+  and the incremental tutorial; and
+- sample configuration avoids committed credentials and the SKYCDS path checks
+  for required runtime configuration; and
+- the LLM task boundary has local tests and a fully local mock-provider example.
+- native Python tasks have local staging, dependency, output, and runner tests.
+
+The test suite is intentionally fast and local: it validates command generation,
+failure propagation, and integration boundaries, not live Docker, SSH, Slurm,
+cloud, Globus, or SKYCDS services. CI also runs focused style checks and a
+progressive type check over the shell-command helper. Several legacy and
+site-specific code paths still construct shell commands, so changes around
+external execution should be kept small, quoted defensively, and verified at
+the boundary being changed.
+
+## Installation
+
+Use Python 3.8 or newer.
 
 ```bash
-git clone https://github.com/DagOnStar/dagonstar.git  
-cd dagonstar  
-python3 -m venv venv  
-. venv/bin/activate  
-pip install -r requirements.txt  
-export PYTHONPATH=$PWD:$PYTHONPATH  
+git clone https://github.com/DagOnStar/dagonstar.git
+cd dagonstar
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-## Troubleshooting 
-
-* On some MacOS installations, pycrypto fails to automatically install. 
-  Usually this is due to *gmp* library missing in the default include and library path.
-  Before launching the requirements install, find the location of the missing library.
-  Then export the CFLAGS as in the example below (The actual path could be different):
+For editable development installs:
 
 ```bash
-export "CFLAGS=-I/usr/local/Cellar/gmp/6.2.1_1/include -L/usr/local/Cellar/gmp/6.2.1_1/lib"
+python -m pip install -e .
 ```
 
-
-# Demo
-
-Copy the configuration file in the examples directory.
+Optional integrations are available as install extras:
 
 ```bash
-cp dagon.ini.sample examples/dagon.ini 
-cd examples
+python -m pip install -e ".[docker]"
+python -m pip install -e ".[cloud]"
+python -m pip install -e ".[globus]"
+python -m pip install -e ".[api]"
+python -m pip install -e ".[all]"
 ```
 
-Edit the ini file matching your system configuration.
+The base package does not install Docker, cloud, Globus, or Flask service
+libraries. If an integration is requested without its extra, DAGonStar reports
+the corresponding install command at the integration boundary.
 
-## Task oriented workflow.
+`requirements.txt` remains a full development/demo environment that installs
+the optional integration dependencies together.
 
-The workflow is defined as tasks and their explicit dependencies.
+## Configuration
+
+Copy the sample configuration before running examples:
 
 ```bash
-python taskflow-demo.py
+cp dagon.ini.sample dagon.ini
 ```
 
-## Data oriented workflow.
+Important sections:
 
-The workflow is defined by data dependencies (task dependencies are automatically resolved)
+- `[batch]`: local scratch directory and staging thread settings.
+- `[dagon_service]`: optional DAGon service registration.
+- `[slurm]`: default Slurm partition for Slurm staging or tasks.
+- `[ec2]`, `[digitalocean]`, `[gce]`: optional cloud credentials.
+- `[llm.<name>]`: optional OpenAI-compatible LLM provider configuration.
 
-```bash 
-python dataflow-demo.py
+Never commit real cloud keys, Globus tokens, SKYCDS tokens, SSH private keys, or
+site-specific passwords. SKYCDS values are read from these environment variables:
+
+```bash
+export DAGON_SKYCDS_CLIENT_TOKEN=...
+export DAGON_SKYCDS_CATALOG_TOKEN=...
+export DAGON_SKYCDS_API_TOKEN=...
+export DAGON_SKYCDS_IP=...
 ```
 
+## Quick start
 
-## Batch Task Flow
+This example creates a four-task local workflow. Task `D` consumes outputs from
+tasks `B` and `C`; the `workflow://` references are used to infer dependencies
+and stage files.
+
 ```python
-    from dagon import Workflow
-    from dagon.task import TaskType, DagonTask
+from dagon import Workflow
+from dagon.task import DagonTask, TaskType
 
-    # Create the orchestration workflow
-    workflow = Workflow("Taskflow-Demo")
-  
-    taskA = DagonTask(TaskType.BATCH, "Tokio", "/bin/hostname >tokio.out")
-    taskB = DagonTask(TaskType.BATCH, "Berlin", "/bin/date")
-    taskC = DagonTask(TaskType.BATCH, "Nairobi", "/usr/bin/uptime")
-    taskD = DagonTask(TaskType.BATCH, "Mosco", "cat workflow://Tokio/tokio.out")
 
-    workflow.add_task(taskA)
-    workflow.add_task(taskB)
-    workflow.add_task(taskC)
-    workflow.add_task(taskD)
-  
-    taskB.add_dependency_to(taskA)
-    taskC.add_dependency_to(taskA)
-    taskD.add_dependency_to(taskB)
-    taskD.add_dependency_to(taskC)
-    
+if __name__ == "__main__":
+    workflow = Workflow("DataFlow-Demo")
+
+    task_a = DagonTask(TaskType.BATCH, "A", "mkdir -p output; hostname > output/f1.txt")
+    task_b = DagonTask(TaskType.BATCH, "B", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt")
+    task_c = DagonTask(TaskType.BATCH, "C", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt")
+    task_d = DagonTask(TaskType.BATCH, "D", "cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt")
+
+    for task in (task_a, task_b, task_c, task_d):
+        workflow.add_task(task)
+
+    workflow.make_dependencies()
     workflow.run()
 ```
 
-## Batch Data Flow
-```python
-    from dagon import Workflow
-    from dagon.task import DagonTask, TaskType
-    
-    # Check if this is the main
-    if __name__ == '__main__':    
-      # Create the orchestration workflow
-      workflow=Workflow("DataFlow-Demo")
-      
-      # The task a
-      taskA = DagonTask(TaskType.BATCH, "A", "mkdir output; hostname > output/f1.txt")
+## Running examples
 
-      # The task b
-      taskB = DagonTask(TaskType.BATCH, "B", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt")
+Most examples expect a `dagon.ini` file in the current working directory or in
+the example directory.
 
-      # The task c
-      taskC = DagonTask(TaskType.BATCH, "C", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt")
-
-      # The task d
-      taskD = DagonTask(TaskType.BATCH, "D", "cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt")
-      
-      # add tasks to the workflow
-      workflow.add_task(taskA)
-      workflow.add_task(taskB)
-      workflow.add_task(taskC)
-      workflow.add_task(taskD)
-    
-      workflow.make_dependencies()
-
-      # run the workflow
-      workflow.run()
+```bash
+cp dagon.ini.sample examples/dagon.ini
+cd examples/taskflow
+python taskflow-demo.py
 ```
-## Meta workflow
+
+Example groups:
+
+- `examples/taskflow`: explicit task dependencies.
+- `examples/dataflow/batch`: local data-driven workflows and checkpointing.
+- `examples/dataflow/slurm`: Slurm and remote Slurm workflows.
+- `examples/dataflow/docker`: Docker-backed workflows.
+- `examples/dataflow/cloud`: cloud-backed task examples.
+- `examples/transversal`: meta-workflow and transversal processing examples.
+- `examples/hipes-tutorial`: tutorial material for HiPES workflows.
+- `examples/envapp`: environmental application workflows and utilities.
+- `examples/async`: local asynchronous launch and lifecycle-callback example.
+- `examples/native`: importable Python functions with staged `workflow://` inputs.
+- `examples/web`: local HTTP request, staged upload, and downstream native processing.
+
+## Web tasks
+
+`TaskType.WEB` executes a JSON-serializable HTTP request through the task executor:
+
 ```python
-    from dagon import Workflow
-    from dagon.dag_tps import DAG_TPS
-    from dagon.task import DagonTask, TaskType
-    
-    workflow = Workflow("DataFlow-Demo-Server")
-    workflow.set_dry(False)    # Set the dry
-    # The task a
-    taskA = DagonTask(TaskType.BATCH, "A", "mkdir output;echo 'A1,A2,A3' > output/f1.csv")
-    # The task b
-    taskB = DagonTask(TaskType.BATCH, "B", "echo 'B1,B2,B3' > f2.csv; cat workflow:///A/output/f1.csv >> f2.csv")
-    # The task c
-    taskC = DagonTask(TaskType.BATCH, "C", "echo 'C1,C2,C3' > f2.txt; cat workflow:///A/output/f1.csv >> f2.csv")
-    # The task d
-    taskD = DagonTask(TaskType.BATCH, "D", "cat workflow:///B/f2.csv >> f3.csv; cat workflow:///C/f2.csv >> f3.csv")
-
-    #second workflow
-    workflow2 = Workflow("DataFlow-transversal")
-    workflow2.set_dry(False)    # Set the dry
-    # The task E
-    taskE = DagonTask(TaskType.BATCH, "E", "mkdir output;echo 'E1,E2,E3' > output/f1.csv")
-    # The task f
-    taskF = DagonTask(TaskType.BATCH, "F", "echo 'F1,F2,F3' > f2.csv; cat workflow://DataFlow-Demo-Server/A/output/f1.csv >> f2.csv; cat workflow:///E/output/f1.csv >> f2.csv")
-    # The task g
-    taskG = DagonTask(TaskType.BATCH, "G", "cat workflow:///F/f2.csv >> f3.csv; cat workflow://DataFlow-Demo-Server/C/f2.csv >> f3.csv")
-
-    # add tasks to the workflow 1
-    workflow.add_task(taskA)
-    workflow.add_task(taskB)
-    workflow.add_task(taskC)
-    workflow.add_task(taskD)
-
-    # add tasks to the workflow 2
-    workflow2.add_task(taskE)
-    workflow2.add_task(taskF)
-    workflow2.add_task(taskG)
-
-    #list of the workflows
-    metaworkflow=DAG_TPS("NewDAG")
-    metaworkflow.add_workflow(workflow)
-    metaworkflow.add_workflow(workflow2)
-    metaworkflow.make_dependencies()
-
-    metaworkflow.run()
+DagonTask(TaskType.WEB, "fetch", {"method": "GET", "url": "https://example.org/data", "outputs": {"body": "data.json"}})
 ```
+
+Responses are written below `outputs/` and request metadata is stored in `.dagon/`. Web tasks use the existing local or Slurm executor mode. Use environment-variable auth fields, never literal secrets. See the [example](examples/web/README.md), [example guide](docs/examples/web_tasks.md), and [tutorial](docs/tutorial/lesson_13_web_tasks.md).
+
+## Native Python tasks
+
+`TaskType.NATIVE` runs an importable function in a task scratch directory while retaining DAGonStar staging and dependencies:
+
+```python
+DagonTask(TaskType.NATIVE, "transform", "myworkflow.tasks:transform", inputs={"input_file": "workflow:///prepare/data.csv", "scale": 0.7}, outputs={"output_file": "clean.csv"})
+```
+
+File arguments are staged below `inputs/`, outputs are paths below `outputs/`, and the JSON return value is written to `.dagon/native_result.json`. See the [native example](examples/native/README.md) and [tutorial lesson](docs/tutorial/lesson_14_native_tasks.md).
+
+## Development
+
+Useful checks:
+
+```bash
+python -m unittest discover -s tests -v
+python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py
+python -m ruff check dagon/shell.py tests
+python -m mypy dagon/shell.py
+python -m pip install -e .
+```
+
+The repository includes a lightweight unit test suite under `tests/`. The tests
+focus on behavior that should remain stable while features evolve: configuration
+loading, workflow defaults, dependency discovery, cycle validation, JSON
+serialization, and runtime-secret validation.
+
+GitHub Actions runs the unit tests and source compilation checks on pushes to
+`master`/`main` and on pull requests.
+
+When changing workflow execution behavior, add a targeted unit test where
+possible. If the behavior depends on Docker, Slurm, SSH, Globus, or a cloud
+provider, add the smallest safe test for local logic and record any manual
+integration command used in your change notes.
+
+Recommended maintenance priorities:
+
+1. Add tests for checkpoint/resume behavior and staging command generation.
+2. Add integration tests for local batch workflows and mocked tests for
+   external-service integrations.
+3. Replace shell string concatenation with safer quoting helpers where practical.
+4. Split optional integrations into extras such as `dagonstar[docker]`,
+   `dagonstar[cloud]`, `dagonstar[globus]`, and `dagonstar[api]`.
+5. Add type hints to public workflow, task, configuration, and staging APIs.
+
+## Troubleshooting
+
+### Missing `dagon.ini`
+
+Create one from the sample:
+
+```bash
+cp dagon.ini.sample dagon.ini
+```
+
+### Docker examples cannot connect to Docker
+
+Check that Docker is running and that your user can access the Docker socket:
+
+```bash
+docker info
+```
+
+### Remote tasks fail over SSH
+
+Verify key-based SSH manually first:
+
+```bash
+ssh -i /path/to/key user@host hostname
+```
+
+### Globus or SKYCDS staging fails
+
+Confirm the integration-specific credentials and endpoint IDs are configured.
+SKYCDS values must be supplied through environment variables, not committed in
+source files.
