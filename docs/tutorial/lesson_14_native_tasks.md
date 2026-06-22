@@ -1,5 +1,7 @@
 # Lesson 14: Execute Native Python Tasks
 
+> Colab compatibility: supported. Native Python tasks run in the Colab runtime.
+
 ## Objective
 
 Use an importable Python function as a workflow task while preserving DAGonStar

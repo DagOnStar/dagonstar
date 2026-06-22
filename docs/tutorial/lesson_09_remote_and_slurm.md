@@ -1,5 +1,7 @@
 # Lesson 09: Prepare Remote and Slurm Workflows
 
+> Colab compatibility: partially supported. Colab can submit to reachable remote resources, but is not an SSH host or Slurm cluster.
+
 ## Objective
 
 Understand how to construct remote and Slurm tasks, and how to verify the

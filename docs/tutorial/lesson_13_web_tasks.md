@@ -1,5 +1,7 @@
 # Lesson 13: Execute a Web Task Locally
 
+> Colab compatibility: supported. The example starts its local HTTP service in the runtime.
+
 ## Objective
 
 Construct a reproducible workflow in which a local HTTP service receives a file

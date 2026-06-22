@@ -1,5 +1,7 @@
 # Lesson 07: Choose Data Staging Modes
 
+> Colab compatibility: partially supported. Local staging works; remote data movers need their configured service.
+
 ## Objective
 
 Control how DAGonStar stages files between tasks.

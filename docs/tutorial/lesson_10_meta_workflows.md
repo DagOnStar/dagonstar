@@ -1,5 +1,7 @@
 # Lesson 10: Compose Meta-Workflows
 
+> Colab compatibility: supported for local workflows. Remote backends retain their own requirements.
+
 ## Objective
 
 Coordinate more than one workflow and use transversal references.

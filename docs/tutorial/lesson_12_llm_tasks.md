@@ -1,5 +1,7 @@
 # Lesson 12: Run an LLM Task Locally
 
+> Colab compatibility: supported. The documented local mock provider does not require credentials.
+
 ## Objective
 
 Build a two-task workflow that produces a text report, passes it to an
