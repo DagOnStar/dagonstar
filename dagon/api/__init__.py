@@ -1,5 +1,6 @@
 
 from requests.exceptions import ConnectionError
+from typing import Any, Dict
 
 import requests
 from requests.exceptions import MissingSchema
@@ -7,12 +8,12 @@ from requests.exceptions import MissingSchema
 
 # Perform the communication with the dagon service
 class API:
-    def __init__(self, url):
+    def __init__(self, url: str) -> None:
         self.base_url = url
         self.checkConnection()
 
     # check if the service URL is valid or a service is available
-    def checkConnection(self):
+    def checkConnection(self) -> None:
         """
         check if the service URL is valid or a service is available
 
@@ -26,7 +27,7 @@ class API:
             raise ConnectionError("Bad URL %s" % self.base_url)
 
     # create workflow on dagon service
-    def create_workflow(self, workflow):
+    def create_workflow(self, workflow: Any) -> int:
         """
         create workflow on dagon service
 
@@ -52,7 +53,7 @@ class API:
                 raise Exception("Workflow error registration %d %s" % (res.status_code, res.reason))
 
     # add task to workflow
-    def add_task(self, workflow_id, task):
+    def add_task(self, workflow_id: int, task: Any) -> None:
         """
         add task to workflow
 
@@ -72,7 +73,7 @@ class API:
             raise Exception("Something went wrong %d %s" % (res.status_code, res.reason))
 
     # update a task status in the server
-    def update_task_status(self, workflow_id, task, status):
+    def update_task_status(self, workflow_id: int, task: str, status: str) -> None:
         """
         update a task status in the server
 
@@ -94,7 +95,7 @@ class API:
             raise Exception("Something went wrong %d %s" % (res.status_code, res.reason))
 
     # get a task from the server
-    def get_task(self, workflow_id, task):
+    def get_task(self, workflow_id: int, task: str) -> Dict[str, Any]:
         """
         get a task from the server
 
@@ -120,7 +121,7 @@ class API:
             return task
 
     # get a task from the server
-    def get_workflow_by_name(self, workflow_name):
+    def get_workflow_by_name(self, workflow_name: str) -> str:
         """
         get a workflow id from the server
 
@@ -143,7 +144,7 @@ class API:
             return workflow_id
 
     # update atribute of the task
-    def update_task(self, workflow_id, task, attribute, value):
+    def update_task(self, workflow_id: int, task: str, attribute: str, value: str) -> None:
         """
         update attribute of the task
 
@@ -169,7 +170,7 @@ class API:
             raise Exception("Something went wrong %d %s" % (res.status_code, res.reason))
 
     # add dependency on task
-    def add_dependency(self, workflow_id, task, dependency):
+    def add_dependency(self, workflow_id: int, task: str, dependency: str) -> None:
         """
         add a dependency to an existing task in a workflow
 

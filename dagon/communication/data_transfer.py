@@ -1,6 +1,5 @@
-from globus_sdk import TransferData, AccessTokenAuthorizer, TransferClient
-import globus_sdk
-import os 
+import os
+from dagon.shell import join_command
 
 class GlobusManager:
     """
@@ -14,7 +13,7 @@ class GlobusManager:
 
     """
 
-    TRANSFER_TOKEN = "Ag82ObxMdj80Gxd2ex7oVJWJnPv4dWQ8ndkpblOz51n42G6g96i8Cjqx5zKDE4jM5E2OzrJgMYMlNYC7NmMbYfk6VP"
+    TRANSFER_TOKEN = os.getenv("DAGON_GLOBUS_TRANSFER_TOKEN", "")
 
     def __init__(self, _from, _to, client_id, intermediate):
 
@@ -31,10 +30,20 @@ class GlobusManager:
         self._to = _to
         self.intermediate = intermediate
 
+        try:
+            import globus_sdk
+        except ImportError as exc:
+            raise ImportError(
+                "Globus support requires the 'globus' extra: "
+                "python -m pip install 'dagonstar[globus]'"
+            ) from exc
+
+        self.globus_sdk = globus_sdk
+
         # Initialize the Globus Native App Client to transfer data
         #print(client_id)
 
-        client = globus_sdk.NativeAppAuthClient(client_id)
+        client = self.globus_sdk.NativeAppAuthClient(client_id)
         client.oauth2_start_flow()
         authorize_url = client.oauth2_get_authorize_url()
         print(f"Please go to this URL and login:\n\n{authorize_url}\n")
@@ -48,8 +57,8 @@ class GlobusManager:
         globus_auth_token = globus_auth_data["access_token"]
         transfer_token = globus_transfer_data["access_token"]
         
-        authorizer = globus_sdk.AccessTokenAuthorizer(transfer_token)
-        self.transfer_client = globus_sdk.TransferClient(authorizer=authorizer)
+        authorizer = self.globus_sdk.AccessTokenAuthorizer(transfer_token)
+        self.transfer_client = self.globus_sdk.TransferClient(authorizer=authorizer)
         # Crea un cliente de transferencia de Globus
         #transfer_token = globus_sdk.RefreshTokenAuthorizer(globus_auth_token, client)
         #self.transfer_client = globus_sdk.TransferClient(authorizer=transfer_token)
@@ -72,7 +81,7 @@ class GlobusManager:
         :rtype: str
         """
 
-        task_data = globus_sdk.TransferData(
+        task_data = self.globus_sdk.TransferData(
             source_endpoint=self._from, destination_endpoint=self._to
         )
 
@@ -117,7 +126,7 @@ class GlobusManager:
 
         #copy the data from the source endpoint to the Globus intermediate endpoint
 
-        task_data = globus_sdk.TransferData(
+        task_data = self.globus_sdk.TransferData(
             source_endpoint=self._from, destination_endpoint=self.intermediate
         )
         
@@ -131,7 +140,7 @@ class GlobusManager:
 
         #copy the data from the source endpoint to the Globus intermediate endpoint
 
-        task_data = globus_sdk.TransferData(
+        task_data = self.globus_sdk.TransferData(
             source_endpoint=self.intermediate, destination_endpoint=self._to
         )
 
@@ -173,23 +182,40 @@ class GlobusManager:
 
 
 class SKYCDS:
-    #TODO: Read this from configuration file
-    CLIENT_TOKEN = "3c2d53762ec82cf4cb14f3c6d45601afaf4b2eb42c702fb9f9cc53fa874cf9a0"
-    CATALOG_TOKEN = "b341db39dc182f276a4685ad4c0c8eb64bef1e7e1217655ff3da6eb28095670e"
-    API_TOKEN = "16970b17feb38ad94a29443954487f8cde3221d2"
-    IP_SKYCDS = ""
+    CLIENT_TOKEN = os.getenv("DAGON_SKYCDS_CLIENT_TOKEN", "")
+    CATALOG_TOKEN = os.getenv("DAGON_SKYCDS_CATALOG_TOKEN", "")
+    API_TOKEN = os.getenv("DAGON_SKYCDS_API_TOKEN", "")
+    IP_SKYCDS = os.getenv("DAGON_SKYCDS_IP", "")
+
+    def _validate_configuration(self):
+        missing = [
+            name
+            for name, value in {
+                "DAGON_SKYCDS_CLIENT_TOKEN": self.CLIENT_TOKEN,
+                "DAGON_SKYCDS_CATALOG_TOKEN": self.CATALOG_TOKEN,
+                "DAGON_SKYCDS_API_TOKEN": self.API_TOKEN,
+                "DAGON_SKYCDS_IP": self.IP_SKYCDS,
+            }.items()
+            if not value
+        ]
+        if missing:
+            raise ValueError("Missing SKYCDS configuration: " + ", ".join(missing))
 
     def upload_data(self, task, path, mode="single", encryption=False):
+        self._validate_configuration()
         str_encryption = "true" if encryption else "false"
-        command = "tar -czvf %s/data.tar %s --exclude=*.tar &&  docker exec -i client java -jar -Xmx3g -Xmx3g CP-ABE_ST_Up.jar %s %s %s %s bob 2 %s test %s" % \
-                  (
-                  task.get_scratch_dir(), path, SKYCDS.CLIENT_TOKEN, SKYCDS.API_TOKEN, SKYCDS.CATALOG_TOKEN, mode, path,
-                  str_encryption)
+        archive = task.get_scratch_dir() + "/data.tar"
+        command = join_command(("tar", "-czvf", archive, path, "--exclude=*.tar")) + " && " + join_command((
+            "docker", "exec", "-i", "client", "java", "-jar", "-Xmx3g", "-Xmx3g", "CP-ABE_ST_Up.jar",
+            SKYCDS.CLIENT_TOKEN, SKYCDS.API_TOKEN, SKYCDS.CATALOG_TOKEN, mode, "bob", "2", path, "test",
+            str_encryption))
         result = task.execute_command(command)
         return result
 
     def download_data(self, task, path):
-        command = "mkdir -p %s && docker exec -i client java -jar -Xmx3g -Xmx3g CP-ABE_ST_Dow.jar %s %s %s %s 2 1 test %s" % \
-                  (path, SKYCDS.CLIENT_TOKEN, SKYCDS.API_TOKEN, SKYCDS.CATALOG_TOKEN, SKYCDS.IP_SKYCDS, path)
+        self._validate_configuration()
+        command = join_command(("mkdir", "-p", path)) + " && " + join_command((
+            "docker", "exec", "-i", "client", "java", "-jar", "-Xmx3g", "-Xmx3g", "CP-ABE_ST_Dow.jar",
+            SKYCDS.CLIENT_TOKEN, SKYCDS.API_TOKEN, SKYCDS.CATALOG_TOKEN, SKYCDS.IP_SKYCDS, "2", "1", "test", path))
         result = task.execute_command(command)
         return result

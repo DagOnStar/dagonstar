@@ -1,8 +1,17 @@
+from typing import Any, Optional
+
 from dagon import Batch
 from dagon.remote import RemoteTask
-from dagon.task import Task
+from dagon.task import ExecutionResult, Task
+from dagon.shell import join_command
 
-import docker
+try:
+    import docker
+except ImportError as exc:
+    raise ImportError(
+        "Docker support requires the 'docker' extra: "
+        "python -m pip install 'dagonstar[docker]'"
+    ) from exc
 
 
 class DockerTask(Batch):
@@ -17,7 +26,17 @@ class DockerTask(Batch):
 
     """
 
-    def __init__(self, name, command, image=None, container_id=None, working_dir=None, globusendpoint=None, remove=True, volume=None, devices=None, transversal_workflow=None, pull=True):
+    def __init__(
+            self,
+            name: str,
+            command: str,
+            image: Optional[str] = None,
+            container_id: Optional[str] = None,
+            working_dir: Optional[str] = None,
+            globusendpoint: Optional[str] = None,
+            remove: bool = True,
+            volume: Optional[str] = None,
+            transversal_workflow: Optional[str] = None) -> None:
         """
         :param name: task name
         :type name: str
@@ -58,13 +77,13 @@ class DockerTask(Batch):
 
         # self.docker_client = DockerClient()
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         if "ip" in kwargs:
             return super(Task, cls).__new__(DockerRemoteTask)
         else:
             return super(DockerTask, cls).__new__(cls)
 
-    def include_command(self, body):
+    def include_command(self, body: str) -> str:
         """
         Include the command to execute in the script body
 
@@ -74,29 +93,12 @@ class DockerTask(Batch):
         :return: Script body with the command
         :rtype: string
         """
-        
-        cd_command = f"cd {self.working_dir} && "
-        container_command = cd_command + body.strip()
-        
-        # Crear un script temporal para evitar problemas con heredocs anidados
-        temp_script = f"{self.working_dir}/.dagon/container_script.sh"
-        
-        # Paso 1: Crear el script en el host usando cat con un delimitador único
-        command = f"cat > {temp_script} << 'END_OF_CONTAINER_SCRIPT'\n"
-        command += f"#!/bin/bash\n"
-        command += f"{container_command}\n"
-        command += "END_OF_CONTAINER_SCRIPT\n"
-        
-        # Paso 2: Dar permisos de ejecución
-        command += f"chmod +x {temp_script}\n"
-        
-        # Paso 3: Copiar el script al contenedor y ejecutarlo
-        command += f"docker cp {temp_script} {self.container.id}:/tmp/task_script.sh\n"
-        command += f"docker exec -i {self.container.id} bash /tmp/task_script.sh | tee {self.working_dir}/.dagon/stdout.txt\n"
-        
-        return command
 
-    def pre_process_command(self, command):
+        body = super(DockerTask, self).include_command(body)
+        body = join_command(("cd", self.working_dir)) + ";" + body
+        return join_command(("docker", "exec", "-t", self.container.id, "sh", "-c", body.strip())) + "\n"
+
+    def pre_process_command(self, command: str) -> str:
         """
         Add some post process commands after the task execution. Also creates the docker container.
 
@@ -113,7 +115,7 @@ class DockerTask(Batch):
             self.container = self.get_running_container()
         return super(DockerTask, self).pre_process_command(command)
 
-    def pull_image(self, image):
+    def pull_image(self, image: str) -> None:
         """
         Pull a Docker image from Docker Hub
 
@@ -133,7 +135,8 @@ class DockerTask(Batch):
 
         # return self.docker_client.pull_image(image)
 
-    def create_container(self):
+    # Create a Docker container
+    def create_container(self) -> Any:
         """
         Creates the container where the task will be executed
         """
@@ -181,14 +184,14 @@ class DockerTask(Batch):
             self.workflow.logger.error("%s: Failed to create container.", self.name)
             raise Exception(str(e))
 
-    def get_running_container(self):
+    def get_running_container(self) -> Any:
         try:
             container = self.docker_client2.containers.get(self.container_id)
             return container
         except Exception as e:
             raise Exception(str(e))
 
-    def remove_container(self):
+    def remove_container(self) -> None:
         """
         Removes a docker container
         """
@@ -196,7 +199,7 @@ class DockerTask(Batch):
         if self.remove:
             self.container.remove()
 
-    def on_execute(self, script, script_name):
+    def on_execute(self, script: str, script_name: str) -> ExecutionResult:
         """
         Execute the task script
 
@@ -213,10 +216,10 @@ class DockerTask(Batch):
 
         # Invoke the base method
         Task.on_execute(self, script, script_name)
-        return Batch.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
+        return Batch.execute_command(join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
         # return self.docker_client.exec_command(self.working_dir + "/.dagon/" + script_name)"""
 
-    def on_garbage(self):
+    def on_garbage(self) -> None:
         """
         Call garbage collector, removing the scratch directory, containers and instances related to the
         task
@@ -233,8 +236,18 @@ class DockerRemoteTask(RemoteTask, DockerTask):
     :vartype docker_client: :class:`dagon.dockercontainer.DockerRemoteClient`
     """
 
-    def __init__(self, name, command, image=None, container_id=None, ip=None, ssh_username=None, keypath=None,
-                 working_dir=None, remove=True, globusendpoint=None, volume=None, devices=None, ssh_port=22, pull=True):  # ← AÑADIDO pull=True
+    def __init__(
+            self,
+            name: str,
+            command: str,
+            image: Optional[str] = None,
+            container_id: Optional[str] = None,
+            ip: Optional[str] = None,
+            ssh_username: Optional[str] = None,
+            keypath: Optional[str] = None,
+            working_dir: Optional[str] = None,
+            remove: bool = True,
+            globusendpoint: Optional[str] = None) -> None:
         """
         :param name: task name
         :type name: str
@@ -286,7 +299,7 @@ class DockerRemoteTask(RemoteTask, DockerTask):
             
         self.docker_client2 = docker.DockerClient(base_url=base_url, timeout=300)
 
-    def on_execute(self, launcher_script, script_name):
+    def on_execute(self, launcher_script: str, script_name: str) -> ExecutionResult:
         """
         Execute the task script
 
@@ -302,9 +315,9 @@ class DockerRemoteTask(RemoteTask, DockerTask):
         """
 
         RemoteTask.on_execute(self, launcher_script, script_name)
-        return self.ssh_connection.execute_command("bash " + self.working_dir + "/.dagon/" + script_name)
+        return self.ssh_connection.execute_command(join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
 
-    def on_garbage(self):
+    def on_garbage(self) -> None:
         """
         Call garbage collector, removing the scratch directory, containers and instances related to the
         task

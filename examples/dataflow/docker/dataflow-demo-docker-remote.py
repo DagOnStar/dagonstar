@@ -19,16 +19,16 @@ if __name__ == '__main__':
     workflow = Workflow("DataFlow-Demo-Docker-Remote")
 
     # The task a
-    taskA = DagonTask(TaskType.DOCKER, "A", "mkdir output;hostname > output/f1.txt", image="ubuntu:latest", ip=REMOTE_IP, ssh_username=SSH_USER)
+    taskA = DagonTask(TaskType.DOCKER, "A", "mkdir output;hostname > output/f1.txt", image="ubuntu:latest", ip="", ssh_username="")
 
     # The task b
-    taskB = DagonTask(TaskType.DOCKER, "B", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", image="ubuntu:latest", ip=REMOTE_IP, ssh_username=SSH_USER)
+    taskB = DagonTask(TaskType.DOCKER, "B", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", image="ubuntu:latest", ip="", ssh_username="")
 
     # The task c
-    taskC = DagonTask(TaskType.DOCKER, "C", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", image="ubuntu:latest", ip=REMOTE_IP, ssh_username=SSH_USER)
+    taskC = DagonTask(TaskType.DOCKER, "C", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", image="ubuntu:latest", ip="", ssh_username="")
 
     # The task d
-    taskD = DagonTask(TaskType.DOCKER, "D", "cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt", image="ubuntu:latest", ip=REMOTE_IP, ssh_username=SSH_USER)
+    taskD = DagonTask(TaskType.DOCKER, "D", "cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt", image="ubuntu:latest", ip="", ssh_username="")
 
     # add tasks to the workflow
     workflow.add_task(taskA)
