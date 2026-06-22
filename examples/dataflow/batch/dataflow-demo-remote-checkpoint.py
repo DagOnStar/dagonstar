@@ -16,31 +16,31 @@ if __name__ == '__main__':
     workflow.set_dry(False)
 
     # The task a
-    taskA = DagonTask(TaskType.BATCH, "A", "mkdir output;hostname > output/f1.txt", ip="", ssh_username="")
+    taskA = DagonTask(TaskType.BATCH, "A", "mkdir output;hostname > output/f1.txt", ip="127.0.0.1", ssh_username="domizzi")
 
     # The task b
-    taskB = DagonTask(TaskType.BATCH, "B", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", ip="", ssh_username="")
+    taskB = DagonTask(TaskType.BATCH, "B", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", ip="127.0.0.1", ssh_username="domizzi")
 
     # The task c
-    taskC = DagonTask(TaskType.BATCH, "C", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", ip="", ssh_username="")
+    taskC = DagonTask(TaskType.BATCH, "C", "echo $RANDOM > f2.txt; cat workflow:///A/output/f1.txt >> f2.txt", ip="127.0.0.1", ssh_username="domizzi")
 
     # The task d
-    taskD = DagonTask(TaskType.BATCH, "D", "cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt", ip="", ssh_username="")
+    taskD = DagonTask(TaskType.BATCH, "D", "cat workflow:///B/f2.txt >> f3.txt; cat workflow:///C/f2.txt >> f3.txt", ip="127.0.0.1", ssh_username="domizzi")
 
     # Explicit checkpoint
-    taskCheckpoint = DagonTask(TaskType.CHECKPOINT, "Checkpoint_1", "workflow:///A/output/f1.txt", ip="", ssh_username="")
+    taskCheckpoint = DagonTask(TaskType.CHECKPOINT, "Checkpoint_1", "workflow:///A/output/f1.txt", ip="127.0.0.1", ssh_username="domizzi")
     
     # The task e
-    taskE = DagonTask(TaskType.BATCH, "E", "mkdir output;cp workflow:///Checkpoint_1/DataFlow-Checkpoint-Demo/D/f3.txt output/f4.txt", ip="", ssh_username="")
+    taskE = DagonTask(TaskType.BATCH, "E", "mkdir output;cp workflow:///Checkpoint_1/DataFlow-Checkpoint-Demo/D/f3.txt output/f4.txt", ip="127.0.0.1", ssh_username="domizzi")
 
     # The task f
-    taskF = DagonTask(TaskType.BATCH, "F", "echo $RANDOM > f5.txt; cat workflow:///E/output/f4.txt >> f5.txt", ip="", ssh_username="")
+    taskF = DagonTask(TaskType.BATCH, "F", "echo $RANDOM > f5.txt; cat workflow:///E/output/f4.txt >> f5.txt", ip="127.0.0.1", ssh_username="domizzi")
 
     # The task g
-    taskG = DagonTask(TaskType.BATCH, "G", "echo $RANDOM > f6.txt; cat workflow:///E/output/f4.txt >> f6.txt", ip="", ssh_username="")
+    taskG = DagonTask(TaskType.BATCH, "G", "echo $RANDOM > f6.txt; cat workflow:///E/output/f4.txt >> f6.txt", ip="127.0.0.1", ssh_username="domizzi")
 
     # The task h
-    taskH = DagonTask(TaskType.BATCH, "H", "cat workflow:///F/f5.txt >> f7.txt; cat workflow:///G/f6.txt >> f7.txt", ip="", ssh_username="")
+    taskH = DagonTask(TaskType.BATCH, "H", "cat workflow:///F/f5.txt >> f7.txt; cat workflow:///G/f6.txt >> f7.txt", ip="127.0.0.1", ssh_username="domizzi")
     
     # add tasks to the workflow
     workflow.add_task(taskA)

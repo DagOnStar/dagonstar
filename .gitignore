@@ -120,3 +120,11 @@ examples/dataflow/batch/dataflow-demo-remote.json
 examples/dataflow/batch/last_run_remote.json
 examples/dataflow/batch/dataflow-demo-remote.json
 examples/dataflow/docker/*.json
+examples/dataflow/docker/os.path
+examples/dataflow/slurm/*.json
+tests/benchmarks/dynostore/*.json
+tests/case_study_pollution/cloud/*.pkl
+tests/case_study_pollution/cloud/*.png
+tests/case_study_pollution/cloud/plots/*.png
+tests/case_study_pollution/cloud/test/*.png
+tests/case_study_pollution/edge/*.csv
