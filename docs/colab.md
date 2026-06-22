@@ -12,6 +12,7 @@ cloud backends.
 | Local Python and Bash tasks | Yes | Best-supported mode for examples. |
 | Notebook-driven workflow creation | Yes | Build and run workflows interactively. |
 | `workflow://` references | Yes | Keep files in the runtime workspace. |
+| FAIR local metadata exports | Yes | Standard-library exports; copy scratch to Drive for persistence. |
 | Web/REST examples | Usually | Depends on network and service availability. |
 | Checkpointing | Yes, with care | Put persistent checkpoints in Google Drive. |
 | SSH/remote execution | Possible | Needs reachable hosts and secure credentials. |
@@ -53,6 +54,10 @@ tutorial scripts are also suitable for hosted Colab:
 !python examples/tutorial/lesson_12_llm_tasks.py
 !python examples/tutorial/lesson_13_web_tasks.py
 ```
+
+Lesson 15's FAIR workflow is also local and credential-free. Its complete
+notebook-ready source and persistence notes are in
+[the FAIR-by-design tutorial](tutorial/lesson_15_fair_by_design.md).
 
 ## Persistence and architecture
 

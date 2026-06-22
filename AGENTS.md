@@ -19,6 +19,22 @@ local, remote, Slurm, Docker, cloud, and data-staging environments.
   must never include credentials. Update FAIR tests, examples, tutorials, and
   affected documentation when its behavior changes.
 
+## FAIR-by-design requirement
+
+- Treat FAIR metadata as a first-class, opt-in concern when adding or changing
+  workflow, task, staging, checkpoint, or provenance behavior. Preserve the
+  behavior of workflows that do not enable FAIR recording.
+- Record only information the implementation can substantiate locally. Do not
+  present local exports as repository publication, remote validation, or copied
+  data, and do not fetch remote outputs merely to create metadata.
+- Keep provenance useful and safe: declare intentional inputs and outputs where
+  appropriate, retain `workflow://` producer/consumer relationships, use
+  licenses and access assumptions explicitly, and never capture credentials,
+  private keys, tokens, or unredacted configuration.
+- Maintain FAIR examples and tutorials as self-contained local demonstrations.
+  State Colab support precisely and use temporary or user-chosen scratch paths
+  rather than requiring a developer's private configuration.
+
 ## Important paths
 
 - `dagon/`: core library code.
