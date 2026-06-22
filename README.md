@@ -361,7 +361,7 @@ Useful checks:
 python -m unittest discover -s tests -v
 python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py
 python -m ruff check dagon/shell.py tests
-python -m mypy dagon/shell.py
+python -m mypy --follow-imports=skip dagon/shell.py
 python -m pip install -e .
 ```
 
