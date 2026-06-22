@@ -12,11 +12,7 @@ DAGonStar workflows are ordinary Python programs. Tasks can depend explicitly on
 other tasks, or implicitly through `workflow://` data references that DAGonStar
 resolves into task dependencies and staging operations.
 
-DAGonStar is used as the primary workflow engine to run real-world production-level
-applications.
-
-DAGonStar is in production at the [Center for Monitoring and Modeling Marine and Atmosphere](https:/meteo.uniparthenope.it)
-applications hosted at the University of Naples "Parthenope".
+![The DAGonStar Logo](/figures/DAGonStar_Logo01.png)
 
 # Motivation
 Thanks to the advent of public, private, and hybrid clouds, the democratization of
@@ -28,6 +24,7 @@ computational scientists. However, nowadays, any science field can be considered
 engines is crucial.
 
 # Acknowledgments
+
 The following initiatives support DAGonStar development:
 
 * Research agreement "Modelling mytilus farming at scale"
