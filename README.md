@@ -160,7 +160,7 @@ local progress reporting.
 
 The repository has a sound baseline for changes to the core behavior:
 
-- 39 unit tests cover configuration parsing, workflow defaults, and dependency
+- 47 unit tests cover configuration parsing, workflow defaults, and dependency
   discovery, cycle validation, JSON serialization, checkpoint reuse, staging
   command generation, packaging extras, optional integration boundaries, and
   selected shell-quoting behavior;
@@ -168,6 +168,9 @@ The repository has a sound baseline for changes to the core behavior:
   Python 3.12, plus focused Ruff and mypy checks on Python 3.12;
 - package extras keep Docker, cloud, Globus, and API dependencies out of the
   base installation;
+- base `requests` and `graphviz` requirements use compatible version ranges,
+  allowing hosted notebook environments such as Google Colab to retain their
+  platform dependencies;
 - documentation covers configuration, architecture, checkpoints, examples,
   and the incremental tutorial; and
 - sample configuration avoids committed credentials and the SKYCDS path checks
