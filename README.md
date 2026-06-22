@@ -12,8 +12,6 @@ DAGonStar workflows are ordinary Python programs. Tasks can depend explicitly on
 other tasks, or implicitly through `workflow://` data references that DAGonStar
 resolves into task dependencies and staging operations.
 
-![The DAGonStar Logo](/figures/DAGonStar_Logo01.png)
-
 # Motivation
 Thanks to the advent of public, private, and hybrid clouds, the democratization of
 Computational resources changed the rules in many scientific fields.
