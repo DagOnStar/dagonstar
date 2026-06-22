@@ -1,5 +1,10 @@
 # Checkpoints
 
+## FAIR checkpoint provenance
+
+When FAIR recording is enabled, a task satisfied from a successful checkpoint
+is marked `checkpoint_reused` in `run.json`. Its known working directory and
+the normal task status remain available for later provenance interpretation.
 Checkpointing lets DAGonStar record completed task state and reuse successful
 task outputs in later runs. This is especially important for scientific
 workflows where a simulation or data transfer may be expensive.

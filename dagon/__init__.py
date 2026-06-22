@@ -171,6 +171,7 @@ class Workflow(object):
                 "on_task_end", "on_task_wait", "on_task_staging_in_start",
                 "on_task_staging_in_end", "on_task_execute_start",
                 "on_task_staging_out_start", "on_task_staging_out_end",
+                "on_dependencies_made",
             )
         }
         for event_name, hook in self._event_hooks.items():
@@ -337,6 +338,20 @@ class Workflow(object):
             task.pre_run()
         self.Validate_WF()
         self._dependencies_made = True
+        self._fire_event("on_dependencies_made", self)
+
+    def enable_fair(self, profile: Any) -> Any:
+        """Enable optional FAIR-by-design recording for this workflow.
+
+        Importing the recorder here keeps the base :mod:`dagon` import free of
+        FAIR implementation work until a workflow explicitly opts in.
+        """
+        from dagon.fair import FairRecorder, validate_profile
+        validate_profile(profile, strict=profile.strict)
+        recorder = FairRecorder(self, profile)
+        self.fair_profile = profile
+        self.fair_recorder = recorder
+        return recorder
 
     def add_listener(self, event_name: str, listener: Callable[[Any], None]) -> None:
         """Register *listener* for a named workflow event."""

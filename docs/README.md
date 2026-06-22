@@ -11,6 +11,7 @@ repository.
 - [Configuration](configuration.md)
 - [LLM Tasks](llm_tasks.md)
 - [Architecture](architecture.md)
+- [FAIR by Design](fair_principles.md)
 - [User Guide](user_guide.md)
 - [Reference Guide](reference_guide.md)
 - [Developer Guide](developer_guide.md)
@@ -40,6 +41,7 @@ repository.
 - [Lesson 12: Run an LLM task locally](tutorial/lesson_12_llm_tasks.md)
 - [Lesson 13: Execute a web task locally](tutorial/lesson_13_web_tasks.md)
 - [Lesson 14: Execute native Python tasks](tutorial/lesson_14_native_tasks.md)
+- [Lesson 15: FAIR by design](tutorial/lesson_15_fair_by_design.md)
 
 ## Example family documentation
 

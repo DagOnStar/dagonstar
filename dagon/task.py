@@ -168,6 +168,26 @@ class Task(Thread):
         self.globusendpoint = globusendpoint
         self.new_tasks = []
         self.logger = logging.getLogger()
+        # Declarations are inert unless the owning workflow enables FAIR.
+        self.fair_inputs = []
+        self.fair_outputs = []
+        self.fair_annotations = {}
+        self.fair_checkpoint_reused = False
+
+    def declare_inputs(self, *artifacts: Any) -> "Task":
+        """Attach intentional input artifact metadata and return this task."""
+        self.fair_inputs.extend(artifacts)
+        return self
+
+    def declare_outputs(self, *artifacts: Any) -> "Task":
+        """Attach intentional output artifact metadata and return this task."""
+        self.fair_outputs.extend(artifacts)
+        return self
+
+    def annotate(self, **metadata: Any) -> "Task":
+        """Attach task-level FAIR annotations and return this task."""
+        self.fair_annotations.update(metadata)
+        return self
 
     def get_endpoint(self) -> Optional[str]:
         return self.globusendpoint
@@ -875,6 +895,7 @@ class Task(Thread):
         if key in self.workflow.checkpoints and "code" in self.workflow.checkpoints[key] and \
                 self.workflow.checkpoints[key]["code"] == 0 and path.isdir(self.workflow.checkpoints[key]["working_dir"]):
             self.working_dir = self.workflow.checkpoints[key]["working_dir"]
+            self.fair_checkpoint_reused = True
 
             self.workflow.logger.debug(
                 "%s Already completed ---" % (self.name))
@@ -882,6 +903,7 @@ class Task(Thread):
             "code" in self.workflow.checkpoints[key] and self.workflow.checkpoints[key]["code"] == 0 and \
                 self.exists_dir(self.workflow.checkpoints[key]["working_dir"]):
             self.working_dir = self.workflow.checkpoints[key]["working_dir"]
+            self.fair_checkpoint_reused = True
 
             self.workflow.logger.debug(
                 "%s Already completed ---" % (self.name))
