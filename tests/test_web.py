@@ -1,4 +1,3 @@
-import base64
 import json
 import os
 import tempfile
@@ -59,15 +58,29 @@ class WebTaskTests(unittest.TestCase):
             request.write_text(json.dumps(spec))
             result = run(str(request))
             body_file = root / "outputs/body.json"
-            return result, (root / ".dagon/web_result.json").read_text(), body_file.read_text() if body_file.is_file() else ""
+            return (
+                result,
+                (root / ".dagon/web_result.json").read_text(),
+                body_file.read_text() if body_file.is_file() else "",
+            )
 
     def test_runner_get_query_metadata_and_environment_auth(self):
         old = os.environ.get("WEB_TEST_TOKEN")
         os.environ["WEB_TEST_TOKEN"] = "token-value"
         try:
-            result, metadata, body = self._run({"method": "GET", "url": self.url + "/auth", "query": {"station": "napoli"},
-                                      "auth": {"type": "bearer", "token_env": "WEB_TEST_TOKEN"},
-                                      "outputs": {"body": "body.json", "headers": "headers.json", "metadata": "meta.json"}})
+            result, metadata, body = self._run(
+                {
+                    "method": "GET",
+                    "url": self.url + "/auth",
+                    "query": {"station": "napoli"},
+                    "auth": {"type": "bearer", "token_env": "WEB_TEST_TOKEN"},
+                    "outputs": {
+                        "body": "body.json",
+                        "headers": "headers.json",
+                        "metadata": "meta.json",
+                    },
+                }
+            )
         finally:
             if old is None:
                 os.environ.pop("WEB_TEST_TOKEN", None)
@@ -85,7 +98,22 @@ class WebTaskTests(unittest.TestCase):
             (root / "inputs").mkdir()
             (root / "inputs/data.txt").write_text("sample")
             request = root / ".dagon/web_request.json"
-            request.write_text(json.dumps({"method": "POST", "url": self.url + "/post", "multipart": {"file": {"file": "inputs/data.txt", "content_type": "text/plain"}, "config": {"value": {"fast": True}, "content_type": "application/json"}}, "outputs": {"body": "response.json"}}))
+            request_payload = {
+                "method": "POST",
+                "url": self.url + "/post",
+                "multipart": {
+                    "file": {
+                        "file": "inputs/data.txt",
+                        "content_type": "text/plain",
+                    },
+                    "config": {
+                        "value": {"fast": True},
+                        "content_type": "application/json",
+                    },
+                },
+                "outputs": {"body": "response.json"},
+            }
+            request.write_text(json.dumps(request_payload))
             result = run(str(request))
             self.assertEqual(result["status_code"], 200)
             self.assertIn("sample", (root / "outputs/response.json").read_text())
@@ -99,7 +127,21 @@ class WebTaskTests(unittest.TestCase):
             config["batch"]["scratch_dir_base"] = directory
             workflow = Workflow("Web", config=config)
             producer = DagonTask(TaskType.BATCH, "produce", "mkdir -p output; echo payload > output/input.txt")
-            web = DagonTask(TaskType.WEB, "upload", {"method": "POST", "url": self.url + "/post", "multipart": {"dataset": {"file": "workflow:///produce/output/input.txt", "content_type": "text/plain"}}, "outputs": {"body": "reply.json"}})
+            web = DagonTask(
+                TaskType.WEB,
+                "upload",
+                {
+                    "method": "POST",
+                    "url": self.url + "/post",
+                    "multipart": {
+                        "dataset": {
+                            "file": "workflow:///produce/output/input.txt",
+                            "content_type": "text/plain",
+                        }
+                    },
+                    "outputs": {"body": "reply.json"},
+                },
+            )
             workflow.add_task(producer)
             workflow.add_task(web)
             workflow.run()
@@ -108,13 +150,35 @@ class WebTaskTests(unittest.TestCase):
             self.assertIn("payload", Path(web.working_dir, "outputs/reply.json").read_text())
 
     def test_basic_and_slurm_command_validation(self):
-        task = DagonTask(TaskType.WEB, "web", {"url": self.url, "auth": {"type": "basic", "username_env": "U", "password_env": "P"}}, executor="slurm", resources={"partition": "debug"})
+        task = DagonTask(
+            TaskType.WEB,
+            "web",
+            {
+                "url": self.url,
+                "auth": {
+                    "type": "basic",
+                    "username_env": "U",
+                    "password_env": "P",
+                },
+            },
+            executor="slurm",
+            resources={"partition": "debug"},
+        )
         task.working_dir = "/tmp/web"
         self.assertIn("--partition=debug", task.generate_slurm_command("web_launcher.sh"))
         os.environ["WEB_TEST_USER"] = "u"
         os.environ["WEB_TEST_PASSWORD"] = "p"
         try:
-            result, _, _ = self._run({"url": self.url + "/basic", "auth": {"type": "basic", "username_env": "WEB_TEST_USER", "password_env": "WEB_TEST_PASSWORD"}})
+            result, _, _ = self._run(
+                {
+                    "url": self.url + "/basic",
+                    "auth": {
+                        "type": "basic",
+                        "username_env": "WEB_TEST_USER",
+                        "password_env": "WEB_TEST_PASSWORD",
+                    },
+                }
+            )
         finally:
             os.environ.pop("WEB_TEST_USER", None)
             os.environ.pop("WEB_TEST_PASSWORD", None)

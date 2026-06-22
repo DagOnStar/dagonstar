@@ -31,9 +31,16 @@ class LLMTaskTests(unittest.TestCase):
             producer_dir.mkdir()
             (producer_dir / "report.txt").write_text("important data", encoding="utf-8")
             producer = DagonTask(TaskType.BATCH, "Produce", "echo ignored", working_dir=str(producer_dir))
-            task = DagonTask(TaskType.LLM, "Ask", {
-                "messages": [{"role": "user", "content": "Summarize: {report}"}],
-            }, provider="test", input_files={"report": "workflow:///Produce/report.txt"}, working_dir=str(Path(directory, "ask")))
+            task = DagonTask(
+                TaskType.LLM,
+                "Ask",
+                {
+                    "messages": [{"role": "user", "content": "Summarize: {report}"}],
+                },
+                provider="test",
+                input_files={"report": "workflow:///Produce/report.txt"},
+                working_dir=str(Path(directory, "ask")),
+            )
             workflow.add_task(producer)
             workflow.add_task(task)
             workflow.make_dependencies()
@@ -50,7 +57,16 @@ class LLMTaskTests(unittest.TestCase):
             self.assertEqual(payload["model"], "test-model")
             self.assertEqual(payload["messages"][0]["content"], "Summarize: important data")
             self.assertTrue(Path(task.working_dir, "response.json").is_file())
-            self.assertTrue(Path(task.working_dir, ".dagon", "inputs", "LLMWorkflow", "Produce", "report.txt").is_file())
+            self.assertTrue(
+                Path(
+                    task.working_dir,
+                    ".dagon",
+                    "inputs",
+                    "LLMWorkflow",
+                    "Produce",
+                    "report.txt",
+                ).is_file()
+            )
 
     def test_provider_requires_configuration(self):
         workflow = make_workflow()
@@ -62,18 +78,35 @@ class LLMTaskTests(unittest.TestCase):
     def test_inline_workflow_reference_is_replaced_by_staged_text(self):
         with tempfile.TemporaryDirectory() as directory:
             workflow = make_workflow("LLMWorkflow")
-            workflow.cfg["llm.test"] = {"endpoint": "https://llm.example.test", "api_key": "secret", "model": "test-model"}
+            workflow.cfg["llm.test"] = {
+                "endpoint": "https://llm.example.test",
+                "api_key": "secret",
+                "model": "test-model",
+            }
             producer_dir = Path(directory, "producer")
             producer_dir.mkdir()
             (producer_dir / "data.txt").write_text("inline data", encoding="utf-8")
             producer = DagonTask(TaskType.BATCH, "Produce", "echo ignored", working_dir=str(producer_dir))
-            task = DagonTask(TaskType.LLM, "Ask", {"messages": [{"role": "user", "content": "Read workflow:///Produce/data.txt"}]}, provider="test", working_dir=str(Path(directory, "ask")))
+            task = DagonTask(
+                TaskType.LLM,
+                "Ask",
+                {
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": "Read workflow:///Produce/data.txt",
+                        }
+                    ],
+                },
+                provider="test",
+                working_dir=str(Path(directory, "ask")),
+            )
             workflow.add_task(producer)
             workflow.add_task(task)
             workflow.make_dependencies()
             with mock.patch("dagon.llm.urlopen") as urlopen:
                 response = mock.MagicMock()
-                response.read.return_value = b'{}'
+                response.read.return_value = b"{}"
                 urlopen.return_value.__enter__.return_value = response
                 task.execute()
             payload = json.loads(urlopen.call_args[0][0].data.decode("utf-8"))
