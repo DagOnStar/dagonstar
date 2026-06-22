@@ -74,6 +74,8 @@ Factory task types:
 - `TaskType.CLOUD`
 - `TaskType.DOCKER`
 - `TaskType.LLM`
+- `TaskType.NATIVE`
+- `TaskType.WEB`
 
 ## `dagon.task.DagonTask`
 
@@ -92,6 +94,8 @@ The concrete class is selected from `tasks_types`:
 | `CLOUD` | `dagon.remote` | `CloudTask` |
 | `DOCKER` | `dagon.docker_task` | `DockerTask` |
 | `LLM` | `dagon.llm` | `LLMTask` |
+| `NATIVE` | `dagon.native` | `NativeTask` |
+| `WEB` | `dagon.web` | `WebTask` |
 | `SLURM` | `dagon.batch` | `Slurm` |
 
 ## `dagon.task.Task`
@@ -228,6 +232,28 @@ Provider configuration is read from `[llm.<provider>]`. `input_files` maps
 parameter names to `workflow://` references, which infer dependencies and stage
 local UTF-8 text before the request. See [LLM Tasks](llm_tasks.md) and the
 [local example](../examples/llm/local_mock_llm.py).
+
+## Native tasks
+
+`NativeTask` executes an importable `module:function` through a JSON runner:
+
+```python
+DagonTask(TaskType.NATIVE, name, function, inputs=None, outputs=None,
+          executor="local", resources=None, python=sys.executable,
+          working_dir=None, environment=None)
+```
+
+Inputs may be JSON scalars, existing local files, or `workflow://` file references. File values are staged below `inputs/`; `outputs` maps parameter names to safe relative paths below `outputs/`. JSON return metadata is written to `.dagon/native_result.json`. `executor` accepts `local` and `slurm`; use existing Slurm settings in `resources`. Functions must be importable module-level callables.
+
+## Web tasks
+
+`WebTask` accepts a JSON-serializable HTTP/HTTPS specification:
+
+```python
+DagonTask(TaskType.WEB, name, {"method": "GET", "url": "https://example.org", "outputs": {"body": "response.json"}}, executor="local")
+```
+
+Specifications support `query`, `headers`, `json`, `data`, `multipart`, `auth`, `timeout`, retry settings, expected status codes, and `outputs`. Recursive `workflow://` values infer dependencies; referenced files are copied below `inputs/`. Body, headers, and metadata outputs are safe relative paths below `outputs/`; `.dagon/web_result.json` stores non-secret status metadata. Supported authentication is bearer, basic, API-key header, or API-key query, always through environment-variable names rather than literal secrets. `executor="slurm"` accepts existing scheduler options in `resources`.
 
 ## Data movement enums
 

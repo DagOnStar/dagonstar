@@ -10,7 +10,7 @@ verification strategy.
 
 - [Taskflow examples](taskflow.md): explicit dependency graphs.
 - [Asynchronous launch](../asynch_launch.md): local background execution and
-  lifecycle callbacks; source: `examples/asynchronous_launch.py`.
+  lifecycle callbacks; source: `examples/async/asynchronous_launch.py`.
 - [Batch dataflow examples](dataflow_batch.md): local and remote dataflow,
   checkpointing, and `workflow://` file references.
 - [Docker dataflow examples](dataflow_docker.md): container-backed tasks.
@@ -27,6 +27,10 @@ verification strategy.
   WaComM++-oriented demonstration material.
 - [LLM task example](llm.md): a local OpenAI-compatible mock and a real-provider
   skeleton.
+- [Native Python task example](native.md): staged files, scalar parameters, and declared outputs.
+- [Web task example](web_tasks.md): local HTTP execution, staged uploads, and response outputs.
+- [Tutorial source programs](../../examples/tutorial/README.md): runnable local
+  sources for the advanced LLM and web lessons.
 
 ## How to use this catalog
 

@@ -57,6 +57,8 @@ DAGonStar can launch external software through several task types:
 - `TaskType.CLOUD`: command executed on a cloud-backed remote node.
 - `TaskType.LLM`: OpenAI-compatible JSON request; use this for API-based text
   analysis rather than a locally installed command-line program.
+- `TaskType.NATIVE`: importable Python function with scalar and staged file bindings.
+- `TaskType.WEB`: scratch-local HTTP/HTTPS request with declared response outputs.
 - remote batch/Slurm/Docker variants selected by SSH parameters.
 
 Choose the backend according to the scientific software's operational needs:

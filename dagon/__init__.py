@@ -449,7 +449,19 @@ class Workflow(object):
                 options['params'] = temp.get('params')
                 options['input_files'] = temp.get('input_files')
                 options['output_file'] = temp.get('output_file', 'response.json')
-            tk = DagonTask(TaskType[temp['type'].upper()], temp['name'], temp['command'], **options)
+            if temp['type'].upper() == 'NATIVE':
+                tk = DagonTask(TaskType.NATIVE, temp['name'], temp['function'],
+                               inputs=temp.get('inputs'), outputs=temp.get('outputs'),
+                               executor=temp.get('executor', 'local'), resources=temp.get('resources'),
+                               python=temp.get('python', 'python'), environment=temp.get('environment'),
+                               working_dir=temp.get('working_dir'))
+            elif temp['type'].upper() == 'WEB':
+                tk = DagonTask(TaskType.WEB, temp['name'], temp['specification'],
+                               executor=temp.get('executor', 'local'), resources=temp.get('resources'),
+                               python=temp.get('python', 'python'), environment=temp.get('environment'),
+                               working_dir=temp.get('working_dir'))
+            else:
+                tk = DagonTask(TaskType[temp['type'].upper()], temp['name'], temp['command'], **options)
             self.add_task(tk)
         # self.make_dependencies()
 

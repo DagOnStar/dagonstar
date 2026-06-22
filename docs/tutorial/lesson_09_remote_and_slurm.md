@@ -76,7 +76,7 @@ You can verify construction without running external services:
 ```python
 from dagon.task import DagonTask, TaskType
 
-task = DagonTask(TaskType.SLURM, "check", "echo check", partition="debug", ntasks=1)
+task = DagonTask(TaskType.SLURM, "check", "echo check", partition="debug", ntasks=1, working_dir="scratch")
 print(type(task).__name__)
 print(task.generate_command("launcher.sh"))
 ```

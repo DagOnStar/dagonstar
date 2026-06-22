@@ -151,6 +151,10 @@ task = DagonTask(
 
 `TaskType.LLM` reads an OpenAI-compatible provider from a section named `[llm.<name>]`; multiple provider sections are supported. See [LLM Tasks](llm_tasks.md) for the exact request and input-file behavior.
 
+## Web task authentication
+
+`TaskType.WEB` authentication is supplied through environment-variable names in the task specification, such as `token_env`, `username_env`, `password_env`, or `value_env`. Do not place HTTP tokens, passwords, or API keys in configuration samples or workflow files.
+
 ```ini
 [llm.example]
 endpoint=https://api.example.org

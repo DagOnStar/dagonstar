@@ -19,6 +19,8 @@ repository.
 - [Checkpoints](checkpoints.md)
 - [Asynchronous workflow launch](asynch_launch.md)
 - [LLM task tutorial](tutorial/lesson_12_llm_tasks.md)
+- [Web task tutorial](tutorial/lesson_13_web_tasks.md)
+- [Native task tutorial](tutorial/lesson_14_native_tasks.md)
 - [Examples Catalog](examples/README.md)
 
 ## Tutorials
@@ -35,6 +37,9 @@ repository.
 - [Lesson 09: Prepare remote and Slurm workflows](tutorial/lesson_09_remote_and_slurm.md)
 - [Lesson 10: Compose meta-workflows](tutorial/lesson_10_meta_workflows.md)
 - [Lesson 11: Launch a workflow asynchronously](tutorial/lesson_11_asynchronous_launch.md)
+- [Lesson 12: Run an LLM task locally](tutorial/lesson_12_llm_tasks.md)
+- [Lesson 13: Execute a web task locally](tutorial/lesson_13_web_tasks.md)
+- [Lesson 14: Execute native Python tasks](tutorial/lesson_14_native_tasks.md)
 
 ## Example family documentation
 

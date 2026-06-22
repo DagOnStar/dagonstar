@@ -136,6 +136,8 @@ DAGonStar's public task types are defined in `dagon.task.TaskType`:
 - `CLOUD`
 - `DOCKER`
 - `LLM`
+- `NATIVE`
+- `WEB`
 - `CHECKPOINT`
 
 Remote variants are selected by keyword arguments. For example, a batch task
@@ -157,4 +159,4 @@ can consume local UTF-8 producer files with `workflow://`; see [LLM Tasks](llm_t
 - [User Guide](user_guide.md): practical workflow authoring guidance.
 - [Reference Guide](reference_guide.md): API-oriented reference.
 - [Developer Guide](developer_guide.md): testing, maintenance, and contribution.
-- [Tutorials](tutorial/README.md): ten incremental lessons.
+- [Tutorials](tutorial/README.md): fourteen incremental lessons.

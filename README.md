@@ -129,7 +129,7 @@ The full documentation set is available in `docs/`:
 - [Checkpoints](docs/checkpoints.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
 - [Examples Catalog](docs/examples/README.md)
-- [Tutorials: twelve incremental lessons](docs/tutorial/README.md)
+- [Tutorials: fourteen incremental lessons](docs/tutorial/README.md)
 
 ## What DAGonStar supports
 
@@ -141,6 +141,8 @@ The full documentation set is available in `docs/`:
 - Docker tasks, locally or over SSH.
 - Cloud-backed tasks through Apache Libcloud providers.
 - OpenAI-compatible LLM tasks with JSON prompts and `workflow://` text inputs.
+- Native Python-function tasks with staged file bindings and JSON result metadata.
+- Web tasks for structured HTTP/HTTPS requests with scratch-local response outputs.
 - Data staging by link, copy, SCP, Globus, and SKYCDS.
 - Checkpoint/resume support.
 - Meta-workflows that coordinate multiple workflows.
@@ -169,6 +171,7 @@ The repository has a sound baseline for changes to the core behavior:
 - sample configuration avoids committed credentials and the SKYCDS path checks
   for required runtime configuration; and
 - the LLM task boundary has local tests and a fully local mock-provider example.
+- native Python tasks have local staging, dependency, output, and runner tests.
 
 The test suite is intentionally fast and local: it validates command generation,
 failure propagation, and integration boundaries, not live Docker, SSH, Slurm,
@@ -287,6 +290,29 @@ Example groups:
 - `examples/transversal`: meta-workflow and transversal processing examples.
 - `examples/hipes-tutorial`: tutorial material for HiPES workflows.
 - `examples/envapp`: environmental application workflows and utilities.
+- `examples/async`: local asynchronous launch and lifecycle-callback example.
+- `examples/native`: importable Python functions with staged `workflow://` inputs.
+- `examples/web`: local HTTP request, staged upload, and downstream native processing.
+
+## Web tasks
+
+`TaskType.WEB` executes a JSON-serializable HTTP request through the task executor:
+
+```python
+DagonTask(TaskType.WEB, "fetch", {"method": "GET", "url": "https://example.org/data", "outputs": {"body": "data.json"}})
+```
+
+Responses are written below `outputs/` and request metadata is stored in `.dagon/`. Web tasks use the existing local or Slurm executor mode. Use environment-variable auth fields, never literal secrets. See the [example](examples/web/README.md), [example guide](docs/examples/web_tasks.md), and [tutorial](docs/tutorial/lesson_13_web_tasks.md).
+
+## Native Python tasks
+
+`TaskType.NATIVE` runs an importable function in a task scratch directory while retaining DAGonStar staging and dependencies:
+
+```python
+DagonTask(TaskType.NATIVE, "transform", "myworkflow.tasks:transform", inputs={"input_file": "workflow:///prepare/data.csv", "scale": 0.7}, outputs={"output_file": "clean.csv"})
+```
+
+File arguments are staged below `inputs/`, outputs are paths below `outputs/`, and the JSON return value is written to `.dagon/native_result.json`. See the [native example](examples/native/README.md) and [tutorial lesson](docs/tutorial/lesson_14_native_tasks.md).
 
 ## Development
 
@@ -354,5 +380,3 @@ ssh -i /path/to/key user@host hostname
 Confirm the integration-specific credentials and endpoint IDs are configured.
 SKYCDS values must be supplied through environment variables, not committed in
 source files.
-
-
