@@ -71,7 +71,7 @@ If this legacy path behaves differently in your environment, first verify
 construction without execution:
 
 ```python
-print(meta.as_json()["name"])
+print(meta.as_json())
 ```
 
 Then inspect the dependency graph with `task.prevs` and `task.nexts`. The

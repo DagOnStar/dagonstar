@@ -49,7 +49,7 @@ remains useful when you want to inspect or validate the graph before launch.
 Run the repository example:
 
 ```bash
-python3 examples/async/asynchronous_launch.py
+python <repository root>/examples/async/asynchronous_launch.py
 ```
 
 ## Scientific practice note
