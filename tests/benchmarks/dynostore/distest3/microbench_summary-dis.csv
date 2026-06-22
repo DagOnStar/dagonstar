@@ -1,0 +1,11 @@
+label,config,object_size_MB,num_objects,mean_total_time_s,std_total_time_s
+small,dagon.ini,1,1,5.02,0.0
+small,dagon-dynostore.ini,1,1,13.24,0.0
+small,dagon.ini,10,10,5.46,0.19
+medium,dagon.ini,50,10,5.76,0.08
+large,dagon.ini,100,10,5.79,0.09
+exlarge,dagon.ini,1000,10,63.83,11.0
+small,dagon-dynostore.ini,10,10,42.27,5.5
+medium,dagon-dynostore.ini,50,10,58.83,13.08
+large,dagon-dynostore.ini,100,10,68.57,9.49
+exlarge,dagon-dynostore.ini,1000,10,232.13,199.97

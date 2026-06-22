@@ -78,11 +78,14 @@ class SSHManager:
 
         ssh = SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+
         while not is_port_open(self.host, 22):
             continue
         if self.keypath is None:
             ssh.connect(self.host, username=self.username)
         else:
+            paramiko.RSAKey.from_private_key_file(self.keypath)
             ssh.connect(self.host, username=self.username, key_filename=self.keypath)
         return ssh
 
@@ -96,14 +99,12 @@ class SSHManager:
         :return: execution results
         :rtype: dict(str, object)
         """
-
         _, stdout, stderr = self.connection.exec_command(command)
         code = stdout.channel.recv_exit_status()
         stdout = "\n".join(stdout.readlines())
         stderr = "\n".join(stderr.readlines())
-        if len(stderr):
-            return {"code": 1, "message": stderr}
-        elif code > 0:
-            return {"code": 1, "message": stdout}
-        else:
+
+        if code == 0:
             return {"code": 0, "output": stdout}
+        else:
+            return {"code": 1, "message": stdout + stderr}
