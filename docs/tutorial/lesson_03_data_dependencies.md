@@ -2,6 +2,21 @@
 
 > Colab compatibility: supported. `workflow://` references work for files created in the Colab runtime.
 
+## Run in Google Colab
+
+Copy the lesson's **Code** into `lesson_03.py` with a `%%writefile
+lesson_03.py` cell, then execute it after this setup:
+
+```python
+!git clone https://github.com/DagOnStar/dagonstar.git
+%cd dagonstar
+!pip install -e .
+!cp dagon.ini.sample dagon.ini
+!python3 lesson_03.py
+```
+
+`workflow://` paths refer to files created inside the current Colab runtime.
+
 ## Objective
 
 Let DAGonStar infer dependencies from data references.

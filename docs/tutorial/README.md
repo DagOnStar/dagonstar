@@ -3,6 +3,9 @@
 This tutorial contains fourteen incremental lessons. The lessons are designed to be
 read in order and to remain consistent with the current DAGonStar implementation.
 
+For an executable Colab-ready version of the complete sequence, open
+[`DAGonStar_tutorial.ipynb`](DAGonStar_tutorial.ipynb).
+
 Most lessons use local batch workflows so they can be verified on a normal
 developer machine. Lessons involving Docker, SSH, Slurm, or cloud execution are
 explicitly marked as optional integration exercises.

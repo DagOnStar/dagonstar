@@ -2,6 +2,23 @@
 
 > Colab compatibility: supported with care. Store checkpoints in Google Drive if they must survive a runtime reset.
 
+## Run in Google Colab
+
+Copy the **Code** into `lesson_06.py` with `%%writefile lesson_06.py`, then
+run it twice after the following setup:
+
+```python
+!git clone https://github.com/DagOnStar/dagonstar.git
+%cd dagonstar
+!pip install -e .
+!cp dagon.ini.sample dagon.ini
+!python3 lesson_06.py
+!python3 lesson_06.py
+```
+
+Place the checkpoint file in mounted Google Drive when it must survive a Colab
+runtime reset.
+
 ## Objective
 
 Record task completion metadata and resume a workflow.

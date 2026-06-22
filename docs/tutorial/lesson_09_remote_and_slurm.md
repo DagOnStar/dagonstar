@@ -2,6 +2,22 @@
 
 > Colab compatibility: partially supported. Colab can submit to reachable remote resources, but is not an SSH host or Slurm cluster.
 
+## Run in Google Colab
+
+Colab can construct and submit this workflow only when you configure a
+reachable SSH host or Slurm cluster. Install the client library first:
+
+```python
+!git clone https://github.com/DagOnStar/dagonstar.git
+%cd dagonstar
+!pip install -e .
+```
+
+Then provide host, account, and short-lived credential configuration outside
+the notebook source, verify `ssh` connectivity, and adapt the remote task
+fields shown below. Do not paste private keys into a shared notebook. The local
+structural verification is safe to run in Colab without a remote service.
+
 ## Objective
 
 Understand how to construct remote and Slurm tasks, and how to verify the

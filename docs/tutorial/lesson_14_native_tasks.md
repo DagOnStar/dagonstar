@@ -2,6 +2,22 @@
 
 > Colab compatibility: supported. Native Python tasks run in the Colab runtime.
 
+## Run in Google Colab
+
+Create the two files from the **Complete local example** in separate cells
+using `%%writefile native_functions.py` and `%%writefile lesson_14_native_tasks.py`.
+Then install and run them from the same directory:
+
+```python
+!git clone https://github.com/DagOnStar/dagonstar.git
+%cd dagonstar
+!pip install -e .
+!python3 lesson_14_native_tasks.py
+```
+
+Keeping both files together makes `native_functions:transform` importable to
+the separate native task runner.
+
 ## Objective
 
 Use an importable Python function as a workflow task while preserving DAGonStar

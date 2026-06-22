@@ -2,6 +2,21 @@
 
 > Colab compatibility: supported with care. A hosted runtime may disconnect or reset while work is running.
 
+## Run in Google Colab
+
+The repository has a runnable source program for this lesson:
+
+```python
+!git clone https://github.com/DagOnStar/dagonstar.git
+%cd dagonstar
+!pip install -e .
+!cp dagon.ini.sample dagon.ini
+!python3 examples/async/asynchronous_launch.py
+```
+
+Keep the browser tab connected until completion; long-running asynchronous
+work should run on a durable remote backend instead.
+
 ## Objective
 
 Start a workflow without blocking the main Python thread, observe its lifecycle,
