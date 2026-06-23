@@ -152,15 +152,15 @@ class TestDockerRemoteTask(unittest.TestCase):
         patcher_from_env = patch("dagon.docker_task.docker.from_env")
         self.mock_from_env = patcher_from_env.start()
         self.addCleanup(patcher_from_env.stop)
-        
+
         self.mock_docker_instance = MagicMock()
         self.mock_from_env.return_value = self.mock_docker_instance
-        
+
         # Mock docker.DockerClient() used in DockerRemoteTask.__init__
         patcher_docker_client = patch("dagon.docker_task.docker.DockerClient")
         self.mock_docker_client_class = patcher_docker_client.start()
         self.addCleanup(patcher_docker_client.stop)
-        
+
         self.mock_remote_docker_instance = MagicMock()
         self.mock_docker_client_class.return_value = self.mock_remote_docker_instance
 
@@ -168,11 +168,11 @@ class TestDockerRemoteTask(unittest.TestCase):
         patcher_ssh_manager = patch("dagon.remote.SSHManager")
         self.mock_ssh_manager_class = patcher_ssh_manager.start()
         self.addCleanup(patcher_ssh_manager.stop)
-        
+
         # Mock SSH connection
         self.mock_ssh = MagicMock()
         self.mock_ssh_manager_class.return_value = self.mock_ssh
-        
+
         # Mock workflow
         self.mock_workflow = MagicMock()
         self.mock_workflow.get_scratch_dir_base.return_value = "/tmp"
@@ -188,7 +188,7 @@ class TestDockerRemoteTask(unittest.TestCase):
             keypath="/path/to/key",
             working_dir="/home/user/work",
         )
-        
+
         # Assign the workflow
         self.task.workflow = self.mock_workflow
 

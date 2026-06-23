@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from dagon.kubernetes_task import KubernetesTask, RemoteKubernetesTask
+from dagon.kubernetes_task import KubernetesTask
 
 class TestKubernetesTask(unittest.TestCase):
     """Unit tests for KubernetesTask."""
@@ -11,20 +11,20 @@ class TestKubernetesTask(unittest.TestCase):
         patcher_config = patch("dagon.kubernetes_task.config.load_kube_config")
         self.mock_config = patcher_config.start()
         self.addCleanup(patcher_config.stop)
-        
+
         # Mock CoreV1Api to avoid creating real client
         patcher_api = patch("dagon.kubernetes_task.client.CoreV1Api")
         self.mock_api_class = patcher_api.start()
         self.addCleanup(patcher_api.stop)
-        
+
         self.mock_api = MagicMock()
         self.mock_api_class.return_value = self.mock_api
-        
+
         # Mock workflow
         self.mock_workflow = MagicMock()
         self.mock_workflow.get_scratch_dir_base.return_value = "/tmp"
         self.mock_workflow.logger = MagicMock()
-        
+
         # Create task
         self.task = KubernetesTask(
             name="test",
@@ -52,9 +52,9 @@ class TestKubernetesTask(unittest.TestCase):
         """Should execute a command inside a pod and return the output."""
         self.task.pod_name = "testpod"
         self.task.namespace = "default"
-        
+
         # Mock exec_in_pod directly since stream is complicated to mock
-        with patch.object(self.task, 'exec_in_pod', return_value="execution ok") as mock_exec:
+        with patch.object(self.task, 'exec_in_pod', return_value="execution ok"):
             result = self.task.exec_in_pod("echo hi")
             self.assertEqual(result, "execution ok")
 
@@ -85,10 +85,10 @@ class TestKubernetesTask(unittest.TestCase):
 
         # Standard deletion fails
         self.mock_api.delete_namespaced_pod.side_effect = Exception("Standard deletion failed")
-        
+
         # Mock subprocess for forced deletion
         mock_subprocess_run.return_value.returncode = 0
-        
+
         self.task.remove_pod()
 
         # Verify that subprocess.run was called for forced deletion
