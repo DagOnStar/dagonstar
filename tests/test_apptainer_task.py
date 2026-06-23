@@ -181,10 +181,12 @@ class TestApptainerTask(unittest.TestCase):
         self.task.staging_dir = "/tmp/dst_staging"
 
         # Mock export and import methods
-        with (
-            patch.object(src_task, 'export_file_to_staging', return_value="/tmp/src_staging/file.txt") as mock_export,
-            patch.object(self.task, 'import_file_from_staging') as mock_import,
-        ):
+        with patch.object(
+                src_task,
+                'export_file_to_staging',
+                return_value="/tmp/src_staging/file.txt"
+            ) as mock_export, \
+            patch.object(self.task, 'import_file_from_staging') as mock_import:
 
             self.task.stage_in(src_task, "/work/input.txt", "/work/output.txt")
 
