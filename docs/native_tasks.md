@@ -235,6 +235,9 @@ pass the environment explicitly, for example
 `python="/absolute/path/to/.venv/bin/python"`; that environment must contain
 DAGonStar as well as the dependencies in `requirements.txt`.
 
+The same example is available as a runnable repository example in
+[`examples/native/with_requirements`](../examples/native/with_requirements/README.md).
+
 ## Environment variables, local files, and Slurm
 
 Use `environment` only for non-secret runtime settings needed by the callable:
