@@ -234,20 +234,73 @@ be tested in the target environment.
 
 ## LLM tasks
 
-`LLMTask` invokes an OpenAI-compatible Chat Completions endpoint without an
-additional SDK. Its constructor is:
+`LLMTask` represents one request/reply call to an OpenAI-compatible Chat
+Completions endpoint. It uses the Python standard library rather than a
+provider SDK and persists the provider's complete JSON reply as a workflow
+artifact. It is appropriate for a bounded request whose inputs and output
+should participate in the DAG; it does not provide streaming, retries,
+provider-specific API translation, or file uploads.
+
+Create it through `DagonTask`:
 
 ```python
 DagonTask(TaskType.LLM, name, prompt, provider, params=None, input_files=None,
           working_dir=None, output_file="response.json", timeout=120)
 ```
 
-`prompt` is a JSON object (or a JSON string) containing `messages`; string
-values may use `{parameter}` placeholders from `params` or `input_files`.
-Provider configuration is read from `[llm.<provider>]`. `input_files` maps
-parameter names to `workflow://` references, which infer dependencies and stage
-local UTF-8 text before the request. See [LLM Tasks](llm_tasks.md) and the
-[local example](../examples/llm/local_mock_llm.py).
+| Parameter | Contract |
+| --- | --- |
+| `name` | Name of the workflow node. |
+| `prompt` | JSON object, or JSON string decoding to an object. It must contain `messages` when executed. All string values support Python `{name}` formatting; escape literal braces as `{{` and `}}`. |
+| `provider` | Name selecting runtime section `[llm.<provider>]`. It is required. |
+| `params` | Optional mapping supplying values for prompt placeholders. A missing placeholder raises `ValueError` before the request. |
+| `input_files` | Optional mapping from a prompt placeholder name to a `workflow://` producer file. Each file becomes UTF-8 text supplied for that placeholder. |
+| `working_dir` | Optional task working directory. |
+| `output_file` | Relative path inside the task directory for the response; defaults to `response.json`. Absolute paths and paths containing `..` are rejected. |
+| `timeout` | HTTP request timeout in seconds; defaults to `120`. |
+
+### Provider configuration and request
+
+The selected `[llm.<provider>]` section requires `endpoint` and either
+`api_key_env` or `api_key`; it may provide a default `model`. `api_key_env`
+names an environment variable and takes precedence when both key settings are
+present. A request-level `model` overrides the configured default. If neither
+provides a model, execution fails.
+
+The task sends a JSON `POST` with bearer authentication. An endpoint already
+ending in `/chat/completions` is used as-is; otherwise DAGonStar appends
+`/v1/chat/completions`. Keep credentials out of workflow definitions, source,
+and committed configuration.
+
+### Workflow inputs and output
+
+For `input_files={"report": "workflow:///prepare/output/report.txt"}`, the
+task infers the `prepare -> <LLM task>` dependency, copies the producer file
+under `.dagon/inputs/<workflow>/prepare/output/report.txt` in its own working
+directory, reads it as UTF-8, then uses the content to render `{report}`.
+References use `workflow://<workflow>/<task>/<relative-path>`; an empty
+workflow component, as in `workflow:///prepare/...`, means the current
+workflow. References may also appear inline in a prompt string, where their
+text replaces the reference itself.
+
+Producer paths must be relative to the producer directory and may not contain
+`..`. The producer and file must exist at execution time. This task accepts
+only local UTF-8 text inputs: it does not fetch remote-only data, decode binary
+files, or automatically extract document text.
+
+After a non-dry request, the exact JSON document returned by the provider is
+written to `<working_dir>/<output_file>`. Downstream tasks can reference that
+file with `workflow://`; LLM tasks do not automatically extract an assistant
+message from the response. In dry mode, input staging still occurs, but no HTTP
+request or response file is produced.
+
+LLM tasks serialize with `"type": "llm"`; their provider, prompt parameters,
+input-file mapping, and output filename are retained. The named provider must
+still be configured locally when a serialized workflow is run.
+
+See [LLM Tasks](llm_tasks.md) for runnable examples, configuration snippets,
+diagnostics, and operational guidance, or run the fully local
+[mock-provider example](../examples/llm/local_mock_llm.py).
 
 ## Native tasks
 
