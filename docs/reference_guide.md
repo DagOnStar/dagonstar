@@ -83,6 +83,9 @@ Factory task types:
 - `TaskType.SLURM`
 - `TaskType.CLOUD`
 - `TaskType.DOCKER`
+- `TaskType.KUBERNETES`
+- `TaskType.APPTAINER`
+- `TaskType.NOMAD`
 - `TaskType.LLM`
 - `TaskType.NATIVE`
 - `TaskType.WEB`
@@ -103,6 +106,9 @@ The concrete class is selected from `tasks_types`:
 | `BATCH` | `dagon.batch` | `Batch` |
 | `CLOUD` | `dagon.remote` | `CloudTask` |
 | `DOCKER` | `dagon.docker_task` | `DockerTask` |
+| `KUBERNETES` | `dagon.kubernetes_task` | `KubernetesTask` |
+| `APPTAINER` | `dagon.apptainer_task` | `ApptainerTask` |
+| `NOMAD` | `dagon.nomad_task` | `NomadTask` |
 | `LLM` | `dagon.llm` | `LLMTask` |
 | `NATIVE` | `dagon.native` | `NativeTask` |
 | `WEB` | `dagon.web` | `WebTask` |
@@ -254,6 +260,14 @@ DagonTask(TaskType.NATIVE, name, function, inputs=None, outputs=None,
 ```
 
 Inputs may be JSON scalars, existing local files, or `workflow://` file references. File values are staged below `inputs/`; `outputs` maps parameter names to safe relative paths below `outputs/`. JSON return metadata is written to `.dagon/native_result.json`. `executor` accepts `local` and `slurm`; use existing Slurm settings in `resources`. Functions must be importable module-level callables.
+
+Lambdas and nested functions are not supported because a native task is run in a
+separate Python process and needs a stable `module:function` import target.
+`environment` supplies string environment variables to that runner, while
+`python` selects its interpreter. Dependencies are not installed automatically:
+install them, along with DAGonStar, into the selected environment before running
+the workflow. See [Native Tasks](native_tasks.md) for complete regular-function,
+lambda-replacement, dependency, and Slurm examples.
 
 ## Web tasks
 
