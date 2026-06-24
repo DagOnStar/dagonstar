@@ -257,13 +257,37 @@ Inputs may be JSON scalars, existing local files, or `workflow://` file referenc
 
 ## Web tasks
 
-`WebTask` accepts a JSON-serializable HTTP/HTTPS specification:
+`WebTask` represents one JSON-serializable HTTP/HTTPS request. It is created
+through `DagonTask` and executes in the task scratch directory:
 
 ```python
-DagonTask(TaskType.WEB, name, {"method": "GET", "url": "https://example.org", "outputs": {"body": "response.json"}}, executor="local")
+DagonTask(
+    TaskType.WEB,
+    name,
+    {"method": "GET", "url": "https://example.org", "outputs": {"body": "response.json"}},
+    executor="local",
+)
 ```
 
-Specifications support `query`, `headers`, `json`, `data`, `multipart`, `auth`, `timeout`, retry settings, expected status codes, and `outputs`. Recursive `workflow://` values infer dependencies; referenced files are copied below `inputs/`. Body, headers, and metadata outputs are safe relative paths below `outputs/`; `.dagon/web_result.json` stores non-secret status metadata. Supported authentication is bearer, basic, API-key header, or API-key query, always through environment-variable names rather than literal secrets. `executor="slurm"` accepts existing scheduler options in `resources`.
+Supported methods are `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, and `HEAD`.
+Specifications support `query`, `headers`, `json`, `data`, `multipart`, `auth`,
+`timeout`, retry settings, expected status codes, and `outputs`. `GET`, `HEAD`,
+`PUT`, and `DELETE` may retry; retries for `POST` or `PATCH` require explicit
+`"retry_unsafe": True` in the specification.
+
+Recursive `workflow://` values infer dependencies; referenced files are copied
+below `inputs/`. The special values `{"text": "workflow://..."}` and
+`{"json_file": "workflow://..."}` load a staged UTF-8 text or JSON file into
+the request. Declared body output is raw response bytes, while headers and
+metadata outputs are JSON, all at safe relative paths below `outputs/`.
+`.dagon/web_result.json` records non-secret status metadata.
+
+Supported authentication is bearer, basic, API-key header, or API-key query,
+always by environment-variable name rather than literal secrets. The task
+accepts `executor="local"` (default) or `executor="slurm"`; the latter accepts
+existing scheduler options in `resources`. See [Web Tasks](web_tasks.md) for
+the complete field reference, authentication shapes, request examples, retry
+semantics, and scratch-artifact behavior.
 
 ## Data movement enums
 

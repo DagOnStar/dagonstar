@@ -10,6 +10,7 @@ repository.
 - [Getting Started](getting_started.md)
 - [Configuration](configuration.md)
 - [LLM Tasks](llm_tasks.md)
+- [Web Tasks](web_tasks.md)
 - [Architecture](architecture.md)
 - [FAIR by Design](fair_principles.md)
 - [User Guide](user_guide.md)
