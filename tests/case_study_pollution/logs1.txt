@@ -1,0 +1,231 @@
+/home/cc/dagonstar/venv/lib/python3.12/site-packages/paramiko/pkey.py:82: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+  "cipher": algorithms.TripleDES,
+/home/cc/dagonstar/venv/lib/python3.12/site-packages/paramiko/transport.py:253: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+  "class": algorithms.TripleDES,
+2025-08-05 21:01:14,696 root         DEBUG    Running workflow: airqualityworkflow
+2025-08-05 21:01:14,697 root         DEBUG    edge_4_01_01: Status.WAITING
+2025-08-05 21:01:14,698 root         DEBUG    edge_4_01_01: Status.RUNNING
+2025-08-05 21:01:14,698 root         DEBUG    fog_4: Status.WAITING
+2025-08-05 21:01:14,698 root         DEBUG    edge_4_01_01: Executing...
+2025-08-05 21:01:14,698 root         DEBUG    cloud_4: Status.WAITING
+2025-08-05 21:01:14,700 root         DEBUG    train_model: Status.WAITING
+2025-08-05 21:01:14,700 root         DEBUG    train_model: Status.RUNNING
+2025-08-05 21:01:14,700 root         DEBUG    predict_pollution_4: Status.WAITING
+2025-08-05 21:01:14,700 root         DEBUG    train_model: Executing...
+2025-08-05 21:01:14,701 root         DEBUG    predict_pollution_8: Status.WAITING
+2025-08-05 21:01:14,702 root         DEBUG    predict_pollution_11: Status.WAITING
+2025-08-05 21:01:14,702 root         DEBUG    predict_pollution_16: Status.WAITING
+2025-08-05 21:01:14,703 root         DEBUG    predict_pollution_17: Status.WAITING
+2025-08-05 21:01:14,703 root         DEBUG    predict_pollution_18: Status.WAITING
+2025-08-05 21:01:14,704 root         DEBUG    predict_pollution_24: Status.WAITING
+2025-08-05 21:01:14,704 root         DEBUG    predict_pollution_27: Status.WAITING
+2025-08-05 21:01:14,705 root         DEBUG    predict_pollution_35: Status.WAITING
+2025-08-05 21:01:14,705 root         DEBUG    predict_pollution_36: Status.WAITING
+2025-08-05 21:01:14,705 root         DEBUG    predict_pollution_38: Status.WAITING
+2025-08-05 21:01:14,706 root         DEBUG    predict_pollution_39: Status.WAITING
+2025-08-05 21:01:14,706 root         DEBUG    predict_pollution_40: Status.WAITING
+2025-08-05 21:01:14,707 root         DEBUG    predict_pollution_47: Status.WAITING
+2025-08-05 21:01:14,707 root         DEBUG    predict_pollution_48: Status.WAITING
+2025-08-05 21:01:14,708 root         DEBUG    predict_pollution_49: Status.WAITING
+2025-08-05 21:01:14,708 root         DEBUG    predict_pollution_50: Status.WAITING
+2025-08-05 21:01:14,708 root         DEBUG    predict_pollution_54: Status.WAITING
+2025-08-05 21:01:14,709 root         DEBUG    predict_pollution_55: Status.WAITING
+2025-08-05 21:01:14,709 root         DEBUG    predict_pollution_56: Status.WAITING
+2025-08-05 21:01:14,710 root         DEBUG    predict_pollution_57: Status.WAITING
+2025-08-05 21:01:14,710 root         DEBUG    predict_pollution_58: Status.WAITING
+2025-08-05 21:01:14,711 root         DEBUG    predict_pollution_59: Status.WAITING
+2025-08-05 21:01:14,711 root         DEBUG    predict_pollution_60: Status.WAITING
+2025-08-05 21:01:14,778 root         DEBUG    edge_4_01_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427674699-edge_4_01_01
+2025-08-05 21:01:14,945 root         DEBUG    train_model: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427674702-train_model
+2025-08-05 21:01:18,376 root         DEBUG    edge_4_01_01 Completed in 2.3882675170898438 seconds ---
+2025-08-05 21:01:20,376 root         DEBUG    edge_4_01_01: Status.FINISHED
+2025-08-05 21:01:20,376 root         DEBUG    fog_4: Status.RUNNING
+2025-08-05 21:01:20,377 root         DEBUG    fog_4: Executing...
+2025-08-05 21:01:20,377 root         DEBUG    fog_4: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427680377-fog_4
+2025-08-05 21:01:23,938 root         DEBUG    fog_4 Completed in 3.3328566551208496 seconds ---
+2025-08-05 21:01:23,938 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427674699-edge_4_01_01
+2025-08-05 21:01:25,028 root         DEBUG    train_model Completed in 8.31081223487854 seconds ---
+2025-08-05 21:01:26,017 root         DEBUG    fog_4: Status.FINISHED
+2025-08-05 21:01:26,018 root         DEBUG    cloud_4: Status.RUNNING
+2025-08-05 21:01:26,018 root         DEBUG    cloud_4: Executing...
+2025-08-05 21:01:26,264 root         DEBUG    cloud_4: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427686019-cloud_4
+2025-08-05 21:01:27,029 root         DEBUG    train_model: Status.FINISHED
+2025-08-05 21:01:27,029 root         DEBUG    predict_pollution_4: Status.RUNNING
+2025-08-05 21:01:27,029 root         DEBUG    predict_pollution_8: Status.RUNNING
+2025-08-05 21:01:27,029 root         DEBUG    predict_pollution_4: Executing...
+2025-08-05 21:01:27,030 root         DEBUG    predict_pollution_11: Status.RUNNING
+2025-08-05 21:01:27,030 root         DEBUG    predict_pollution_16: Status.RUNNING
+2025-08-05 21:01:27,030 root         DEBUG    predict_pollution_8: Executing...
+2025-08-05 21:01:27,030 root         DEBUG    predict_pollution_17: Status.RUNNING
+2025-08-05 21:01:27,030 root         DEBUG    predict_pollution_18: Status.RUNNING
+2025-08-05 21:01:27,031 root         DEBUG    predict_pollution_24: Status.RUNNING
+2025-08-05 21:01:27,031 root         DEBUG    predict_pollution_27: Status.RUNNING
+2025-08-05 21:01:27,031 root         DEBUG    predict_pollution_11: Executing...
+2025-08-05 21:01:27,032 root         DEBUG    predict_pollution_35: Status.RUNNING
+2025-08-05 21:01:27,032 root         DEBUG    predict_pollution_36: Status.RUNNING
+2025-08-05 21:01:27,032 root         DEBUG    predict_pollution_16: Executing...
+2025-08-05 21:01:27,032 root         DEBUG    predict_pollution_38: Status.RUNNING
+2025-08-05 21:01:27,032 root         DEBUG    predict_pollution_39: Status.RUNNING
+2025-08-05 21:01:27,033 root         DEBUG    predict_pollution_40: Status.RUNNING
+2025-08-05 21:01:27,033 root         DEBUG    predict_pollution_17: Executing...
+2025-08-05 21:01:27,033 root         DEBUG    predict_pollution_47: Status.RUNNING
+2025-08-05 21:01:27,034 root         DEBUG    predict_pollution_48: Status.RUNNING
+2025-08-05 21:01:27,034 root         DEBUG    predict_pollution_18: Executing...
+2025-08-05 21:01:27,034 root         DEBUG    predict_pollution_49: Status.RUNNING
+2025-08-05 21:01:27,034 root         DEBUG    predict_pollution_50: Status.RUNNING
+2025-08-05 21:01:27,034 root         DEBUG    predict_pollution_24: Executing...
+2025-08-05 21:01:27,035 root         DEBUG    predict_pollution_54: Status.RUNNING
+2025-08-05 21:01:27,035 root         DEBUG    predict_pollution_55: Status.RUNNING
+2025-08-05 21:01:27,035 root         DEBUG    predict_pollution_27: Executing...
+2025-08-05 21:01:27,035 root         DEBUG    predict_pollution_56: Status.RUNNING
+2025-08-05 21:01:27,036 root         DEBUG    predict_pollution_57: Status.RUNNING
+2025-08-05 21:01:27,036 root         DEBUG    predict_pollution_35: Executing...
+2025-08-05 21:01:27,036 root         DEBUG    predict_pollution_58: Status.RUNNING
+2025-08-05 21:01:27,036 root         DEBUG    predict_pollution_59: Status.RUNNING
+2025-08-05 21:01:27,037 root         DEBUG    predict_pollution_36: Executing...
+2025-08-05 21:01:27,037 root         DEBUG    predict_pollution_60: Status.RUNNING
+2025-08-05 21:01:27,037 root         DEBUG    predict_pollution_38: Executing...
+2025-08-05 21:01:27,038 root         DEBUG    predict_pollution_39: Executing...
+2025-08-05 21:01:27,038 root         DEBUG    predict_pollution_40: Executing...
+2025-08-05 21:01:27,039 root         DEBUG    predict_pollution_47: Executing...
+2025-08-05 21:01:27,039 root         DEBUG    predict_pollution_48: Executing...
+2025-08-05 21:01:27,039 root         DEBUG    predict_pollution_49: Executing...
+2025-08-05 21:01:27,040 root         DEBUG    predict_pollution_50: Executing...
+2025-08-05 21:01:27,040 root         DEBUG    predict_pollution_54: Executing...
+2025-08-05 21:01:27,041 root         DEBUG    predict_pollution_55: Executing...
+2025-08-05 21:01:27,041 root         DEBUG    predict_pollution_56: Executing...
+2025-08-05 21:01:27,042 root         DEBUG    predict_pollution_57: Executing...
+2025-08-05 21:01:27,042 root         DEBUG    predict_pollution_58: Executing...
+2025-08-05 21:01:27,043 root         DEBUG    predict_pollution_59: Executing...
+2025-08-05 21:01:27,043 root         DEBUG    predict_pollution_60: Executing...
+2025-08-05 21:01:27,275 root         DEBUG    predict_pollution_4: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687031-predict_pollution_4
+2025-08-05 21:01:27,279 root         DEBUG    predict_pollution_8: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687033-predict_pollution_8
+2025-08-05 21:01:27,287 root         DEBUG    predict_pollution_24: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687040-predict_pollution_24
+2025-08-05 21:01:27,287 root         DEBUG    predict_pollution_17: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687039-predict_pollution_17
+2025-08-05 21:01:27,288 root         DEBUG    predict_pollution_11: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687036-predict_pollution_11
+2025-08-05 21:01:27,289 root         DEBUG    predict_pollution_38: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687044-predict_pollution_38
+2025-08-05 21:01:27,296 root         DEBUG    predict_pollution_16: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687037-predict_pollution_16
+2025-08-05 21:01:27,298 root         DEBUG    predict_pollution_39: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687044-predict_pollution_39
+2025-08-05 21:01:27,301 root         DEBUG    predict_pollution_59: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687050-predict_pollution_59
+2025-08-05 21:01:27,306 root         DEBUG    predict_pollution_35: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687042-predict_pollution_35
+2025-08-05 21:01:27,307 root         DEBUG    predict_pollution_57: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687049-predict_pollution_57
+2025-08-05 21:01:27,307 root         DEBUG    predict_pollution_18: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687040-predict_pollution_18
+2025-08-05 21:01:27,311 root         DEBUG    predict_pollution_56: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687049-predict_pollution_56
+2025-08-05 21:01:27,312 root         DEBUG    predict_pollution_49: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687047-predict_pollution_49
+2025-08-05 21:01:27,313 root         DEBUG    predict_pollution_47: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687046-predict_pollution_47
+2025-08-05 21:01:27,313 root         DEBUG    predict_pollution_27: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687041-predict_pollution_27
+2025-08-05 21:01:27,313 root         DEBUG    predict_pollution_60: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687051-predict_pollution_60
+2025-08-05 21:01:27,315 root         DEBUG    predict_pollution_48: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687046-predict_pollution_48
+2025-08-05 21:01:27,316 root         DEBUG    predict_pollution_50: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687047-predict_pollution_50
+2025-08-05 21:01:27,319 root         DEBUG    predict_pollution_36: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687043-predict_pollution_36
+2025-08-05 21:01:27,322 root         DEBUG    predict_pollution_55: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687048-predict_pollution_55
+2025-08-05 21:01:27,324 root         DEBUG    predict_pollution_54: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687048-predict_pollution_54
+2025-08-05 21:01:27,325 root         DEBUG    predict_pollution_40: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687045-predict_pollution_40
+2025-08-05 21:01:27,326 root         DEBUG    predict_pollution_58: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687050-predict_pollution_58
+2025-08-05 21:01:35,912 root         DEBUG    cloud_4 Completed in 8.124297142028809 seconds ---
+2025-08-05 21:01:35,912 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427680377-fog_4
+2025-08-05 21:01:35,912 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427686019-cloud_4
+2025-08-05 21:01:38,275 root         DEBUG    cloud_4: Status.FINISHED
+2025-08-05 21:01:53,176 root         DEBUG    predict_pollution_38 Completed in 24.370583295822144 seconds ---
+2025-08-05 21:01:53,176 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687044-predict_pollution_38
+2025-08-05 21:01:54,375 root         DEBUG    predict_pollution_27 Completed in 25.581307649612427 seconds ---
+2025-08-05 21:01:54,375 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687041-predict_pollution_27
+2025-08-05 21:01:54,628 root         DEBUG    predict_pollution_24 Completed in 25.824387073516846 seconds ---
+2025-08-05 21:01:54,628 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687040-predict_pollution_24
+2025-08-05 21:01:54,894 root         DEBUG    predict_pollution_17 Completed in 26.08763551712036 seconds ---
+2025-08-05 21:01:54,894 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687039-predict_pollution_17
+2025-08-05 21:01:55,536 root         DEBUG    predict_pollution_38: Status.FINISHED
+2025-08-05 21:01:55,598 root         DEBUG    predict_pollution_50 Completed in 26.75682044029236 seconds ---
+2025-08-05 21:01:55,598 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687047-predict_pollution_50
+2025-08-05 21:01:56,628 root         DEBUG    predict_pollution_40 Completed in 27.806476593017578 seconds ---
+2025-08-05 21:01:56,629 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687045-predict_pollution_40
+2025-08-05 21:01:56,630 root         DEBUG    predict_pollution_55 Completed in 27.781448364257812 seconds ---
+2025-08-05 21:01:56,630 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687048-predict_pollution_55
+2025-08-05 21:01:56,633 root         DEBUG    predict_pollution_18 Completed in 27.69202184677124 seconds ---
+2025-08-05 21:01:56,634 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687040-predict_pollution_18
+2025-08-05 21:01:56,635 root         DEBUG    predict_pollution_8 Completed in 27.78142476081848 seconds ---
+2025-08-05 21:01:56,635 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687033-predict_pollution_8
+2025-08-05 21:01:56,737 root         DEBUG    predict_pollution_27: Status.FINISHED
+2025-08-05 21:01:56,987 root         DEBUG    predict_pollution_24: Status.FINISHED
+2025-08-05 21:01:57,193 root         DEBUG    predict_pollution_48 Completed in 28.3415367603302 seconds ---
+2025-08-05 21:01:57,194 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687046-predict_pollution_48
+2025-08-05 21:01:57,206 root         DEBUG    predict_pollution_39 Completed in 28.258824825286865 seconds ---
+2025-08-05 21:01:57,206 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687044-predict_pollution_39
+2025-08-05 21:01:57,254 root         DEBUG    predict_pollution_17: Status.FINISHED
+2025-08-05 21:01:57,502 root         DEBUG    predict_pollution_11 Completed in 28.586182355880737 seconds ---
+2025-08-05 21:01:57,502 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687036-predict_pollution_11
+2025-08-05 21:01:57,775 root         DEBUG    predict_pollution_47 Completed in 28.77568817138672 seconds ---
+2025-08-05 21:01:57,775 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687046-predict_pollution_47
+2025-08-05 21:01:57,958 root         DEBUG    predict_pollution_50: Status.FINISHED
+2025-08-05 21:01:58,028 root         DEBUG    predict_pollution_59 Completed in 29.117112159729004 seconds ---
+2025-08-05 21:01:58,029 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687050-predict_pollution_59
+2025-08-05 21:01:58,989 root         DEBUG    predict_pollution_40: Status.FINISHED
+2025-08-05 21:01:58,991 root         DEBUG    predict_pollution_55: Status.FINISHED
+2025-08-05 21:01:58,996 root         DEBUG    predict_pollution_18: Status.FINISHED
+2025-08-05 21:01:58,999 root         DEBUG    predict_pollution_8: Status.FINISHED
+2025-08-05 21:01:59,555 root         DEBUG    predict_pollution_48: Status.FINISHED
+2025-08-05 21:01:59,570 root         DEBUG    predict_pollution_39: Status.FINISHED
+2025-08-05 21:01:59,772 root         DEBUG    predict_pollution_54 Completed in 30.625552892684937 seconds ---
+2025-08-05 21:01:59,772 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687048-predict_pollution_54
+2025-08-05 21:01:59,777 root         DEBUG    predict_pollution_58 Completed in 30.806503534317017 seconds ---
+2025-08-05 21:01:59,778 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687050-predict_pollution_58
+2025-08-05 21:01:59,780 root         DEBUG    predict_pollution_60 Completed in 30.7615864276886 seconds ---
+2025-08-05 21:01:59,780 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687051-predict_pollution_60
+2025-08-05 21:01:59,783 root         DEBUG    predict_pollution_16 Completed in 30.79878282546997 seconds ---
+2025-08-05 21:01:59,783 root         DEBUG    predict_pollution_4 Completed in 30.389779090881348 seconds ---
+2025-08-05 21:01:59,784 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687037-predict_pollution_16
+2025-08-05 21:01:59,784 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687031-predict_pollution_4
+2025-08-05 21:01:59,786 root         DEBUG    predict_pollution_49 Completed in 30.806742191314697 seconds ---
+2025-08-05 21:01:59,786 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687047-predict_pollution_49
+2025-08-05 21:01:59,794 root         DEBUG    predict_pollution_57 Completed in 30.755136489868164 seconds ---
+2025-08-05 21:01:59,794 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687049-predict_pollution_57
+2025-08-05 21:01:59,866 root         DEBUG    predict_pollution_11: Status.FINISHED
+2025-08-05 21:02:00,139 root         DEBUG    predict_pollution_47: Status.FINISHED
+2025-08-05 21:02:00,389 root         DEBUG    predict_pollution_59: Status.FINISHED
+2025-08-05 21:02:00,541 root         DEBUG    predict_pollution_35 Completed in 31.593117237091064 seconds ---
+2025-08-05 21:02:00,542 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687042-predict_pollution_35
+2025-08-05 21:02:00,544 root         DEBUG    predict_pollution_56 Completed in 31.494178771972656 seconds ---
+2025-08-05 21:02:00,544 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687049-predict_pollution_56
+2025-08-05 21:02:00,545 root         DEBUG    predict_pollution_36 Completed in 31.29585099220276 seconds ---
+2025-08-05 21:02:00,546 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427674702-train_model
+2025-08-05 21:02:00,788 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427687043-predict_pollution_36
+2025-08-05 21:02:02,133 root         DEBUG    predict_pollution_54: Status.FINISHED
+2025-08-05 21:02:02,140 root         DEBUG    predict_pollution_58: Status.FINISHED
+2025-08-05 21:02:02,143 root         DEBUG    predict_pollution_60: Status.FINISHED
+2025-08-05 21:02:02,144 root         DEBUG    predict_pollution_4: Status.FINISHED
+2025-08-05 21:02:02,145 root         DEBUG    predict_pollution_16: Status.FINISHED
+2025-08-05 21:02:02,148 root         DEBUG    predict_pollution_49: Status.FINISHED
+2025-08-05 21:02:02,156 root         DEBUG    predict_pollution_57: Status.FINISHED
+2025-08-05 21:02:02,903 root         DEBUG    predict_pollution_56: Status.FINISHED
+2025-08-05 21:02:02,904 root         DEBUG    predict_pollution_35: Status.FINISHED
+2025-08-05 21:02:03,032 root         DEBUG    predict_pollution_36: Status.FINISHED
+2025-08-05 21:02:03,032 root         INFO     Workflow 'airqualityworkflow' completed in 48.335575580596924 seconds ---
+48
+edge_4_01_01
+train_model
+fog_4
+cloud_4
+predict_pollution_27
+predict_pollution_24
+predict_pollution_38
+predict_pollution_17
+predict_pollution_40
+predict_pollution_50
+predict_pollution_55
+predict_pollution_48
+predict_pollution_8
+predict_pollution_59
+predict_pollution_11
+predict_pollution_18
+predict_pollution_39
+predict_pollution_35
+predict_pollution_58
+predict_pollution_49
+predict_pollution_16
+predict_pollution_47
+predict_pollution_60
+predict_pollution_57
+predict_pollution_56
+predict_pollution_54
+predict_pollution_36
+predict_pollution_4

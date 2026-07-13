@@ -1,6 +1,7 @@
 import logging
 import shutil
 import glob
+import os
 from json import loads, dumps
 from threading import Thread
 from threading import Semaphore
@@ -180,6 +181,7 @@ class Task(Thread):
         self.fair_outputs = []
         self.fair_annotations = {}
         self.fair_checkpoint_reused = False
+        self.completetion_time = 0
 
     def declare_inputs(self, *artifacts: Any) -> "Task":
         """Attach intentional input artifact metadata and return this task."""
@@ -542,31 +544,68 @@ class Task(Thread):
         :return: command preprocessed
         :rtype: str
         """
-        stager = dagon.Stager(
+        stager = dagon.stager.base.Stager(
             self.data_mover, self.stager_mover, self.workflow.cfg)
 
         # Initialize the script
         header = "#! /bin/bash\n"
+        header = "export PATH=\"$HOME/.local/bin:$PATH\"\n"
         header = header + "# This is the DagOn launcher script\n\n"
         header = header + "code=0\n"
         # Add and execute the howim script
 
         context_script = header + "cd " + self.working_dir + "/.dagon\n"
+
+        if "dynostore" in self.workflow.cfg:
+
+            # Check if python is available
+            header += "if command -v python &>/dev/null; then\n"
+            header += "PYTHON=python\n"
+            header += "elif command -v python3 &>/dev/null; then\n"
+            header += "PYTHON=python3\n"
+            header += "else\n"
+            header += " echo \"Python is not available, please install Python to use DynoStore\"\n"
+            header += " exit 1\n"
+            header += "fi\n"
+
+            header += "if $PYTHON -c \"import dynostore\" &>/dev/null; then\n"
+            header += " echo \"DynoStore is installed\"\n"
+            header += "else\n"
+            header += " echo \"DynoStore is not installed, installing...\"\n"
+            header += "pip install git+https://github.com/dynostore/dynostore-client\n"
+            header += " fi\n"
+
+        header += "echo \n echo \"************************************\"\n echo \n"
+
         context_script += header + self.get_how_im_script() + "\n\n"
 
         # execute context script
         result = self.on_execute(context_script, "context.sh")
         if result['code']:
             raise Exception(result['message'])
-        
+
         # Step 1: Unescape the backslashes
-        unescaped_output = result['output'].encode('utf-8').decode('unicode_escape')
+        unescaped_output = result['output'].encode(
+            'utf-8').decode('unicode_escape')
 
         # Optional: remove trailing newline if needed
         unescaped_output = unescaped_output.strip()
 
-            
-        self.set_info(loads(unescaped_output))
+        # Get only the JSON part of the output
+        parts_output = unescaped_output.split(
+            "************************************")
+        if len(parts_output) > 1:
+            json_output = parts_output[1].strip()
+        else:
+            raise ValueError("Output does not contain expected JSON format")
+
+        info = loads(json_output)
+
+        if "dynostore" in self.workflow.cfg:
+            info['dynostore'] = self.workflow.cfg['dynostore']
+
+        # ToDO: Check if dynostore is available
+        self.set_info(info)
 
         # start the creation of the launcher.sh script
         # Create the header
@@ -784,6 +823,15 @@ class Task(Thread):
         """
         footer = command + "\n\n"
         footer = footer + "# Perform post process\n"
+
+        # if dynostore, push the data to dynostore
+        if "dynostore" in self.workflow.cfg:
+            dyno_conf = self.workflow.cfg['dynostore']
+            dyno_server = f"{dyno_conf.get("host")}:{dyno_conf.get("port")}"
+            footer += f"echo \"Pushing data to DynoStore server {dyno_server}\"\n"
+            footer += f"$PYTHON -m dynostore.cli --server {dyno_server} put {self.working_dir} --recursive --catalog={os.path.basename(self.working_dir)}\n"
+            # an sleep for sync
+            footer += f"sleep 1\n"
         footer += "exit $code"
         return footer
 
@@ -964,9 +1012,11 @@ class Task(Thread):
 
                 # Invoke the actual executor
                 start_time = time()
+                print(self.name)
                 self.result = self.on_execute(launcher_script, "launcher.sh")
+                self.completetion_time = time() - start_time
                 self.workflow.logger.debug(
-                    "%s Completed in %s seconds ---" % (self.name, (time() - start_time)))
+                    "%s Completed in %s seconds ---" % (self.name, self.completetion_time))
 
                 self.workflow.checkpoints[key]["code"] = self.result['code']
 
@@ -1137,6 +1187,7 @@ class Task(Thread):
         :return: Context script
         :rtype: str
         """
+
         return r"""
 # Initialize
 machine_type="none"
@@ -1144,8 +1195,6 @@ public_id="none"
 user="none"
 status_sshd="none"
 status_ftpd="none"
-status_skycds="none"
-
 #get http communication protocol
 curl_or_wget=$(if hash curl 2>/dev/null; then echo "curl"; elif hash wget 2>/dev/null; then echo "wget"; fi);
 
@@ -1178,10 +1227,16 @@ then
   private_ip=`ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\\1/p'`
 fi
 
-# Check if the secure copy is available
-status_sshd=`systemctl status sshd 2>/dev/null | grep 'Active' | awk '{print $2}'`
-if [ "$status_sshd" == "" ]
-then
+# Check if either sshd.service or ssh.service is available and active
+status_sshd=$(systemctl status sshd 2>/dev/null | grep 'Active' | awk '{print $2}')
+
+# If sshd is not found or inactive, try ssh
+if [ -z "$status_sshd" ]; then
+  status_sshd=$(systemctl status ssh 2>/dev/null | grep 'Active' | awk '{print $2}')
+fi
+
+# If neither is found, set to "none"
+if [ -z "$status_sshd" ]; then
   status_sshd="none"
 fi
 
@@ -1199,15 +1254,6 @@ then
   status_gsiftpd="none"
 fi
 
-#check if skycds container is running
-status_docker=`systemctl status docker 2>/dev/null|grep "Active"| awk '{print $2}'`
-if [ "$status_gsiftpd" == "active" ]
-then
-    if [ "$(docker ps -aq -f status=running -f name=client)" ]; then
-    # cleanup
-        status_skycds="active"
-    fi
-fi
 
 # Get the user
 user=$USER
@@ -1215,6 +1261,6 @@ user=$USER
 echo "no" | ssh-keygen  -b 2048 -t rsa -f ssh_key -q -N ""  >/dev/null
 
 # Construct the json
-json="{\\\"type\\\":\\\"$machine_type\\\",\\\"public_ip\\\":\\\"$public_ip\\\",\\\"ip\\\":\\\"$private_ip\\\",\\\"user\\\":\\\"$user\\\",\\\"SCP\\\":\\\"$status_sshd\\\",\\\"FTP\\\":\\\"$status_ftpd\\\",\\\"GRIDFTP\\\":\\\"$status_gsiftpd\\\",\\\"SKYCDS\\\":\\\"$status_skycds\\\"}"
+json="{\\\"type\\\":\\\"$machine_type\\\",\\\"public_ip\\\":\\\"$public_ip\\\",\\\"ip\\\":\\\"$private_ip\\\",\\\"user\\\":\\\"$user\\\",\\\"SCP\\\":\\\"$status_sshd\\\",\\\"FTP\\\":\\\"$status_ftpd\\\",\\\"GRIDFTP\\\":\\\"$status_gsiftpd\\\"}"
 echo $json
 """

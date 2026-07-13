@@ -1,0 +1,131 @@
+/home/cc/dagonstar/venv/lib/python3.12/site-packages/paramiko/pkey.py:82: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+  "cipher": algorithms.TripleDES,
+/home/cc/dagonstar/venv/lib/python3.12/site-packages/paramiko/transport.py:253: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+  "class": algorithms.TripleDES,
+2025-08-05 21:06:00,135 root         DEBUG    Running workflow: airqualityworkflow
+2025-08-05 21:06:00,136 root         DEBUG    edge_4_01_01: Status.WAITING
+2025-08-05 21:06:00,137 root         DEBUG    edge_4_01_01: Status.RUNNING
+2025-08-05 21:06:00,137 root         DEBUG    edge_4_02_01: Status.WAITING
+2025-08-05 21:06:00,137 root         DEBUG    edge_4_01_01: Executing...
+2025-08-05 21:06:00,137 root         DEBUG    edge_4_03_01: Status.WAITING
+2025-08-05 21:06:00,138 root         DEBUG    edge_4_02_01: Status.RUNNING
+2025-08-05 21:06:00,139 root         DEBUG    edge_4_04_01: Status.WAITING
+2025-08-05 21:06:00,139 root         DEBUG    edge_4_03_01: Status.RUNNING
+2025-08-05 21:06:00,139 root         DEBUG    edge_4_05_01: Status.WAITING
+2025-08-05 21:06:00,140 root         DEBUG    edge_4_02_01: Executing...
+2025-08-05 21:06:00,140 root         DEBUG    edge_4_06_01: Status.WAITING
+2025-08-05 21:06:00,140 root         DEBUG    edge_4_04_01: Status.RUNNING
+2025-08-05 21:06:00,141 root         DEBUG    edge_4_07_01: Status.WAITING
+2025-08-05 21:06:00,141 root         DEBUG    edge_4_03_01: Executing...
+2025-08-05 21:06:00,141 root         DEBUG    edge_4_05_01: Status.RUNNING
+2025-08-05 21:06:00,141 root         DEBUG    edge_4_08_01: Status.WAITING
+2025-08-05 21:06:00,142 root         DEBUG    edge_4_09_01: Status.WAITING
+2025-08-05 21:06:00,142 root         DEBUG    edge_4_06_01: Status.RUNNING
+2025-08-05 21:06:00,143 root         DEBUG    edge_4_10_01: Status.WAITING
+2025-08-05 21:06:00,143 root         DEBUG    edge_4_04_01: Executing...
+2025-08-05 21:06:00,143 root         DEBUG    edge_4_11_01: Status.WAITING
+2025-08-05 21:06:00,143 root         DEBUG    edge_4_07_01: Status.RUNNING
+2025-08-05 21:06:00,144 root         DEBUG    fog_4: Status.WAITING
+2025-08-05 21:06:00,144 root         DEBUG    edge_4_05_01: Executing...
+2025-08-05 21:06:00,145 root         DEBUG    cloud_4: Status.WAITING
+2025-08-05 21:06:00,145 root         DEBUG    edge_4_08_01: Status.RUNNING
+2025-08-05 21:06:00,145 root         DEBUG    train_model: Status.WAITING
+2025-08-05 21:06:00,146 root         DEBUG    edge_4_09_01: Status.RUNNING
+2025-08-05 21:06:00,146 root         DEBUG    predict_pollution_4: Status.WAITING
+2025-08-05 21:06:00,146 root         DEBUG    edge_4_06_01: Executing...
+2025-08-05 21:06:00,146 root         DEBUG    edge_4_10_01: Status.RUNNING
+2025-08-05 21:06:00,147 root         DEBUG    edge_4_11_01: Status.RUNNING
+2025-08-05 21:06:00,147 root         DEBUG    edge_4_07_01: Executing...
+2025-08-05 21:06:00,148 root         DEBUG    edge_4_08_01: Executing...
+2025-08-05 21:06:00,149 root         DEBUG    train_model: Status.RUNNING
+2025-08-05 21:06:00,149 root         DEBUG    edge_4_09_01: Executing...
+2025-08-05 21:06:00,150 root         DEBUG    edge_4_10_01: Executing...
+2025-08-05 21:06:00,150 root         DEBUG    edge_4_11_01: Executing...
+2025-08-05 21:06:00,151 root         DEBUG    train_model: Executing...
+2025-08-05 21:06:00,218 root         DEBUG    edge_4_01_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960138-edge_4_01_01
+2025-08-05 21:06:00,222 root         DEBUG    edge_4_02_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960142-edge_4_02_01
+2025-08-05 21:06:00,225 root         DEBUG    edge_4_03_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960144-edge_4_03_01
+2025-08-05 21:06:00,227 root         DEBUG    edge_4_04_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960147-edge_4_04_01
+2025-08-05 21:06:00,228 root         DEBUG    edge_4_05_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960148-edge_4_05_01
+2025-08-05 21:06:00,230 root         DEBUG    edge_4_07_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960151-edge_4_07_01
+2025-08-05 21:06:00,231 root         DEBUG    edge_4_06_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960150-edge_4_06_01
+2025-08-05 21:06:00,234 root         DEBUG    edge_4_11_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960153-edge_4_11_01
+2025-08-05 21:06:00,234 root         DEBUG    edge_4_08_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960151-edge_4_08_01
+2025-08-05 21:06:00,236 root         DEBUG    edge_4_09_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960152-edge_4_09_01
+2025-08-05 21:06:00,237 root         DEBUG    edge_4_10_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960152-edge_4_10_01
+2025-08-05 21:06:00,402 root         DEBUG    train_model: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960153-train_model
+2025-08-05 21:06:03,859 root         DEBUG    edge_4_09_01 Completed in 2.752415657043457 seconds ---
+2025-08-05 21:06:04,097 root         DEBUG    edge_4_10_01 Completed in 3.0925557613372803 seconds ---
+2025-08-05 21:06:04,350 root         DEBUG    edge_4_11_01 Completed in 3.2911057472229004 seconds ---
+2025-08-05 21:06:04,597 root         DEBUG    edge_4_05_01 Completed in 3.447652578353882 seconds ---
+2025-08-05 21:06:04,849 root         DEBUG    edge_4_02_01 Completed in 3.7789368629455566 seconds ---
+2025-08-05 21:06:05,099 root         DEBUG    edge_4_08_01 Completed in 4.116862535476685 seconds ---
+2025-08-05 21:06:05,772 root         DEBUG    edge_4_03_01 Completed in 4.771591663360596 seconds ---
+2025-08-05 21:06:05,775 root         DEBUG    edge_4_04_01 Completed in 4.574793815612793 seconds ---
+2025-08-05 21:06:05,781 root         DEBUG    edge_4_01_01 Completed in 4.6545727252960205 seconds ---
+2025-08-05 21:06:05,860 root         DEBUG    edge_4_09_01: Status.FINISHED
+2025-08-05 21:06:06,001 root         DEBUG    edge_4_07_01 Completed in 4.990484714508057 seconds ---
+2025-08-05 21:06:06,097 root         DEBUG    edge_4_10_01: Status.FINISHED
+2025-08-05 21:06:06,218 root         DEBUG    edge_4_06_01 Completed in 4.88686203956604 seconds ---
+2025-08-05 21:06:06,351 root         DEBUG    edge_4_11_01: Status.FINISHED
+2025-08-05 21:06:06,597 root         DEBUG    edge_4_05_01: Status.FINISHED
+2025-08-05 21:06:06,850 root         DEBUG    edge_4_02_01: Status.FINISHED
+2025-08-05 21:06:07,100 root         DEBUG    edge_4_08_01: Status.FINISHED
+2025-08-05 21:06:07,773 root         DEBUG    edge_4_03_01: Status.FINISHED
+2025-08-05 21:06:07,776 root         DEBUG    edge_4_04_01: Status.FINISHED
+2025-08-05 21:06:07,781 root         DEBUG    edge_4_01_01: Status.FINISHED
+2025-08-05 21:06:08,001 root         DEBUG    edge_4_07_01: Status.FINISHED
+2025-08-05 21:06:08,218 root         DEBUG    edge_4_06_01: Status.FINISHED
+2025-08-05 21:06:08,219 root         DEBUG    fog_4: Status.RUNNING
+2025-08-05 21:06:08,219 root         DEBUG    fog_4: Executing...
+2025-08-05 21:06:08,219 root         DEBUG    fog_4: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427968220-fog_4
+2025-08-05 21:06:10,837 root         DEBUG    train_model Completed in 8.784775972366333 seconds ---
+2025-08-05 21:06:12,837 root         DEBUG    train_model: Status.FINISHED
+2025-08-05 21:06:12,837 root         DEBUG    predict_pollution_4: Status.RUNNING
+2025-08-05 21:06:12,838 root         DEBUG    predict_pollution_4: Executing...
+2025-08-05 21:06:13,082 root         DEBUG    predict_pollution_4: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427972838-predict_pollution_4
+2025-08-05 21:06:27,209 root         DEBUG    fog_4 Completed in 18.7322256565094 seconds ---
+2025-08-05 21:06:27,209 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960138-edge_4_01_01
+2025-08-05 21:06:27,288 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960142-edge_4_02_01
+2025-08-05 21:06:27,366 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960144-edge_4_03_01
+2025-08-05 21:06:27,445 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960147-edge_4_04_01
+2025-08-05 21:06:27,524 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960148-edge_4_05_01
+2025-08-05 21:06:27,603 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960150-edge_4_06_01
+2025-08-05 21:06:27,681 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960151-edge_4_07_01
+2025-08-05 21:06:27,760 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960151-edge_4_08_01
+2025-08-05 21:06:27,838 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960152-edge_4_09_01
+2025-08-05 21:06:27,917 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960152-edge_4_10_01
+2025-08-05 21:06:27,996 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960153-edge_4_11_01
+2025-08-05 21:06:30,075 root         DEBUG    fog_4: Status.FINISHED
+2025-08-05 21:06:30,076 root         DEBUG    cloud_4: Status.RUNNING
+2025-08-05 21:06:30,076 root         DEBUG    cloud_4: Executing...
+2025-08-05 21:06:30,319 root         DEBUG    cloud_4: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427990076-cloud_4
+2025-08-05 21:06:31,862 root         DEBUG    predict_pollution_4 Completed in 17.332387924194336 seconds ---
+2025-08-05 21:06:31,862 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427960153-train_model
+2025-08-05 21:06:32,107 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427972838-predict_pollution_4
+2025-08-05 21:06:34,352 root         DEBUG    predict_pollution_4: Status.FINISHED
+2025-08-05 21:06:39,239 root         DEBUG    cloud_4 Completed in 7.242091655731201 seconds ---
+2025-08-05 21:06:39,239 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427968220-fog_4
+2025-08-05 21:06:39,240 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754427990076-cloud_4
+2025-08-05 21:06:41,599 root         DEBUG    cloud_4: Status.FINISHED
+2025-08-05 21:06:41,599 root         INFO     Workflow 'airqualityworkflow' completed in 41.46298813819885 seconds ---
+48
+edge_4_08_01
+edge_4_03_01
+edge_4_10_01
+edge_4_07_01
+edge_4_11_01
+edge_4_02_01
+edge_4_09_01
+edge_4_01_01
+edge_4_05_01
+edge_4_04_01
+edge_4_06_01
+train_model
+fog_4
+predict_pollution_4
+cloud_4
+
+real    0m50.017s
+user    0m8.771s
+sys     0m0.658s

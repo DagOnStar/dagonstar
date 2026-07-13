@@ -1,0 +1,1135 @@
+/home/cc/dagonstar/venv/lib/python3.12/site-packages/paramiko/pkey.py:82: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+  "cipher": algorithms.TripleDES,
+/home/cc/dagonstar/venv/lib/python3.12/site-packages/paramiko/transport.py:253: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+  "class": algorithms.TripleDES,
+2025-08-05 21:09:52,046 root         DEBUG    Running workflow: airqualityworkflow
+2025-08-05 21:09:52,047 root         DEBUG    edge_4_01_01: Status.WAITING
+2025-08-05 21:09:52,047 root         DEBUG    edge_4_01_01: Status.RUNNING
+2025-08-05 21:09:52,048 root         DEBUG    edge_4_02_01: Status.WAITING
+2025-08-05 21:09:52,048 root         DEBUG    edge_4_01_01: Executing...
+2025-08-05 21:09:52,048 root         DEBUG    edge_4_03_01: Status.WAITING
+2025-08-05 21:09:52,048 root         DEBUG    edge_4_02_01: Status.RUNNING
+2025-08-05 21:09:52,049 root         DEBUG    edge_4_04_01: Status.WAITING
+2025-08-05 21:09:52,050 root         DEBUG    edge_4_03_01: Status.RUNNING
+2025-08-05 21:09:52,050 root         DEBUG    edge_4_05_01: Status.WAITING
+2025-08-05 21:09:52,050 root         DEBUG    edge_4_02_01: Executing...
+2025-08-05 21:09:52,050 root         DEBUG    edge_4_06_01: Status.WAITING
+2025-08-05 21:09:52,051 root         DEBUG    edge_4_04_01: Status.RUNNING
+2025-08-05 21:09:52,051 root         DEBUG    edge_4_03_01: Executing...
+2025-08-05 21:09:52,051 root         DEBUG    edge_4_07_01: Status.WAITING
+2025-08-05 21:09:52,051 root         DEBUG    edge_4_05_01: Status.RUNNING
+2025-08-05 21:09:52,052 root         DEBUG    edge_4_08_01: Status.WAITING
+2025-08-05 21:09:52,052 root         DEBUG    edge_4_09_01: Status.WAITING
+2025-08-05 21:09:52,053 root         DEBUG    edge_4_06_01: Status.RUNNING
+2025-08-05 21:09:52,053 root         DEBUG    edge_4_10_01: Status.WAITING
+2025-08-05 21:09:52,053 root         DEBUG    edge_4_04_01: Executing...
+2025-08-05 21:09:52,053 root         DEBUG    edge_4_11_01: Status.WAITING
+2025-08-05 21:09:52,054 root         DEBUG    edge_8_01_01: Status.WAITING
+2025-08-05 21:09:52,059 root         DEBUG    edge_8_01_01: Status.RUNNING
+2025-08-05 21:09:52,055 root         DEBUG    edge_8_02_01: Status.WAITING
+2025-08-05 21:09:52,055 root         DEBUG    edge_4_05_01: Executing...
+2025-08-05 21:09:52,055 root         DEBUG    edge_8_03_01: Status.WAITING
+2025-08-05 21:09:52,055 root         DEBUG    edge_4_08_01: Status.RUNNING
+2025-08-05 21:09:52,056 root         DEBUG    edge_8_04_01: Status.WAITING
+2025-08-05 21:09:52,056 root         DEBUG    edge_4_09_01: Status.RUNNING
+2025-08-05 21:09:52,056 root         DEBUG    edge_8_05_01: Status.WAITING
+2025-08-05 21:09:52,056 root         DEBUG    edge_4_06_01: Executing...
+2025-08-05 21:09:52,057 root         DEBUG    edge_8_06_01: Status.WAITING
+2025-08-05 21:09:52,057 root         DEBUG    edge_4_10_01: Status.RUNNING
+2025-08-05 21:09:52,057 root         DEBUG    edge_8_07_01: Status.WAITING
+2025-08-05 21:09:52,058 root         DEBUG    edge_8_08_01: Status.WAITING
+2025-08-05 21:09:52,058 root         DEBUG    edge_4_11_01: Status.RUNNING
+2025-08-05 21:09:52,059 root         DEBUG    edge_8_09_01: Status.WAITING
+2025-08-05 21:09:52,054 root         DEBUG    edge_4_07_01: Status.RUNNING
+2025-08-05 21:09:52,059 root         DEBUG    edge_8_01_01: Executing...
+2025-08-05 21:09:52,059 root         DEBUG    edge_8_10_01: Status.WAITING
+2025-08-05 21:09:52,059 root         DEBUG    edge_8_02_01: Status.RUNNING
+2025-08-05 21:09:52,060 root         DEBUG    edge_8_11_01: Status.WAITING
+2025-08-05 21:09:52,060 root         DEBUG    edge_11_01_01: Status.WAITING
+2025-08-05 21:09:52,061 root         DEBUG    edge_8_03_01: Status.RUNNING
+2025-08-05 21:09:52,061 root         DEBUG    edge_11_02_01: Status.WAITING
+2025-08-05 21:09:52,061 root         DEBUG    edge_4_08_01: Executing...
+2025-08-05 21:09:52,062 root         DEBUG    edge_11_03_01: Status.WAITING
+2025-08-05 21:09:52,062 root         DEBUG    edge_8_04_01: Status.RUNNING
+2025-08-05 21:09:52,062 root         DEBUG    edge_11_04_01: Status.WAITING
+2025-08-05 21:09:52,062 root         DEBUG    edge_4_09_01: Executing...
+2025-08-05 21:09:52,063 root         DEBUG    edge_11_05_01: Status.WAITING
+2025-08-05 21:09:52,063 root         DEBUG    edge_8_05_01: Status.RUNNING
+2025-08-05 21:09:52,063 root         DEBUG    edge_11_06_01: Status.WAITING
+2025-08-05 21:09:52,064 root         DEBUG    edge_11_07_01: Status.WAITING
+2025-08-05 21:09:52,064 root         DEBUG    edge_8_06_01: Status.RUNNING
+2025-08-05 21:09:52,064 root         DEBUG    edge_11_08_01: Status.WAITING
+2025-08-05 21:09:52,064 root         DEBUG    edge_4_10_01: Executing...
+2025-08-05 21:09:52,065 root         DEBUG    edge_11_09_01: Status.WAITING
+2025-08-05 21:09:52,078 root         DEBUG    edge_11_09_01: Status.RUNNING
+2025-08-05 21:09:52,065 root         DEBUG    edge_11_10_01: Status.WAITING
+2025-08-05 21:09:52,066 root         DEBUG    edge_8_08_01: Status.RUNNING
+2025-08-05 21:09:52,066 root         DEBUG    edge_11_11_01: Status.WAITING
+2025-08-05 21:09:52,066 root         DEBUG    edge_4_11_01: Executing...
+2025-08-05 21:09:52,067 root         DEBUG    edge_16_01_01: Status.WAITING
+2025-08-05 21:09:52,067 root         DEBUG    edge_8_09_01: Status.RUNNING
+2025-08-05 21:09:52,067 root         DEBUG    edge_16_02_01: Status.WAITING
+2025-08-05 21:09:52,067 root         DEBUG    edge_4_07_01: Executing...
+2025-08-05 21:09:52,068 root         DEBUG    edge_16_03_01: Status.WAITING
+2025-08-05 21:09:52,068 root         DEBUG    edge_16_04_01: Status.WAITING
+2025-08-05 21:09:52,068 root         DEBUG    edge_8_10_01: Status.RUNNING
+2025-08-05 21:09:52,069 root         DEBUG    edge_16_05_01: Status.WAITING
+2025-08-05 21:09:52,069 root         DEBUG    edge_8_02_01: Executing...
+2025-08-05 21:09:52,069 root         DEBUG    edge_16_06_01: Status.WAITING
+2025-08-05 21:09:52,069 root         DEBUG    edge_8_11_01: Status.RUNNING
+2025-08-05 21:09:52,070 root         DEBUG    edge_16_07_01: Status.WAITING
+2025-08-05 21:09:52,070 root         DEBUG    edge_11_01_01: Status.RUNNING
+2025-08-05 21:09:52,070 root         DEBUG    edge_16_08_01: Status.WAITING
+2025-08-05 21:09:52,070 root         DEBUG    edge_8_03_01: Executing...
+2025-08-05 21:09:52,071 root         DEBUG    edge_16_09_01: Status.WAITING
+2025-08-05 21:09:52,071 root         DEBUG    edge_11_02_01: Status.RUNNING
+2025-08-05 21:09:52,071 root         DEBUG    edge_16_10_01: Status.WAITING
+2025-08-05 21:09:52,072 root         DEBUG    edge_16_11_01: Status.WAITING
+2025-08-05 21:09:52,072 root         DEBUG    edge_11_03_01: Status.RUNNING
+2025-08-05 21:09:52,072 root         DEBUG    edge_17_01_01: Status.WAITING
+2025-08-05 21:09:52,073 root         DEBUG    edge_8_04_01: Executing...
+2025-08-05 21:09:52,073 root         DEBUG    edge_17_02_01: Status.WAITING
+2025-08-05 21:09:52,073 root         DEBUG    edge_11_04_01: Status.RUNNING
+2025-08-05 21:09:52,074 root         DEBUG    edge_17_03_01: Status.WAITING
+2025-08-05 21:09:52,074 root         DEBUG    edge_17_04_01: Status.WAITING
+2025-08-05 21:09:52,074 root         DEBUG    edge_11_05_01: Status.RUNNING
+2025-08-05 21:09:52,075 root         DEBUG    edge_17_05_01: Status.WAITING
+2025-08-05 21:09:52,075 root         DEBUG    edge_8_05_01: Executing...
+2025-08-05 21:09:52,075 root         DEBUG    edge_17_06_01: Status.WAITING
+2025-08-05 21:09:52,075 root         DEBUG    edge_11_06_01: Status.RUNNING
+2025-08-05 21:09:52,076 root         DEBUG    edge_17_07_01: Status.WAITING
+2025-08-05 21:09:52,076 root         DEBUG    edge_11_07_01: Status.RUNNING
+2025-08-05 21:09:52,076 root         DEBUG    edge_17_08_01: Status.WAITING
+2025-08-05 21:09:52,076 root         DEBUG    edge_8_06_01: Executing...
+2025-08-05 21:09:52,077 root         DEBUG    edge_17_09_01: Status.WAITING
+2025-08-05 21:09:52,077 root         DEBUG    edge_11_08_01: Status.RUNNING
+2025-08-05 21:09:52,077 root         DEBUG    edge_17_10_01: Status.WAITING
+2025-08-05 21:09:52,065 root         DEBUG    edge_8_07_01: Status.RUNNING
+2025-08-05 21:09:52,078 root         DEBUG    edge_17_11_01: Status.WAITING
+2025-08-05 21:09:52,078 root         DEBUG    edge_11_09_01: Executing...
+2025-08-05 21:09:52,079 root         DEBUG    edge_18_01_01: Status.WAITING
+2025-08-05 21:09:52,079 root         DEBUG    edge_11_10_01: Status.RUNNING
+2025-08-05 21:09:52,079 root         DEBUG    edge_18_02_01: Status.WAITING
+2025-08-05 21:09:52,079 root         DEBUG    edge_8_08_01: Executing...
+2025-08-05 21:09:52,080 root         DEBUG    edge_18_03_01: Status.WAITING
+2025-08-05 21:09:52,080 root         DEBUG    edge_11_11_01: Status.RUNNING
+2025-08-05 21:09:52,080 root         DEBUG    edge_18_04_01: Status.WAITING
+2025-08-05 21:09:52,081 root         DEBUG    edge_18_05_01: Status.WAITING
+2025-08-05 21:09:52,081 root         DEBUG    edge_16_01_01: Status.RUNNING
+2025-08-05 21:09:52,081 root         DEBUG    edge_18_06_01: Status.WAITING
+2025-08-05 21:09:52,081 root         DEBUG    edge_8_09_01: Executing...
+2025-08-05 21:09:52,082 root         DEBUG    edge_18_07_01: Status.WAITING
+2025-08-05 21:09:52,082 root         DEBUG    edge_16_02_01: Status.RUNNING
+2025-08-05 21:09:52,082 root         DEBUG    edge_18_08_01: Status.WAITING
+2025-08-05 21:09:52,083 root         DEBUG    edge_18_09_01: Status.WAITING
+2025-08-05 21:09:52,083 root         DEBUG    edge_16_03_01: Status.RUNNING
+2025-08-05 21:09:52,084 root         DEBUG    edge_18_10_01: Status.WAITING
+2025-08-05 21:09:52,084 root         DEBUG    edge_16_04_01: Status.RUNNING
+2025-08-05 21:09:52,084 root         DEBUG    edge_18_11_01: Status.WAITING
+2025-08-05 21:09:52,084 root         DEBUG    edge_8_10_01: Executing...
+2025-08-05 21:09:52,085 root         DEBUG    edge_24_01_01: Status.WAITING
+2025-08-05 21:09:52,085 root         DEBUG    edge_16_05_01: Status.RUNNING
+2025-08-05 21:09:52,086 root         DEBUG    edge_24_02_01: Status.WAITING
+2025-08-05 21:09:52,087 root         DEBUG    edge_24_03_01: Status.WAITING
+2025-08-05 21:09:52,087 root         DEBUG    edge_16_06_01: Status.RUNNING
+2025-08-05 21:09:52,087 root         DEBUG    edge_24_04_01: Status.WAITING
+2025-08-05 21:09:52,088 root         DEBUG    edge_24_05_01: Status.WAITING
+2025-08-05 21:09:52,088 root         DEBUG    edge_8_11_01: Executing...
+2025-08-05 21:09:52,089 root         DEBUG    edge_24_06_01: Status.WAITING
+2025-08-05 21:09:52,089 root         DEBUG    edge_16_07_01: Status.RUNNING
+2025-08-05 21:09:52,089 root         DEBUG    edge_24_07_01: Status.WAITING
+2025-08-05 21:09:52,089 root         DEBUG    edge_11_01_01: Executing...
+2025-08-05 21:09:52,090 root         DEBUG    edge_24_08_01: Status.WAITING
+2025-08-05 21:09:52,090 root         DEBUG    edge_16_08_01: Status.RUNNING
+2025-08-05 21:09:52,091 root         DEBUG    edge_24_09_01: Status.WAITING
+2025-08-05 21:09:52,091 root         DEBUG    edge_24_10_01: Status.WAITING
+2025-08-05 21:09:52,092 root         DEBUG    edge_16_09_01: Status.RUNNING
+2025-08-05 21:09:52,092 root         DEBUG    edge_24_11_01: Status.WAITING
+2025-08-05 21:09:52,092 root         DEBUG    edge_11_02_01: Executing...
+2025-08-05 21:09:52,092 root         DEBUG    edge_27_01_01: Status.WAITING
+2025-08-05 21:09:52,093 root         DEBUG    edge_16_10_01: Status.RUNNING
+2025-08-05 21:09:52,093 root         DEBUG    edge_16_11_01: Status.RUNNING
+2025-08-05 21:09:52,093 root         DEBUG    edge_27_02_01: Status.WAITING
+2025-08-05 21:09:52,094 root         DEBUG    edge_11_03_01: Executing...
+2025-08-05 21:09:52,094 root         DEBUG    edge_27_03_01: Status.WAITING
+2025-08-05 21:09:52,094 root         DEBUG    edge_17_01_01: Status.RUNNING
+2025-08-05 21:09:52,095 root         DEBUG    edge_27_04_01: Status.WAITING
+2025-08-05 21:09:52,096 root         DEBUG    edge_27_05_01: Status.WAITING
+2025-08-05 21:09:52,096 root         DEBUG    edge_17_02_01: Status.RUNNING
+2025-08-05 21:09:52,096 root         DEBUG    edge_27_06_01: Status.WAITING
+2025-08-05 21:09:52,097 root         DEBUG    edge_11_04_01: Executing...
+2025-08-05 21:09:52,097 root         DEBUG    edge_17_03_01: Status.RUNNING
+2025-08-05 21:09:52,097 root         DEBUG    edge_27_07_01: Status.WAITING
+2025-08-05 21:09:52,097 root         DEBUG    edge_17_04_01: Status.RUNNING
+2025-08-05 21:09:52,098 root         DEBUG    edge_27_08_01: Status.WAITING
+2025-08-05 21:09:52,098 root         DEBUG    edge_11_05_01: Executing...
+2025-08-05 21:09:52,098 root         DEBUG    edge_27_09_01: Status.WAITING
+2025-08-05 21:09:52,098 root         DEBUG    edge_17_05_01: Status.RUNNING
+2025-08-05 21:09:52,099 root         DEBUG    edge_27_10_01: Status.WAITING
+2025-08-05 21:09:52,100 root         DEBUG    edge_27_11_01: Status.WAITING
+2025-08-05 21:09:52,100 root         DEBUG    edge_17_06_01: Status.RUNNING
+2025-08-05 21:09:52,101 root         DEBUG    edge_35_01_01: Status.WAITING
+2025-08-05 21:09:52,101 root         DEBUG    edge_11_06_01: Executing...
+2025-08-05 21:09:52,101 root         DEBUG    edge_35_02_01: Status.WAITING
+2025-08-05 21:09:52,101 root         DEBUG    edge_17_07_01: Status.RUNNING
+2025-08-05 21:09:52,102 root         DEBUG    edge_11_07_01: Executing...
+2025-08-05 21:09:52,102 root         DEBUG    edge_35_03_01: Status.WAITING
+2025-08-05 21:09:52,103 root         DEBUG    edge_35_04_01: Status.WAITING
+2025-08-05 21:09:52,103 root         DEBUG    edge_17_08_01: Status.RUNNING
+2025-08-05 21:09:52,104 root         DEBUG    edge_35_05_01: Status.WAITING
+2025-08-05 21:09:52,106 root         DEBUG    edge_35_06_01: Status.WAITING
+2025-08-05 21:09:52,107 root         DEBUG    edge_17_09_01: Status.RUNNING
+2025-08-05 21:09:52,107 root         DEBUG    edge_35_07_01: Status.WAITING
+2025-08-05 21:09:52,107 root         DEBUG    edge_11_08_01: Executing...
+2025-08-05 21:09:52,108 root         DEBUG    edge_35_08_01: Status.WAITING
+2025-08-05 21:09:52,108 root         DEBUG    edge_17_10_01: Status.RUNNING
+2025-08-05 21:09:52,109 root         DEBUG    edge_35_09_01: Status.WAITING
+2025-08-05 21:09:52,109 root         DEBUG    edge_8_07_01: Executing...
+2025-08-05 21:09:52,109 root         DEBUG    edge_35_10_01: Status.WAITING
+2025-08-05 21:09:52,186 root         DEBUG    edge_35_10_01: Status.RUNNING
+2025-08-05 21:09:52,111 root         DEBUG    edge_35_11_01: Status.WAITING
+2025-08-05 21:09:52,113 root         DEBUG    edge_36_01_01: Status.WAITING
+2025-08-05 21:09:52,114 root         DEBUG    edge_36_02_01: Status.WAITING
+2025-08-05 21:09:52,114 root         DEBUG    edge_18_01_01: Status.RUNNING
+2025-08-05 21:09:52,115 root         DEBUG    edge_36_03_01: Status.WAITING
+2025-08-05 21:09:52,115 root         DEBUG    edge_11_10_01: Executing...
+2025-08-05 21:09:52,115 root         DEBUG    edge_18_02_01: Status.RUNNING
+2025-08-05 21:09:52,115 root         DEBUG    edge_36_04_01: Status.WAITING
+2025-08-05 21:09:52,116 root         DEBUG    edge_36_05_01: Status.WAITING
+2025-08-05 21:09:52,117 root         DEBUG    edge_36_06_01: Status.WAITING
+2025-08-05 21:09:52,117 root         DEBUG    edge_18_03_01: Status.RUNNING
+2025-08-05 21:09:52,118 root         DEBUG    edge_11_11_01: Executing...
+2025-08-05 21:09:52,118 root         DEBUG    edge_36_07_01: Status.WAITING
+2025-08-05 21:09:52,119 root         DEBUG    edge_18_04_01: Status.RUNNING
+2025-08-05 21:09:52,119 root         DEBUG    edge_36_08_01: Status.WAITING
+2025-08-05 21:09:52,119 root         DEBUG    edge_18_05_01: Status.RUNNING
+2025-08-05 21:09:52,120 root         DEBUG    edge_36_09_01: Status.WAITING
+2025-08-05 21:09:52,120 root         DEBUG    edge_16_01_01: Executing...
+2025-08-05 21:09:52,120 root         DEBUG    edge_36_10_01: Status.WAITING
+2025-08-05 21:09:52,120 root         DEBUG    edge_18_06_01: Status.RUNNING
+2025-08-05 21:09:52,120 root         DEBUG    edge_36_11_01: Status.WAITING
+2025-08-05 21:09:52,122 root         DEBUG    fog_4: Status.WAITING
+2025-08-05 21:09:52,122 root         DEBUG    edge_18_07_01: Status.RUNNING
+2025-08-05 21:09:52,123 root         DEBUG    fog_8: Status.WAITING
+2025-08-05 21:09:52,123 root         DEBUG    edge_16_02_01: Executing...
+2025-08-05 21:09:52,124 root         DEBUG    edge_18_08_01: Status.RUNNING
+2025-08-05 21:09:52,124 root         DEBUG    fog_11: Status.WAITING
+2025-08-05 21:09:52,125 root         DEBUG    edge_18_09_01: Status.RUNNING
+2025-08-05 21:09:52,125 root         DEBUG    fog_16: Status.WAITING
+2025-08-05 21:09:52,125 root         DEBUG    edge_16_03_01: Executing...
+2025-08-05 21:09:52,126 root         DEBUG    fog_17: Status.WAITING
+2025-08-05 21:09:52,127 root         DEBUG    edge_18_10_01: Status.RUNNING
+2025-08-05 21:09:52,127 root         DEBUG    fog_18: Status.WAITING
+2025-08-05 21:09:52,127 root         DEBUG    edge_16_04_01: Executing...
+2025-08-05 21:09:52,128 root         DEBUG    fog_24: Status.WAITING
+2025-08-05 21:09:52,128 root         DEBUG    edge_18_11_01: Status.RUNNING
+2025-08-05 21:09:52,129 root         DEBUG    fog_27: Status.WAITING
+2025-08-05 21:09:52,129 root         DEBUG    fog_35: Status.WAITING
+2025-08-05 21:09:52,130 root         DEBUG    edge_24_01_01: Status.RUNNING
+2025-08-05 21:09:52,131 root         DEBUG    edge_16_05_01: Executing...
+2025-08-05 21:09:52,131 root         DEBUG    fog_36: Status.WAITING
+2025-08-05 21:09:52,132 root         DEBUG    cloud_4: Status.WAITING
+2025-08-05 21:09:52,133 root         DEBUG    edge_24_02_01: Status.RUNNING
+2025-08-05 21:09:52,134 root         DEBUG    edge_4_01_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192049-edge_4_01_01
+2025-08-05 21:09:52,134 root         DEBUG    edge_24_03_01: Status.RUNNING
+2025-08-05 21:09:52,134 root         DEBUG    cloud_8: Status.WAITING
+2025-08-05 21:09:52,135 root         DEBUG    edge_16_06_01: Executing...
+2025-08-05 21:09:52,136 root         DEBUG    edge_24_04_01: Status.RUNNING
+2025-08-05 21:09:52,137 root         DEBUG    edge_4_03_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192054-edge_4_03_01
+2025-08-05 21:09:52,138 root         DEBUG    cloud_11: Status.WAITING
+2025-08-05 21:09:52,139 root         DEBUG    edge_24_05_01: Status.RUNNING
+2025-08-05 21:09:52,139 root         DEBUG    cloud_16: Status.WAITING
+2025-08-05 21:09:52,139 root         DEBUG    edge_4_02_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192052-edge_4_02_01
+2025-08-05 21:09:52,141 root         DEBUG    cloud_17: Status.WAITING
+2025-08-05 21:09:52,143 root         DEBUG    cloud_18: Status.WAITING
+2025-08-05 21:09:52,143 root         DEBUG    edge_4_04_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192058-edge_4_04_01
+2025-08-05 21:09:52,144 root         DEBUG    cloud_24: Status.WAITING
+2025-08-05 21:09:52,145 root         DEBUG    edge_24_06_01: Status.RUNNING
+2025-08-05 21:09:52,145 root         DEBUG    edge_4_05_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192060-edge_4_05_01
+2025-08-05 21:09:52,146 root         DEBUG    cloud_27: Status.WAITING
+2025-08-05 21:09:52,146 root         DEBUG    edge_16_07_01: Executing...
+2025-08-05 21:09:52,147 root         DEBUG    edge_24_07_01: Status.RUNNING
+2025-08-05 21:09:52,148 root         DEBUG    edge_4_06_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192064-edge_4_06_01
+2025-08-05 21:09:52,148 root         DEBUG    cloud_35: Status.WAITING
+2025-08-05 21:09:52,150 root         DEBUG    edge_24_08_01: Status.RUNNING
+2025-08-05 21:09:52,150 root         DEBUG    cloud_36: Status.WAITING
+2025-08-05 21:09:52,151 root         DEBUG    edge_16_08_01: Executing...
+2025-08-05 21:09:52,151 root         DEBUG    train_model: Status.WAITING
+2025-08-05 21:09:52,152 root         DEBUG    predict_pollution_4: Status.WAITING
+2025-08-05 21:09:52,153 root         DEBUG    edge_24_09_01: Status.RUNNING
+2025-08-05 21:09:52,154 root         DEBUG    predict_pollution_8: Status.WAITING
+2025-08-05 21:09:52,154 root         DEBUG    edge_24_10_01: Status.RUNNING
+2025-08-05 21:09:52,155 root         DEBUG    predict_pollution_11: Status.WAITING
+2025-08-05 21:09:52,156 root         DEBUG    edge_16_09_01: Executing...
+2025-08-05 21:09:52,157 root         DEBUG    predict_pollution_16: Status.WAITING
+2025-08-05 21:09:52,158 root         DEBUG    edge_4_08_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192072-edge_4_08_01
+2025-08-05 21:09:52,158 root         DEBUG    edge_24_11_01: Status.RUNNING
+2025-08-05 21:09:52,158 root         DEBUG    edge_8_01_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192068-edge_8_01_01
+2025-08-05 21:09:52,159 root         DEBUG    predict_pollution_17: Status.WAITING
+2025-08-05 21:09:52,161 root         DEBUG    predict_pollution_18: Status.WAITING
+2025-08-05 21:09:52,162 root         DEBUG    predict_pollution_24: Status.WAITING
+2025-08-05 21:09:52,162 root         DEBUG    edge_4_09_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192074-edge_4_09_01
+2025-08-05 21:09:52,163 root         DEBUG    edge_27_01_01: Status.RUNNING
+2025-08-05 21:09:52,164 root         DEBUG    edge_16_10_01: Executing...
+2025-08-05 21:09:52,165 root         DEBUG    edge_4_07_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192083-edge_4_07_01
+2025-08-05 21:09:52,165 root         DEBUG    edge_4_10_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192078-edge_4_10_01
+2025-08-05 21:09:52,165 root         DEBUG    edge_4_11_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192081-edge_4_11_01
+2025-08-05 21:09:52,165 root         DEBUG    predict_pollution_27: Status.WAITING
+2025-08-05 21:09:52,166 root         DEBUG    edge_16_11_01: Executing...
+2025-08-05 21:09:52,167 root         DEBUG    predict_pollution_35: Status.WAITING
+2025-08-05 21:09:52,168 root         DEBUG    predict_pollution_36: Status.WAITING
+2025-08-05 21:09:52,169 root         DEBUG    edge_27_02_01: Status.RUNNING
+2025-08-05 21:09:52,171 root         DEBUG    edge_27_03_01: Status.RUNNING
+2025-08-05 21:09:52,172 root         DEBUG    edge_17_01_01: Executing...
+2025-08-05 21:09:52,172 root         DEBUG    edge_8_02_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192086-edge_8_02_01
+2025-08-05 21:09:52,172 root         DEBUG    edge_27_04_01: Status.RUNNING
+2025-08-05 21:09:52,173 root         DEBUG    edge_27_05_01: Status.RUNNING
+2025-08-05 21:09:52,174 root         DEBUG    edge_8_03_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192091-edge_8_03_01
+2025-08-05 21:09:52,174 root         DEBUG    edge_17_02_01: Executing...
+2025-08-05 21:09:52,174 root         DEBUG    edge_27_06_01: Status.RUNNING
+2025-08-05 21:09:52,175 root         DEBUG    edge_17_03_01: Executing...
+2025-08-05 21:09:52,176 root         DEBUG    edge_27_07_01: Status.RUNNING
+2025-08-05 21:09:52,177 root         DEBUG    edge_8_04_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192095-edge_8_04_01
+2025-08-05 21:09:52,177 root         DEBUG    edge_17_04_01: Executing...
+2025-08-05 21:09:52,177 root         DEBUG    edge_27_08_01: Status.RUNNING
+2025-08-05 21:09:52,178 root         DEBUG    edge_27_09_01: Status.RUNNING
+2025-08-05 21:09:52,178 root         DEBUG    edge_17_05_01: Executing...
+2025-08-05 21:09:52,179 root         DEBUG    edge_27_10_01: Status.RUNNING
+2025-08-05 21:09:52,179 root         DEBUG    edge_27_11_01: Status.RUNNING
+2025-08-05 21:09:52,180 root         DEBUG    edge_17_06_01: Executing...
+2025-08-05 21:09:52,180 root         DEBUG    edge_8_05_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192100-edge_8_05_01
+2025-08-05 21:09:52,180 root         DEBUG    edge_35_01_01: Status.RUNNING
+2025-08-05 21:09:52,181 root         DEBUG    edge_35_02_01: Status.RUNNING
+2025-08-05 21:09:52,182 root         DEBUG    edge_17_07_01: Executing...
+2025-08-05 21:09:52,182 root         DEBUG    edge_35_03_01: Status.RUNNING
+2025-08-05 21:09:52,183 root         DEBUG    edge_35_04_01: Status.RUNNING
+2025-08-05 21:09:52,183 root         DEBUG    edge_17_08_01: Executing...
+2025-08-05 21:09:52,183 root         DEBUG    edge_35_05_01: Status.RUNNING
+2025-08-05 21:09:52,183 root         DEBUG    edge_35_06_01: Status.RUNNING
+2025-08-05 21:09:52,183 root         DEBUG    edge_17_09_01: Executing...
+2025-08-05 21:09:52,184 root         DEBUG    edge_35_07_01: Status.RUNNING
+2025-08-05 21:09:52,185 root         DEBUG    edge_35_08_01: Status.RUNNING
+2025-08-05 21:09:52,185 root         DEBUG    edge_17_10_01: Executing...
+2025-08-05 21:09:52,185 root         DEBUG    edge_35_09_01: Status.RUNNING
+2025-08-05 21:09:52,110 root         DEBUG    edge_17_11_01: Status.RUNNING
+2025-08-05 21:09:52,186 root         DEBUG    edge_35_10_01: Executing...
+2025-08-05 21:09:52,186 root         DEBUG    edge_35_11_01: Status.RUNNING
+2025-08-05 21:09:52,187 root         DEBUG    edge_36_01_01: Status.RUNNING
+2025-08-05 21:09:52,187 root         DEBUG    edge_36_02_01: Status.RUNNING
+2025-08-05 21:09:52,187 root         DEBUG    edge_18_01_01: Executing...
+2025-08-05 21:09:52,187 root         DEBUG    edge_36_03_01: Status.RUNNING
+2025-08-05 21:09:52,189 root         DEBUG    edge_8_06_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192106-edge_8_06_01
+2025-08-05 21:09:52,189 root         DEBUG    edge_18_02_01: Executing...
+2025-08-05 21:09:52,190 root         DEBUG    edge_36_04_01: Status.RUNNING
+2025-08-05 21:09:52,190 root         DEBUG    edge_36_05_01: Status.RUNNING
+2025-08-05 21:09:52,191 root         DEBUG    edge_36_06_01: Status.RUNNING
+2025-08-05 21:09:52,191 root         DEBUG    edge_18_03_01: Executing...
+2025-08-05 21:09:52,191 root         DEBUG    edge_36_07_01: Status.RUNNING
+2025-08-05 21:09:52,192 root         DEBUG    edge_18_04_01: Executing...
+2025-08-05 21:09:52,192 root         DEBUG    edge_36_08_01: Status.RUNNING
+2025-08-05 21:09:52,192 root         DEBUG    edge_18_05_01: Executing...
+2025-08-05 21:09:52,192 root         DEBUG    edge_36_09_01: Status.RUNNING
+2025-08-05 21:09:52,193 root         DEBUG    edge_36_10_01: Status.RUNNING
+2025-08-05 21:09:52,193 root         DEBUG    edge_18_06_01: Executing...
+2025-08-05 21:09:52,193 root         DEBUG    edge_36_11_01: Status.RUNNING
+2025-08-05 21:09:52,194 root         DEBUG    edge_18_07_01: Executing...
+2025-08-05 21:09:52,194 root         DEBUG    edge_18_08_01: Executing...
+2025-08-05 21:09:52,195 root         DEBUG    edge_18_09_01: Executing...
+2025-08-05 21:09:52,197 root         DEBUG    edge_18_10_01: Executing...
+2025-08-05 21:09:52,198 root         DEBUG    edge_11_09_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192114-edge_11_09_01
+2025-08-05 21:09:52,200 root         DEBUG    edge_18_11_01: Executing...
+2025-08-05 21:09:52,200 root         DEBUG    edge_8_08_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192117-edge_8_08_01
+2025-08-05 21:09:52,201 root         DEBUG    edge_24_01_01: Executing...
+2025-08-05 21:09:52,203 root         DEBUG    edge_24_02_01: Executing...
+2025-08-05 21:09:52,204 root         DEBUG    edge_24_03_01: Executing...
+2025-08-05 21:09:52,208 root         DEBUG    edge_24_04_01: Executing...
+2025-08-05 21:09:52,209 root         DEBUG    edge_8_09_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192121-edge_8_09_01
+2025-08-05 21:09:52,209 root         DEBUG    edge_24_05_01: Executing...
+2025-08-05 21:09:52,213 root         DEBUG    edge_24_06_01: Executing...
+2025-08-05 21:09:52,215 root         DEBUG    edge_8_10_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192129-edge_8_10_01
+2025-08-05 21:09:52,216 root         DEBUG    edge_24_07_01: Executing...
+2025-08-05 21:09:52,218 root         DEBUG    edge_24_08_01: Executing...
+2025-08-05 21:09:52,219 root         DEBUG    train_model: Status.RUNNING
+2025-08-05 21:09:52,220 root         DEBUG    edge_24_09_01: Executing...
+2025-08-05 21:09:52,222 root         DEBUG    edge_24_10_01: Executing...
+2025-08-05 21:09:52,223 root         DEBUG    edge_8_11_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192141-edge_8_11_01
+2025-08-05 21:09:52,225 root         DEBUG    edge_24_11_01: Executing...
+2025-08-05 21:09:52,227 root         DEBUG    edge_27_01_01: Executing...
+2025-08-05 21:09:52,232 root         DEBUG    edge_11_01_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192149-edge_11_01_01
+2025-08-05 21:09:52,234 root         DEBUG    edge_27_02_01: Executing...
+2025-08-05 21:09:52,235 root         DEBUG    edge_27_03_01: Executing...
+2025-08-05 21:09:52,236 root         DEBUG    edge_27_04_01: Executing...
+2025-08-05 21:09:52,236 root         DEBUG    edge_27_05_01: Executing...
+2025-08-05 21:09:52,238 root         DEBUG    edge_27_06_01: Executing...
+2025-08-05 21:09:52,239 root         DEBUG    edge_27_07_01: Executing...
+2025-08-05 21:09:52,240 root         DEBUG    edge_27_08_01: Executing...
+2025-08-05 21:09:52,240 root         DEBUG    edge_27_09_01: Executing...
+2025-08-05 21:09:52,241 root         DEBUG    edge_27_10_01: Executing...
+2025-08-05 21:09:52,243 root         DEBUG    edge_27_11_01: Executing...
+2025-08-05 21:09:52,243 root         DEBUG    edge_11_02_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192162-edge_11_02_01
+2025-08-05 21:09:52,245 root         DEBUG    edge_35_01_01: Executing...
+2025-08-05 21:09:52,245 root         DEBUG    edge_35_02_01: Executing...
+2025-08-05 21:09:52,247 root         DEBUG    edge_35_03_01: Executing...
+2025-08-05 21:09:52,247 root         DEBUG    edge_35_04_01: Executing...
+2025-08-05 21:09:52,248 root         DEBUG    edge_35_05_01: Executing...
+2025-08-05 21:09:52,249 root         DEBUG    edge_35_06_01: Executing...
+2025-08-05 21:09:52,251 root         DEBUG    edge_35_07_01: Executing...
+2025-08-05 21:09:52,251 root         DEBUG    edge_35_08_01: Executing...
+2025-08-05 21:09:52,253 root         DEBUG    edge_35_09_01: Executing...
+2025-08-05 21:09:52,254 root         DEBUG    edge_11_03_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192170-edge_11_03_01
+2025-08-05 21:09:52,254 root         DEBUG    edge_17_11_01: Executing...
+2025-08-05 21:09:52,257 root         DEBUG    edge_35_11_01: Executing...
+2025-08-05 21:09:52,258 root         DEBUG    edge_11_04_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192175-edge_11_04_01
+2025-08-05 21:09:52,260 root         DEBUG    edge_36_01_01: Executing...
+2025-08-05 21:09:52,261 root         DEBUG    edge_11_05_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192178-edge_11_05_01
+2025-08-05 21:09:52,262 root         DEBUG    edge_36_02_01: Executing...
+2025-08-05 21:09:52,263 root         DEBUG    edge_36_03_01: Executing...
+2025-08-05 21:09:52,272 root         DEBUG    edge_11_06_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192181-edge_11_06_01
+2025-08-05 21:09:52,273 root         DEBUG    edge_11_08_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192184-edge_11_08_01
+2025-08-05 21:09:52,273 root         DEBUG    edge_36_04_01: Executing...
+2025-08-05 21:09:52,275 root         DEBUG    edge_11_10_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192189-edge_11_10_01
+2025-08-05 21:09:52,276 root         DEBUG    edge_11_07_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192182-edge_11_07_01
+2025-08-05 21:09:52,278 root         DEBUG    edge_16_01_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192193-edge_16_01_01
+2025-08-05 21:09:52,278 root         DEBUG    edge_36_05_01: Executing...
+2025-08-05 21:09:52,279 root         DEBUG    edge_11_11_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192191-edge_11_11_01
+2025-08-05 21:09:52,287 root         DEBUG    edge_36_06_01: Executing...
+2025-08-05 21:09:52,296 root         DEBUG    edge_16_02_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192195-edge_16_02_01
+2025-08-05 21:09:52,296 root         DEBUG    edge_16_04_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192199-edge_16_04_01
+2025-08-05 21:09:52,297 root         DEBUG    edge_8_07_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192186-edge_8_07_01
+2025-08-05 21:09:52,298 root         DEBUG    edge_16_05_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192202-edge_16_05_01
+2025-08-05 21:09:52,299 root         DEBUG    edge_36_07_01: Executing...
+2025-08-05 21:09:52,303 root         DEBUG    edge_16_03_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192196-edge_16_03_01
+2025-08-05 21:09:52,307 root         DEBUG    edge_36_08_01: Executing...
+2025-08-05 21:09:52,311 root         DEBUG    edge_36_09_01: Executing...
+2025-08-05 21:09:52,312 root         DEBUG    edge_16_06_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192207-edge_16_06_01
+2025-08-05 21:09:52,314 root         DEBUG    edge_36_10_01: Executing...
+2025-08-05 21:09:52,316 root         DEBUG    edge_16_10_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192228-edge_16_10_01
+2025-08-05 21:09:52,320 root         DEBUG    edge_36_11_01: Executing...
+2025-08-05 21:09:52,320 root         DEBUG    edge_16_07_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192216-edge_16_07_01
+2025-08-05 21:09:52,321 root         DEBUG    edge_16_08_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192219-edge_16_08_01
+2025-08-05 21:09:52,330 root         DEBUG    edge_17_01_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192236-edge_17_01_01
+2025-08-05 21:09:52,337 root         DEBUG    edge_16_09_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192223-edge_16_09_01
+2025-08-05 21:09:52,338 root         DEBUG    edge_17_03_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192239-edge_17_03_01
+2025-08-05 21:09:52,340 root         DEBUG    edge_16_11_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192233-edge_16_11_01
+2025-08-05 21:09:52,342 root         DEBUG    edge_17_05_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192241-edge_17_05_01
+2025-08-05 21:09:52,345 root         DEBUG    edge_17_09_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192250-edge_17_09_01
+2025-08-05 21:09:52,357 root         DEBUG    edge_17_08_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192248-edge_17_08_01
+2025-08-05 21:09:52,358 root         DEBUG    edge_17_06_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192244-edge_17_06_01
+2025-08-05 21:09:52,360 root         DEBUG    edge_17_04_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192240-edge_17_04_01
+2025-08-05 21:09:52,362 root         DEBUG    edge_17_10_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192252-edge_17_10_01
+2025-08-05 21:09:52,364 root         DEBUG    edge_18_01_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192263-edge_18_01_01
+2025-08-05 21:09:52,365 root         DEBUG    edge_17_02_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192238-edge_17_02_01
+2025-08-05 21:09:52,370 root         DEBUG    edge_17_07_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192246-edge_17_07_01
+2025-08-05 21:09:52,371 root         DEBUG    edge_35_10_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192256-edge_35_10_01
+2025-08-05 21:09:52,374 root         DEBUG    edge_18_02_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192270-edge_18_02_01
+2025-08-05 21:09:52,383 root         DEBUG    train_model: Executing...
+2025-08-05 21:09:52,396 root         DEBUG    edge_18_05_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192310-edge_18_05_01
+2025-08-05 21:09:52,400 root         DEBUG    edge_18_04_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192305-edge_18_04_01
+2025-08-05 21:09:52,411 root         DEBUG    edge_18_03_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192293-edge_18_03_01
+2025-08-05 21:09:52,429 root         DEBUG    edge_18_07_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192321-edge_18_07_01
+2025-08-05 21:09:52,432 root         DEBUG    edge_18_09_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192325-edge_18_09_01
+2025-08-05 21:09:52,439 root         DEBUG    edge_18_10_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192326-edge_18_10_01
+2025-08-05 21:09:52,441 root         DEBUG    edge_18_08_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192322-edge_18_08_01
+2025-08-05 21:09:52,446 root         DEBUG    edge_18_11_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192329-edge_18_11_01
+2025-08-05 21:09:52,451 root         DEBUG    edge_18_06_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192317-edge_18_06_01
+2025-08-05 21:09:52,452 root         DEBUG    edge_24_02_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192355-edge_24_02_01
+2025-08-05 21:09:52,453 root         DEBUG    edge_24_01_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192349-edge_24_01_01
+2025-08-05 21:09:52,471 root         DEBUG    edge_24_03_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192362-edge_24_03_01
+2025-08-05 21:09:52,480 root         DEBUG    edge_24_04_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192366-edge_24_04_01
+2025-08-05 21:09:52,487 root         DEBUG    edge_24_05_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192377-edge_24_05_01
+2025-08-05 21:09:52,487 root         DEBUG    edge_24_08_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192382-edge_24_08_01
+2025-08-05 21:09:52,489 root         DEBUG    edge_24_11_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192385-edge_24_11_01
+2025-08-05 21:09:52,490 root         DEBUG    edge_27_01_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192386-edge_27_01_01
+2025-08-05 21:09:52,491 root         DEBUG    edge_24_06_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192378-edge_24_06_01
+2025-08-05 21:09:52,498 root         DEBUG    edge_24_07_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192380-edge_24_07_01
+2025-08-05 21:09:52,499 root         DEBUG    edge_27_04_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192391-edge_27_04_01
+2025-08-05 21:09:52,500 root         DEBUG    edge_27_03_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192390-edge_27_03_01
+2025-08-05 21:09:52,506 root         DEBUG    edge_27_05_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192392-edge_27_05_01
+2025-08-05 21:09:52,511 root         DEBUG    edge_24_10_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192384-edge_24_10_01
+2025-08-05 21:09:52,529 root         DEBUG    edge_27_09_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192403-edge_27_09_01
+2025-08-05 21:09:52,530 root         DEBUG    edge_24_09_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192383-edge_24_09_01
+2025-08-05 21:09:52,530 root         DEBUG    edge_27_02_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192389-edge_27_02_01
+2025-08-05 21:09:52,531 root         DEBUG    edge_27_10_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192406-edge_27_10_01
+2025-08-05 21:09:52,533 root         DEBUG    edge_27_08_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192402-edge_27_08_01
+2025-08-05 21:09:52,541 root         DEBUG    edge_35_01_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192417-edge_35_01_01
+2025-08-05 21:09:52,543 root         DEBUG    edge_27_06_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192394-edge_27_06_01
+2025-08-05 21:09:52,545 root         DEBUG    edge_27_07_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192399-edge_27_07_01
+2025-08-05 21:09:52,546 root         DEBUG    edge_27_11_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192409-edge_27_11_01
+2025-08-05 21:09:52,553 root         DEBUG    edge_35_02_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192424-edge_35_02_01
+2025-08-05 21:09:52,562 root         DEBUG    edge_35_04_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192453-edge_35_04_01
+2025-08-05 21:09:52,573 root         DEBUG    edge_35_06_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192459-edge_35_06_01
+2025-08-05 21:09:52,577 root         DEBUG    edge_35_08_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192467-edge_35_08_01
+2025-08-05 21:09:52,577 root         DEBUG    edge_35_07_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192465-edge_35_07_01
+2025-08-05 21:09:52,581 root         DEBUG    edge_35_11_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192487-edge_35_11_01
+2025-08-05 21:09:52,586 root         DEBUG    edge_35_05_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192454-edge_35_05_01
+2025-08-05 21:09:52,592 root         DEBUG    edge_35_03_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192450-edge_35_03_01
+2025-08-05 21:09:52,598 root         DEBUG    edge_35_09_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192473-edge_35_09_01
+2025-08-05 21:09:52,600 root         DEBUG    edge_17_11_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192484-edge_17_11_01
+2025-08-05 21:09:52,613 root         DEBUG    edge_36_01_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192496-edge_36_01_01
+2025-08-05 21:09:52,622 root         DEBUG    edge_36_03_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192523-edge_36_03_01
+2025-08-05 21:09:52,625 root         DEBUG    edge_36_02_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192509-edge_36_02_01
+2025-08-05 21:09:52,645 root         DEBUG    edge_36_04_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192540-edge_36_04_01
+2025-08-05 21:09:52,657 root         DEBUG    edge_36_05_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192550-edge_36_05_01
+2025-08-05 21:09:52,666 root         DEBUG    edge_36_06_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192558-edge_36_06_01
+2025-08-05 21:09:52,687 root         DEBUG    edge_36_07_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192592-edge_36_07_01
+2025-08-05 21:09:52,706 root         DEBUG    edge_36_08_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192609-edge_36_08_01
+2025-08-05 21:09:52,716 root         DEBUG    edge_36_10_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192620-edge_36_10_01
+2025-08-05 21:09:52,718 root         DEBUG    edge_36_09_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192616-edge_36_09_01
+2025-08-05 21:09:52,741 root         DEBUG    edge_36_11_01: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192629-edge_36_11_01
+2025-08-05 21:09:53,013 root         DEBUG    train_model: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192686-train_model
+2025-08-05 21:09:57,101 root         DEBUG    edge_4_10_01 Completed in 4.059217691421509 seconds ---
+2025-08-05 21:09:57,627 root         DEBUG    edge_11_02_01 Completed in 4.354201555252075 seconds ---
+2025-08-05 21:09:58,008 root         DEBUG    edge_8_08_01 Completed in 4.541598320007324 seconds ---
+2025-08-05 21:09:58,502 root         DEBUG    edge_24_11_01 Completed in 4.6936140060424805 seconds ---
+2025-08-05 21:09:59,031 root         DEBUG    edge_18_03_01 Completed in 5.288906812667847 seconds ---
+2025-08-05 21:09:59,037 root         DEBUG    edge_18_01_01 Completed in 5.45040488243103 seconds ---
+2025-08-05 21:09:59,102 root         DEBUG    edge_4_10_01: Status.FINISHED
+2025-08-05 21:09:59,578 root         DEBUG    edge_24_09_01 Completed in 5.608967304229736 seconds ---
+2025-08-05 21:09:59,627 root         DEBUG    edge_11_02_01: Status.FINISHED
+2025-08-05 21:09:59,746 root         DEBUG    edge_16_05_01 Completed in 6.115905046463013 seconds ---
+2025-08-05 21:09:59,786 root         DEBUG    edge_18_07_01 Completed in 5.911851406097412 seconds ---
+2025-08-05 21:09:59,796 root         DEBUG    edge_24_02_01 Completed in 5.988224029541016 seconds ---
+2025-08-05 21:10:00,008 root         DEBUG    edge_8_08_01: Status.FINISHED
+2025-08-05 21:10:00,228 root         DEBUG    edge_17_05_01 Completed in 6.546494245529175 seconds ---
+2025-08-05 21:10:00,240 root         DEBUG    edge_27_01_01 Completed in 5.96612024307251 seconds ---
+2025-08-05 21:10:00,502 root         DEBUG    edge_24_11_01: Status.FINISHED
+2025-08-05 21:10:00,504 root         DEBUG    edge_35_09_01 Completed in 6.245762348175049 seconds ---
+2025-08-05 21:10:00,995 root         DEBUG    edge_8_11_01 Completed in 6.567663192749023 seconds ---
+2025-08-05 21:10:01,031 root         DEBUG    edge_18_03_01: Status.FINISHED
+2025-08-05 21:10:01,038 root         DEBUG    edge_18_01_01: Status.FINISHED
+2025-08-05 21:10:01,369 root         DEBUG    edge_17_01_01 Completed in 7.1070990562438965 seconds ---
+2025-08-05 21:10:01,579 root         DEBUG    edge_24_09_01: Status.FINISHED
+2025-08-05 21:10:01,602 root         DEBUG    edge_16_02_01 Completed in 8.148619651794434 seconds ---
+2025-08-05 21:10:01,656 root         DEBUG    edge_18_08_01 Completed in 7.385088682174683 seconds ---
+2025-08-05 21:10:01,747 root         DEBUG    edge_16_05_01: Status.FINISHED
+2025-08-05 21:10:01,786 root         DEBUG    edge_18_07_01: Status.FINISHED
+2025-08-05 21:10:01,796 root         DEBUG    edge_24_02_01: Status.FINISHED
+2025-08-05 21:10:01,987 root         DEBUG    edge_8_05_01 Completed in 7.64681077003479 seconds ---
+2025-08-05 21:10:02,228 root         DEBUG    edge_17_05_01: Status.FINISHED
+2025-08-05 21:10:02,241 root         DEBUG    edge_27_01_01: Status.FINISHED
+2025-08-05 21:10:02,316 root         DEBUG    edge_8_02_01 Completed in 9.242726802825928 seconds ---
+2025-08-05 21:10:02,505 root         DEBUG    edge_35_09_01: Status.FINISHED
+2025-08-05 21:10:02,995 root         DEBUG    edge_8_11_01: Status.FINISHED
+2025-08-05 21:10:03,369 root         DEBUG    edge_17_01_01: Status.FINISHED
+2025-08-05 21:10:03,603 root         DEBUG    edge_16_02_01: Status.FINISHED
+2025-08-05 21:10:03,656 root         DEBUG    edge_18_08_01: Status.FINISHED
+2025-08-05 21:10:03,987 root         DEBUG    edge_8_05_01: Status.FINISHED
+2025-08-05 21:10:04,316 root         DEBUG    edge_8_02_01: Status.FINISHED
+2025-08-05 21:10:05,135 root         DEBUG    edge_11_05_01 Completed in 11.683605432510376 seconds ---
+2025-08-05 21:10:05,137 root         DEBUG    edge_17_08_01 Completed in 11.086154460906982 seconds ---
+2025-08-05 21:10:05,139 root         DEBUG    edge_11_11_01 Completed in 9.966518640518188 seconds ---
+2025-08-05 21:10:05,140 root         DEBUG    edge_8_10_01 Completed in 10.391967296600342 seconds ---
+2025-08-05 21:10:05,141 root         DEBUG    edge_16_10_01 Completed in 10.390937566757202 seconds ---
+2025-08-05 21:10:05,142 root         DEBUG    edge_18_04_01 Completed in 10.429497480392456 seconds ---
+2025-08-05 21:10:05,147 root         DEBUG    edge_4_09_01 Completed in 11.96013617515564 seconds ---
+2025-08-05 21:10:05,155 root         DEBUG    edge_17_09_01 Completed in 10.45958662033081 seconds ---
+2025-08-05 21:10:05,156 root         DEBUG    edge_27_02_01 Completed in 9.700505495071411 seconds ---
+2025-08-05 21:10:07,136 root         DEBUG    edge_11_05_01: Status.FINISHED
+2025-08-05 21:10:07,137 root         DEBUG    edge_17_08_01: Status.FINISHED
+2025-08-05 21:10:07,140 root         DEBUG    edge_11_11_01: Status.FINISHED
+2025-08-05 21:10:07,141 root         DEBUG    edge_8_10_01: Status.FINISHED
+2025-08-05 21:10:07,142 root         DEBUG    edge_16_10_01: Status.FINISHED
+2025-08-05 21:10:07,143 root         DEBUG    edge_18_04_01: Status.FINISHED
+2025-08-05 21:10:07,147 root         DEBUG    edge_4_09_01: Status.FINISHED
+2025-08-05 21:10:07,155 root         DEBUG    edge_17_09_01: Status.FINISHED
+2025-08-05 21:10:07,156 root         DEBUG    edge_27_02_01: Status.FINISHED
+2025-08-05 21:10:10,204 root         DEBUG    edge_35_02_01 Completed in 14.595240116119385 seconds ---
+2025-08-05 21:10:10,205 root         DEBUG    edge_4_11_01 Completed in 16.764801025390625 seconds ---
+2025-08-05 21:10:10,207 root         DEBUG    edge_36_05_01 Completed in 14.371390581130981 seconds ---
+2025-08-05 21:10:10,208 root         DEBUG    edge_4_01_01 Completed in 16.722638368606567 seconds ---
+2025-08-05 21:10:10,211 root         DEBUG    edge_4_07_01 Completed in 17.150469303131104 seconds ---
+2025-08-05 21:10:10,215 root         DEBUG    edge_4_03_01 Completed in 16.97856092453003 seconds ---
+2025-08-05 21:10:10,216 root         DEBUG    edge_18_11_01 Completed in 13.901575326919556 seconds ---
+2025-08-05 21:10:10,217 root         DEBUG    edge_11_01_01 Completed in 17.084661722183228 seconds ---
+2025-08-05 21:10:10,218 root         DEBUG    edge_8_03_01 Completed in 16.848985195159912 seconds ---
+2025-08-05 21:10:10,219 root         DEBUG    edge_36_08_01 Completed in 14.600038766860962 seconds ---
+2025-08-05 21:10:10,221 root         DEBUG    edge_24_03_01 Completed in 14.406067132949829 seconds ---
+2025-08-05 21:10:10,224 root         DEBUG    edge_4_05_01 Completed in 17.173706531524658 seconds ---
+2025-08-05 21:10:10,226 root         DEBUG    edge_11_04_01 Completed in 15.203246831893921 seconds ---
+2025-08-05 21:10:10,227 root         DEBUG    edge_8_04_01 Completed in 16.98121976852417 seconds ---
+2025-08-05 21:10:10,229 root         DEBUG    edge_36_09_01 Completed in 13.845116138458252 seconds ---
+2025-08-05 21:10:10,231 root         DEBUG    edge_35_04_01 Completed in 14.8412184715271 seconds ---
+2025-08-05 21:10:10,231 root         DEBUG    edge_36_03_01 Completed in 13.884349346160889 seconds ---
+2025-08-05 21:10:10,233 root         DEBUG    edge_36_01_01 Completed in 14.517671585083008 seconds ---
+2025-08-05 21:10:10,234 root         DEBUG    edge_4_08_01 Completed in 17.14040517807007 seconds ---
+2025-08-05 21:10:10,236 root         DEBUG    edge_11_06_01 Completed in 16.84565567970276 seconds ---
+2025-08-05 21:10:10,248 root         DEBUG    edge_16_09_01 Completed in 16.344568729400635 seconds ---
+2025-08-05 21:10:10,255 root         DEBUG    edge_24_04_01 Completed in 14.222773790359497 seconds ---
+2025-08-05 21:10:11,419 root         DEBUG    edge_24_10_01 Completed in 14.881186723709106 seconds ---
+2025-08-05 21:10:11,423 root         DEBUG    edge_18_02_01 Completed in 17.876548051834106 seconds ---
+2025-08-05 21:10:11,871 root         DEBUG    edge_11_10_01 Completed in 18.35703158378601 seconds ---
+2025-08-05 21:10:11,873 root         DEBUG    edge_4_04_01 Completed in 18.453795433044434 seconds ---
+2025-08-05 21:10:11,881 root         DEBUG    edge_4_02_01 Completed in 18.726027488708496 seconds ---
+2025-08-05 21:10:12,204 root         DEBUG    edge_35_02_01: Status.FINISHED
+2025-08-05 21:10:12,205 root         DEBUG    edge_4_11_01: Status.FINISHED
+2025-08-05 21:10:12,207 root         DEBUG    edge_36_05_01: Status.FINISHED
+2025-08-05 21:10:12,208 root         DEBUG    edge_4_01_01: Status.FINISHED
+2025-08-05 21:10:12,211 root         DEBUG    edge_4_07_01: Status.FINISHED
+2025-08-05 21:10:12,216 root         DEBUG    edge_4_03_01: Status.FINISHED
+2025-08-05 21:10:12,216 root         DEBUG    edge_18_11_01: Status.FINISHED
+2025-08-05 21:10:12,217 root         DEBUG    edge_11_01_01: Status.FINISHED
+2025-08-05 21:10:12,218 root         DEBUG    edge_8_03_01: Status.FINISHED
+2025-08-05 21:10:12,220 root         DEBUG    edge_36_08_01: Status.FINISHED
+2025-08-05 21:10:12,221 root         DEBUG    edge_24_03_01: Status.FINISHED
+2025-08-05 21:10:12,225 root         DEBUG    edge_4_05_01: Status.FINISHED
+2025-08-05 21:10:12,227 root         DEBUG    edge_11_04_01: Status.FINISHED
+2025-08-05 21:10:12,227 root         DEBUG    edge_8_04_01: Status.FINISHED
+2025-08-05 21:10:12,229 root         DEBUG    edge_36_09_01: Status.FINISHED
+2025-08-05 21:10:12,233 root         DEBUG    edge_35_04_01: Status.FINISHED
+2025-08-05 21:10:12,234 root         DEBUG    edge_36_03_01: Status.FINISHED
+2025-08-05 21:10:12,235 root         DEBUG    edge_36_01_01: Status.FINISHED
+2025-08-05 21:10:12,236 root         DEBUG    edge_4_08_01: Status.FINISHED
+2025-08-05 21:10:12,236 root         DEBUG    edge_11_06_01: Status.FINISHED
+2025-08-05 21:10:12,249 root         DEBUG    edge_16_09_01: Status.FINISHED
+2025-08-05 21:10:12,255 root         DEBUG    edge_24_04_01: Status.FINISHED
+2025-08-05 21:10:13,419 root         DEBUG    edge_24_10_01: Status.FINISHED
+2025-08-05 21:10:13,423 root         DEBUG    edge_18_02_01: Status.FINISHED
+2025-08-05 21:10:13,713 root         DEBUG    edge_11_03_01 Completed in 20.39195728302002 seconds ---
+2025-08-05 21:10:13,872 root         DEBUG    edge_11_10_01: Status.FINISHED
+2025-08-05 21:10:13,873 root         DEBUG    edge_4_04_01: Status.FINISHED
+2025-08-05 21:10:13,882 root         DEBUG    edge_4_02_01: Status.FINISHED
+2025-08-05 21:10:13,934 root         DEBUG    edge_11_07_01 Completed in 20.501989364624023 seconds ---
+2025-08-05 21:10:15,713 root         DEBUG    edge_11_03_01: Status.FINISHED
+2025-08-05 21:10:15,934 root         DEBUG    edge_11_07_01: Status.FINISHED
+2025-08-05 21:10:20,116 root         DEBUG    edge_17_07_01 Completed in 25.270715713500977 seconds ---
+2025-08-05 21:10:20,118 root         DEBUG    edge_18_05_01 Completed in 24.429600954055786 seconds ---
+2025-08-05 21:10:20,125 root         DEBUG    edge_16_01_01 Completed in 26.792470693588257 seconds ---
+2025-08-05 21:10:20,130 root         DEBUG    edge_16_04_01 Completed in 25.358072519302368 seconds ---
+2025-08-05 21:10:20,139 root         DEBUG    edge_8_01_01 Completed in 27.097518920898438 seconds ---
+2025-08-05 21:10:20,140 root         DEBUG    edge_35_10_01 Completed in 25.606144428253174 seconds ---
+2025-08-05 21:10:20,142 root         DEBUG    edge_17_03_01 Completed in 25.950165033340454 seconds ---
+2025-08-05 21:10:20,146 root         DEBUG    edge_27_08_01 Completed in 25.660351753234863 seconds ---
+2025-08-05 21:10:20,148 root         DEBUG    edge_24_07_01 Completed in 25.09833526611328 seconds ---
+2025-08-05 21:10:20,149 root         DEBUG    edge_27_04_01 Completed in 25.42171049118042 seconds ---
+2025-08-05 21:10:20,150 root         DEBUG    edge_8_06_01 Completed in 27.034870147705078 seconds ---
+2025-08-05 21:10:20,151 root         DEBUG    edge_8_07_01 Completed in 26.531647205352783 seconds ---
+2025-08-05 21:10:20,153 root         DEBUG    edge_24_06_01 Completed in 24.168336391448975 seconds ---
+2025-08-05 21:10:20,155 root         DEBUG    edge_24_08_01 Completed in 25.273669958114624 seconds ---
+2025-08-05 21:10:20,157 root         DEBUG    edge_36_10_01 Completed in 24.927433252334595 seconds ---
+2025-08-05 21:10:20,159 root         DEBUG    edge_17_10_01 Completed in 25.657320499420166 seconds ---
+2025-08-05 21:10:20,161 root         DEBUG    edge_11_08_01 Completed in 26.88326096534729 seconds ---
+2025-08-05 21:10:20,161 root         DEBUG    edge_11_09_01 Completed in 27.02390742301941 seconds ---
+2025-08-05 21:10:20,163 root         DEBUG    edge_8_09_01 Completed in 27.073713779449463 seconds ---
+2025-08-05 21:10:20,166 root         DEBUG    edge_27_09_01 Completed in 24.91935110092163 seconds ---
+2025-08-05 21:10:20,167 root         DEBUG    edge_16_03_01 Completed in 24.029412269592285 seconds ---
+2025-08-05 21:10:20,167 root         DEBUG    edge_27_05_01 Completed in 25.06291437149048 seconds ---
+2025-08-05 21:10:20,171 root         DEBUG    edge_4_06_01 Completed in 27.096808433532715 seconds ---
+2025-08-05 21:10:20,172 root         DEBUG    edge_35_07_01 Completed in 25.11275625228882 seconds ---
+2025-08-05 21:10:20,174 root         DEBUG    edge_27_06_01 Completed in 23.96695375442505 seconds ---
+2025-08-05 21:10:20,174 root         DEBUG    edge_24_05_01 Completed in 24.343103170394897 seconds ---
+2025-08-05 21:10:20,178 root         DEBUG    edge_36_07_01 Completed in 24.64258050918579 seconds ---
+2025-08-05 21:10:20,178 root         DEBUG    edge_17_04_01 Completed in 23.919640064239502 seconds ---
+2025-08-05 21:10:20,179 root         DEBUG    edge_17_02_01 Completed in 26.234430074691772 seconds ---
+2025-08-05 21:10:20,179 root         DEBUG    edge_35_06_01 Completed in 25.634150505065918 seconds ---
+2025-08-05 21:10:20,180 root         DEBUG    edge_18_10_01 Completed in 22.9709255695343 seconds ---
+2025-08-05 21:10:20,182 root         DEBUG    edge_35_01_01 Completed in 24.32412624359131 seconds ---
+2025-08-05 21:10:20,183 root         DEBUG    edge_16_08_01 Completed in 25.15774393081665 seconds ---
+2025-08-05 21:10:20,186 root         DEBUG    edge_27_10_01 Completed in 25.192503929138184 seconds ---
+2025-08-05 21:10:20,187 root         DEBUG    edge_18_09_01 Completed in 24.62727975845337 seconds ---
+2025-08-05 21:10:20,188 root         DEBUG    edge_16_11_01 Completed in 24.90193247795105 seconds ---
+2025-08-05 21:10:22,116 root         DEBUG    edge_17_07_01: Status.FINISHED
+2025-08-05 21:10:22,118 root         DEBUG    edge_18_05_01: Status.FINISHED
+2025-08-05 21:10:22,125 root         DEBUG    edge_16_01_01: Status.FINISHED
+2025-08-05 21:10:22,131 root         DEBUG    edge_16_04_01: Status.FINISHED
+2025-08-05 21:10:22,139 root         DEBUG    edge_8_01_01: Status.FINISHED
+2025-08-05 21:10:22,140 root         DEBUG    edge_35_10_01: Status.FINISHED
+2025-08-05 21:10:22,142 root         DEBUG    edge_17_03_01: Status.FINISHED
+2025-08-05 21:10:22,147 root         DEBUG    edge_27_08_01: Status.FINISHED
+2025-08-05 21:10:22,148 root         DEBUG    edge_24_07_01: Status.FINISHED
+2025-08-05 21:10:22,149 root         DEBUG    edge_27_04_01: Status.FINISHED
+2025-08-05 21:10:22,151 root         DEBUG    edge_8_06_01: Status.FINISHED
+2025-08-05 21:10:22,152 root         DEBUG    edge_8_07_01: Status.FINISHED
+2025-08-05 21:10:22,153 root         DEBUG    edge_24_06_01: Status.FINISHED
+2025-08-05 21:10:22,155 root         DEBUG    edge_24_08_01: Status.FINISHED
+2025-08-05 21:10:22,158 root         DEBUG    edge_36_10_01: Status.FINISHED
+2025-08-05 21:10:22,159 root         DEBUG    edge_17_10_01: Status.FINISHED
+2025-08-05 21:10:22,162 root         DEBUG    edge_11_08_01: Status.FINISHED
+2025-08-05 21:10:22,163 root         DEBUG    edge_11_09_01: Status.FINISHED
+2025-08-05 21:10:22,164 root         DEBUG    fog_11: Status.RUNNING
+2025-08-05 21:10:22,164 root         DEBUG    fog_11: Executing...
+2025-08-05 21:10:22,164 root         DEBUG    fog_11: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428222165-fog_11
+2025-08-05 21:10:22,165 root         DEBUG    edge_8_09_01: Status.FINISHED
+2025-08-05 21:10:22,166 root         DEBUG    fog_8: Status.RUNNING
+2025-08-05 21:10:22,166 root         DEBUG    fog_8: Executing...
+2025-08-05 21:10:22,166 root         DEBUG    edge_27_09_01: Status.FINISHED
+2025-08-05 21:10:22,168 root         DEBUG    fog_8: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428222167-fog_8
+2025-08-05 21:10:22,169 root         DEBUG    edge_16_03_01: Status.FINISHED
+2025-08-05 21:10:22,171 root         DEBUG    edge_27_05_01: Status.FINISHED
+2025-08-05 21:10:22,173 root         DEBUG    edge_4_06_01: Status.FINISHED
+2025-08-05 21:10:22,173 root         DEBUG    fog_4: Status.RUNNING
+2025-08-05 21:10:22,173 root         DEBUG    fog_4: Executing...
+2025-08-05 21:10:22,174 root         DEBUG    fog_4: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428222174-fog_4
+2025-08-05 21:10:22,178 root         DEBUG    edge_35_07_01: Status.FINISHED
+2025-08-05 21:10:22,178 root         DEBUG    edge_27_06_01: Status.FINISHED
+2025-08-05 21:10:22,180 root         DEBUG    edge_24_05_01: Status.FINISHED
+2025-08-05 21:10:22,182 root         DEBUG    edge_36_07_01: Status.FINISHED
+2025-08-05 21:10:22,186 root         DEBUG    edge_17_04_01: Status.FINISHED
+2025-08-05 21:10:22,187 root         DEBUG    edge_17_02_01: Status.FINISHED
+2025-08-05 21:10:22,188 root         DEBUG    edge_35_06_01: Status.FINISHED
+2025-08-05 21:10:22,188 root         DEBUG    edge_18_10_01: Status.FINISHED
+2025-08-05 21:10:22,189 root         DEBUG    edge_35_01_01: Status.FINISHED
+2025-08-05 21:10:22,189 root         DEBUG    edge_16_08_01: Status.FINISHED
+2025-08-05 21:10:22,189 root         DEBUG    edge_27_10_01: Status.FINISHED
+2025-08-05 21:10:22,189 root         DEBUG    edge_16_11_01: Status.FINISHED
+2025-08-05 21:10:22,189 root         DEBUG    edge_18_09_01: Status.FINISHED
+2025-08-05 21:10:22,960 root         DEBUG    edge_18_06_01 Completed in 27.00749182701111 seconds ---
+2025-08-05 21:10:22,961 root         DEBUG    edge_27_03_01 Completed in 27.136239051818848 seconds ---
+2025-08-05 21:10:22,962 root         DEBUG    edge_35_03_01 Completed in 25.876802921295166 seconds ---
+2025-08-05 21:10:22,964 root         DEBUG    edge_27_07_01 Completed in 27.845778942108154 seconds ---
+2025-08-05 21:10:22,965 root         DEBUG    edge_16_06_01 Completed in 27.340710639953613 seconds ---
+2025-08-05 21:10:22,968 root         DEBUG    edge_16_07_01 Completed in 27.41263198852539 seconds ---
+2025-08-05 21:10:22,969 root         DEBUG    edge_35_11_01 Completed in 26.211737632751465 seconds ---
+2025-08-05 21:10:22,970 root         DEBUG    edge_24_01_01 Completed in 25.672082901000977 seconds ---
+2025-08-05 21:10:22,971 root         DEBUG    edge_35_08_01 Completed in 25.367366790771484 seconds ---
+2025-08-05 21:10:22,978 root         DEBUG    edge_36_06_01 Completed in 25.535862684249878 seconds ---
+2025-08-05 21:10:22,980 root         DEBUG    edge_17_06_01 Completed in 25.48319363594055 seconds ---
+2025-08-05 21:10:22,981 root         DEBUG    edge_17_11_01 Completed in 25.545233726501465 seconds ---
+2025-08-05 21:10:24,215 root         DEBUG    edge_36_04_01 Completed in 27.49276852607727 seconds ---
+2025-08-05 21:10:24,217 root         DEBUG    edge_35_05_01 Completed in 26.3155415058136 seconds ---
+2025-08-05 21:10:24,219 root         DEBUG    edge_27_11_01 Completed in 25.642682313919067 seconds ---
+2025-08-05 21:10:24,220 root         DEBUG    edge_36_02_01 Completed in 25.889899015426636 seconds ---
+2025-08-05 21:10:24,229 root         DEBUG    edge_36_11_01 Completed in 25.47771191596985 seconds ---
+2025-08-05 21:10:24,961 root         DEBUG    edge_18_06_01: Status.FINISHED
+2025-08-05 21:10:24,961 root         DEBUG    edge_27_03_01: Status.FINISHED
+2025-08-05 21:10:24,962 root         DEBUG    fog_18: Status.RUNNING
+2025-08-05 21:10:24,963 root         DEBUG    fog_18: Executing...
+2025-08-05 21:10:24,963 root         DEBUG    edge_35_03_01: Status.FINISHED
+2025-08-05 21:10:24,963 root         DEBUG    fog_18: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428224963-fog_18
+2025-08-05 21:10:24,964 root         DEBUG    edge_27_07_01: Status.FINISHED
+2025-08-05 21:10:24,966 root         DEBUG    edge_16_06_01: Status.FINISHED
+2025-08-05 21:10:24,969 root         DEBUG    edge_16_07_01: Status.FINISHED
+2025-08-05 21:10:24,969 root         DEBUG    fog_16: Status.RUNNING
+2025-08-05 21:10:24,970 root         DEBUG    fog_16: Executing...
+2025-08-05 21:10:24,970 root         DEBUG    fog_16: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428224970-fog_16
+2025-08-05 21:10:24,971 root         DEBUG    edge_35_11_01: Status.FINISHED
+2025-08-05 21:10:24,971 root         DEBUG    edge_24_01_01: Status.FINISHED
+2025-08-05 21:10:24,972 root         DEBUG    edge_35_08_01: Status.FINISHED
+2025-08-05 21:10:24,972 root         DEBUG    fog_24: Status.RUNNING
+2025-08-05 21:10:24,973 root         DEBUG    fog_24: Executing...
+2025-08-05 21:10:24,973 root         DEBUG    fog_24: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428224973-fog_24
+2025-08-05 21:10:24,979 root         DEBUG    edge_36_06_01: Status.FINISHED
+2025-08-05 21:10:24,980 root         DEBUG    edge_17_06_01: Status.FINISHED
+2025-08-05 21:10:24,981 root         DEBUG    edge_17_11_01: Status.FINISHED
+2025-08-05 21:10:24,981 root         DEBUG    fog_17: Status.RUNNING
+2025-08-05 21:10:24,982 root         DEBUG    fog_17: Executing...
+2025-08-05 21:10:24,982 root         DEBUG    fog_17: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428224982-fog_17
+2025-08-05 21:10:25,973 root         DEBUG    train_model Completed in 31.532761335372925 seconds ---
+2025-08-05 21:10:26,215 root         DEBUG    edge_36_04_01: Status.FINISHED
+2025-08-05 21:10:26,218 root         DEBUG    edge_35_05_01: Status.FINISHED
+2025-08-05 21:10:26,219 root         DEBUG    fog_35: Status.RUNNING
+2025-08-05 21:10:26,219 root         DEBUG    fog_35: Executing...
+2025-08-05 21:10:26,219 root         DEBUG    fog_35: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428226219-fog_35
+2025-08-05 21:10:26,220 root         DEBUG    edge_27_11_01: Status.FINISHED
+2025-08-05 21:10:26,221 root         DEBUG    edge_36_02_01: Status.FINISHED
+2025-08-05 21:10:26,221 root         DEBUG    fog_27: Status.RUNNING
+2025-08-05 21:10:26,222 root         DEBUG    fog_27: Executing...
+2025-08-05 21:10:26,223 root         DEBUG    fog_27: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428226223-fog_27
+2025-08-05 21:10:26,229 root         DEBUG    edge_36_11_01: Status.FINISHED
+2025-08-05 21:10:26,229 root         DEBUG    fog_36: Status.RUNNING
+2025-08-05 21:10:26,230 root         DEBUG    fog_36: Executing...
+2025-08-05 21:10:26,230 root         DEBUG    fog_36: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428226230-fog_36
+2025-08-05 21:10:27,974 root         DEBUG    train_model: Status.FINISHED
+2025-08-05 21:10:27,974 root         DEBUG    predict_pollution_4: Status.RUNNING
+2025-08-05 21:10:27,974 root         DEBUG    predict_pollution_8: Status.RUNNING
+2025-08-05 21:10:27,975 root         DEBUG    predict_pollution_4: Executing...
+2025-08-05 21:10:27,975 root         DEBUG    predict_pollution_11: Status.RUNNING
+2025-08-05 21:10:27,975 root         DEBUG    predict_pollution_16: Status.RUNNING
+2025-08-05 21:10:27,975 root         DEBUG    predict_pollution_8: Executing...
+2025-08-05 21:10:27,976 root         DEBUG    predict_pollution_17: Status.RUNNING
+2025-08-05 21:10:27,976 root         DEBUG    predict_pollution_18: Status.RUNNING
+2025-08-05 21:10:27,977 root         DEBUG    predict_pollution_24: Status.RUNNING
+2025-08-05 21:10:27,977 root         DEBUG    predict_pollution_11: Executing...
+2025-08-05 21:10:27,977 root         DEBUG    predict_pollution_27: Status.RUNNING
+2025-08-05 21:10:27,977 root         DEBUG    predict_pollution_35: Status.RUNNING
+2025-08-05 21:10:27,977 root         DEBUG    predict_pollution_16: Executing...
+2025-08-05 21:10:27,978 root         DEBUG    predict_pollution_36: Status.RUNNING
+2025-08-05 21:10:27,978 root         DEBUG    predict_pollution_17: Executing...
+2025-08-05 21:10:27,979 root         DEBUG    predict_pollution_18: Executing...
+2025-08-05 21:10:27,979 root         DEBUG    predict_pollution_24: Executing...
+2025-08-05 21:10:27,979 root         DEBUG    predict_pollution_27: Executing...
+2025-08-05 21:10:27,980 root         DEBUG    predict_pollution_35: Executing...
+2025-08-05 21:10:27,980 root         DEBUG    predict_pollution_36: Executing...
+2025-08-05 21:10:28,220 root         DEBUG    predict_pollution_4: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227976-predict_pollution_4
+2025-08-05 21:10:28,223 root         DEBUG    predict_pollution_8: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227978-predict_pollution_8
+2025-08-05 21:10:28,224 root         DEBUG    predict_pollution_11: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227979-predict_pollution_11
+2025-08-05 21:10:28,231 root         DEBUG    predict_pollution_35: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227982-predict_pollution_35
+2025-08-05 21:10:28,232 root         DEBUG    predict_pollution_24: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227982-predict_pollution_24
+2025-08-05 21:10:28,233 root         DEBUG    predict_pollution_18: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227981-predict_pollution_18
+2025-08-05 21:10:28,236 root         DEBUG    predict_pollution_27: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227982-predict_pollution_27
+2025-08-05 21:10:28,237 root         DEBUG    predict_pollution_16: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227980-predict_pollution_16
+2025-08-05 21:10:28,240 root         DEBUG    predict_pollution_17: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227981-predict_pollution_17
+2025-08-05 21:10:28,240 root         DEBUG    predict_pollution_36: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227983-predict_pollution_36
+2025-08-05 21:10:45,367 root         DEBUG    fog_4 Completed in 22.936424255371094 seconds ---
+2025-08-05 21:10:45,367 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192049-edge_4_01_01
+2025-08-05 21:10:45,446 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192052-edge_4_02_01
+2025-08-05 21:10:45,525 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192054-edge_4_03_01
+2025-08-05 21:10:45,605 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192058-edge_4_04_01
+2025-08-05 21:10:45,684 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192060-edge_4_05_01
+2025-08-05 21:10:45,763 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192064-edge_4_06_01
+2025-08-05 21:10:45,841 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192083-edge_4_07_01
+2025-08-05 21:10:45,869 root         DEBUG    fog_8 Completed in 23.352967023849487 seconds ---
+2025-08-05 21:10:45,869 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192068-edge_8_01_01
+2025-08-05 21:10:45,919 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192072-edge_4_08_01
+2025-08-05 21:10:45,948 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192086-edge_8_02_01
+2025-08-05 21:10:45,998 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192074-edge_4_09_01
+2025-08-05 21:10:46,027 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192091-edge_8_03_01
+2025-08-05 21:10:46,077 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192078-edge_4_10_01
+2025-08-05 21:10:46,107 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192095-edge_8_04_01
+2025-08-05 21:10:46,151 root         DEBUG    fog_11 Completed in 23.76304268836975 seconds ---
+2025-08-05 21:10:46,151 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192149-edge_11_01_01
+2025-08-05 21:10:46,156 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192081-edge_4_11_01
+2025-08-05 21:10:46,186 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192100-edge_8_05_01
+2025-08-05 21:10:46,231 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192162-edge_11_02_01
+2025-08-05 21:10:46,265 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192106-edge_8_06_01
+2025-08-05 21:10:46,310 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192170-edge_11_03_01
+2025-08-05 21:10:46,344 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192186-edge_8_07_01
+2025-08-05 21:10:46,389 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192175-edge_11_04_01
+2025-08-05 21:10:46,422 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192117-edge_8_08_01
+2025-08-05 21:10:46,467 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192178-edge_11_05_01
+2025-08-05 21:10:46,501 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192121-edge_8_09_01
+2025-08-05 21:10:46,546 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192181-edge_11_06_01
+2025-08-05 21:10:46,579 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192129-edge_8_10_01
+2025-08-05 21:10:46,624 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192182-edge_11_07_01
+2025-08-05 21:10:46,657 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192141-edge_8_11_01
+2025-08-05 21:10:46,701 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192184-edge_11_08_01
+2025-08-05 21:10:46,779 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192114-edge_11_09_01
+2025-08-05 21:10:46,857 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192189-edge_11_10_01
+2025-08-05 21:10:46,936 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192191-edge_11_11_01
+2025-08-05 21:10:48,235 root         DEBUG    fog_4: Status.FINISHED
+2025-08-05 21:10:48,235 root         DEBUG    cloud_4: Status.RUNNING
+2025-08-05 21:10:48,236 root         DEBUG    cloud_4: Executing...
+2025-08-05 21:10:48,480 root         DEBUG    cloud_4: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428248236-cloud_4
+2025-08-05 21:10:48,660 root         DEBUG    fog_24 Completed in 23.496299505233765 seconds ---
+2025-08-05 21:10:48,660 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192349-edge_24_01_01
+2025-08-05 21:10:48,735 root         DEBUG    fog_8: Status.FINISHED
+2025-08-05 21:10:48,735 root         DEBUG    cloud_8: Status.RUNNING
+2025-08-05 21:10:48,736 root         DEBUG    cloud_8: Executing...
+2025-08-05 21:10:48,738 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192355-edge_24_02_01
+2025-08-05 21:10:48,817 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192362-edge_24_03_01
+2025-08-05 21:10:48,895 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192366-edge_24_04_01
+2025-08-05 21:10:48,974 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192377-edge_24_05_01
+2025-08-05 21:10:48,976 root         DEBUG    cloud_8: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428248736-cloud_8
+2025-08-05 21:10:49,015 root         DEBUG    fog_11: Status.FINISHED
+2025-08-05 21:10:49,015 root         DEBUG    cloud_11: Status.RUNNING
+2025-08-05 21:10:49,015 root         DEBUG    cloud_11: Executing...
+2025-08-05 21:10:49,051 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192378-edge_24_06_01
+2025-08-05 21:10:49,128 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192380-edge_24_07_01
+2025-08-05 21:10:49,207 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192382-edge_24_08_01
+2025-08-05 21:10:49,260 root         DEBUG    cloud_11: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428249015-cloud_11
+2025-08-05 21:10:49,285 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192383-edge_24_09_01
+2025-08-05 21:10:49,364 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192384-edge_24_10_01
+2025-08-05 21:10:49,370 root         DEBUG    fog_17 Completed in 24.215210914611816 seconds ---
+2025-08-05 21:10:49,370 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192236-edge_17_01_01
+2025-08-05 21:10:49,443 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192385-edge_24_11_01
+2025-08-05 21:10:49,449 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192238-edge_17_02_01
+2025-08-05 21:10:49,527 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192239-edge_17_03_01
+2025-08-05 21:10:49,605 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192240-edge_17_04_01
+2025-08-05 21:10:49,683 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192241-edge_17_05_01
+2025-08-05 21:10:49,763 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192244-edge_17_06_01
+2025-08-05 21:10:49,842 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192246-edge_17_07_01
+2025-08-05 21:10:49,921 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192248-edge_17_08_01
+2025-08-05 21:10:50,000 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192250-edge_17_09_01
+2025-08-05 21:10:50,078 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192252-edge_17_10_01
+2025-08-05 21:10:50,157 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192484-edge_17_11_01
+2025-08-05 21:10:50,395 root         DEBUG    fog_18 Completed in 25.202619791030884 seconds ---
+2025-08-05 21:10:50,395 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192263-edge_18_01_01
+2025-08-05 21:10:50,474 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192270-edge_18_02_01
+2025-08-05 21:10:50,553 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192293-edge_18_03_01
+2025-08-05 21:10:50,632 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192305-edge_18_04_01
+2025-08-05 21:10:50,667 root         DEBUG    fog_16 Completed in 25.423107862472534 seconds ---
+2025-08-05 21:10:50,667 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192193-edge_16_01_01
+2025-08-05 21:10:50,711 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192310-edge_18_05_01
+2025-08-05 21:10:50,745 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192195-edge_16_02_01
+2025-08-05 21:10:50,791 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192317-edge_18_06_01
+2025-08-05 21:10:50,825 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192196-edge_16_03_01
+2025-08-05 21:10:50,870 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192321-edge_18_07_01
+2025-08-05 21:10:50,904 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192199-edge_16_04_01
+2025-08-05 21:10:50,949 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192322-edge_18_08_01
+2025-08-05 21:10:50,952 root         DEBUG    fog_35 Completed in 24.53926682472229 seconds ---
+2025-08-05 21:10:50,952 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192417-edge_35_01_01
+2025-08-05 21:10:50,982 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192202-edge_16_05_01
+2025-08-05 21:10:51,028 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192325-edge_18_09_01
+2025-08-05 21:10:51,030 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192424-edge_35_02_01
+2025-08-05 21:10:51,061 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192207-edge_16_06_01
+2025-08-05 21:10:51,107 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192326-edge_18_10_01
+2025-08-05 21:10:51,110 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192450-edge_35_03_01
+2025-08-05 21:10:51,139 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192216-edge_16_07_01
+2025-08-05 21:10:51,186 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192329-edge_18_11_01
+2025-08-05 21:10:51,188 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192453-edge_35_04_01
+2025-08-05 21:10:51,219 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192219-edge_16_08_01
+2025-08-05 21:10:51,267 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192454-edge_35_05_01
+2025-08-05 21:10:51,297 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192223-edge_16_09_01
+2025-08-05 21:10:51,345 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192459-edge_35_06_01
+2025-08-05 21:10:51,375 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192228-edge_16_10_01
+2025-08-05 21:10:51,424 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192465-edge_35_07_01
+2025-08-05 21:10:51,454 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192233-edge_16_11_01
+2025-08-05 21:10:51,460 root         DEBUG    fog_27 Completed in 24.891735553741455 seconds ---
+2025-08-05 21:10:51,461 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192386-edge_27_01_01
+2025-08-05 21:10:51,462 root         DEBUG    fog_36 Completed in 24.978428840637207 seconds ---
+2025-08-05 21:10:51,462 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192496-edge_36_01_01
+2025-08-05 21:10:51,503 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192467-edge_35_08_01
+2025-08-05 21:10:51,521 root         DEBUG    fog_24: Status.FINISHED
+2025-08-05 21:10:51,521 root         DEBUG    cloud_24: Status.RUNNING
+2025-08-05 21:10:51,521 root         DEBUG    cloud_24: Executing...
+2025-08-05 21:10:51,540 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192389-edge_27_02_01
+2025-08-05 21:10:51,541 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192509-edge_36_02_01
+2025-08-05 21:10:51,582 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192473-edge_35_09_01
+2025-08-05 21:10:51,619 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192390-edge_27_03_01
+2025-08-05 21:10:51,620 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192523-edge_36_03_01
+2025-08-05 21:10:51,660 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192256-edge_35_10_01
+2025-08-05 21:10:51,698 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192391-edge_27_04_01
+2025-08-05 21:10:51,699 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192540-edge_36_04_01
+2025-08-05 21:10:51,739 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192487-edge_35_11_01
+2025-08-05 21:10:51,765 root         DEBUG    cloud_24: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428251522-cloud_24
+2025-08-05 21:10:51,777 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192392-edge_27_05_01
+2025-08-05 21:10:51,779 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192550-edge_36_05_01
+2025-08-05 21:10:51,857 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192394-edge_27_06_01
+2025-08-05 21:10:51,858 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192558-edge_36_06_01
+2025-08-05 21:10:51,936 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192399-edge_27_07_01
+2025-08-05 21:10:51,938 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192592-edge_36_07_01
+2025-08-05 21:10:52,015 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192402-edge_27_08_01
+2025-08-05 21:10:52,017 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192609-edge_36_08_01
+2025-08-05 21:10:52,094 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192403-edge_27_09_01
+2025-08-05 21:10:52,096 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192616-edge_36_09_01
+2025-08-05 21:10:52,174 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192406-edge_27_10_01
+2025-08-05 21:10:52,175 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192620-edge_36_10_01
+2025-08-05 21:10:52,236 root         DEBUG    fog_17: Status.FINISHED
+2025-08-05 21:10:52,237 root         DEBUG    cloud_17: Status.RUNNING
+2025-08-05 21:10:52,237 root         DEBUG    cloud_17: Executing...
+2025-08-05 21:10:52,252 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192409-edge_27_11_01
+2025-08-05 21:10:52,254 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192629-edge_36_11_01
+2025-08-05 21:10:52,295 root         DEBUG    predict_pollution_11 Completed in 22.60299777984619 seconds ---
+2025-08-05 21:10:52,296 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227979-predict_pollution_11
+2025-08-05 21:10:52,481 root         DEBUG    cloud_17: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428252237-cloud_17
+2025-08-05 21:10:53,027 root         DEBUG    predict_pollution_18 Completed in 23.33058500289917 seconds ---
+2025-08-05 21:10:53,027 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227981-predict_pollution_18
+2025-08-05 21:10:53,265 root         DEBUG    fog_18: Status.FINISHED
+2025-08-05 21:10:53,265 root         DEBUG    cloud_18: Status.RUNNING
+2025-08-05 21:10:53,265 root         DEBUG    cloud_18: Executing...
+2025-08-05 21:10:53,301 root         DEBUG    predict_pollution_17 Completed in 23.605757236480713 seconds ---
+2025-08-05 21:10:53,301 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227981-predict_pollution_17
+2025-08-05 21:10:53,511 root         DEBUG    cloud_18: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428253266-cloud_18
+2025-08-05 21:10:53,533 root         DEBUG    fog_16: Status.FINISHED
+2025-08-05 21:10:53,534 root         DEBUG    cloud_16: Status.RUNNING
+2025-08-05 21:10:53,534 root         DEBUG    cloud_16: Executing...
+2025-08-05 21:10:53,589 root         DEBUG    predict_pollution_4 Completed in 23.852283239364624 seconds ---
+2025-08-05 21:10:53,589 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227976-predict_pollution_4
+2025-08-05 21:10:53,775 root         DEBUG    cloud_16: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428253535-cloud_16
+2025-08-05 21:10:53,819 root         DEBUG    fog_35: Status.FINISHED
+2025-08-05 21:10:53,819 root         DEBUG    cloud_35: Status.RUNNING
+2025-08-05 21:10:53,819 root         DEBUG    cloud_35: Executing...
+2025-08-05 21:10:53,845 root         DEBUG    predict_pollution_36 Completed in 24.11314821243286 seconds ---
+2025-08-05 21:10:53,845 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227983-predict_pollution_36
+2025-08-05 21:10:54,061 root         DEBUG    cloud_35: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428253820-cloud_35
+2025-08-05 21:10:54,331 root         DEBUG    fog_27: Status.FINISHED
+2025-08-05 21:10:54,331 root         DEBUG    cloud_27: Status.RUNNING
+2025-08-05 21:10:54,331 root         DEBUG    cloud_27: Executing...
+2025-08-05 21:10:54,333 root         DEBUG    fog_36: Status.FINISHED
+2025-08-05 21:10:54,333 root         DEBUG    cloud_36: Status.RUNNING
+2025-08-05 21:10:54,333 root         DEBUG    cloud_36: Executing...
+2025-08-05 21:10:54,575 root         DEBUG    cloud_27: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428254332-cloud_27
+2025-08-05 21:10:54,577 root         DEBUG    cloud_36: Scratch directory: /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428254334-cloud_36
+2025-08-05 21:10:54,655 root         DEBUG    predict_pollution_11: Status.FINISHED
+2025-08-05 21:10:54,883 root         DEBUG    predict_pollution_24 Completed in 25.080620527267456 seconds ---
+2025-08-05 21:10:54,883 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227982-predict_pollution_24
+2025-08-05 21:10:54,885 root         DEBUG    predict_pollution_16 Completed in 24.99854040145874 seconds ---
+2025-08-05 21:10:54,886 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227980-predict_pollution_16
+2025-08-05 21:10:54,889 root         DEBUG    predict_pollution_8 Completed in 24.839956760406494 seconds ---
+2025-08-05 21:10:54,889 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227978-predict_pollution_8
+2025-08-05 21:10:54,890 root         DEBUG    predict_pollution_35 Completed in 24.857131004333496 seconds ---
+2025-08-05 21:10:54,891 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227982-predict_pollution_35
+2025-08-05 21:10:55,216 root         DEBUG    predict_pollution_27 Completed in 24.981406927108765 seconds ---
+2025-08-05 21:10:55,217 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428192686-train_model
+2025-08-05 21:10:55,390 root         DEBUG    predict_pollution_18: Status.FINISHED
+2025-08-05 21:10:55,458 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428227982-predict_pollution_27
+2025-08-05 21:10:55,663 root         DEBUG    predict_pollution_17: Status.FINISHED
+2025-08-05 21:10:55,950 root         DEBUG    predict_pollution_4: Status.FINISHED
+2025-08-05 21:10:56,207 root         DEBUG    predict_pollution_36: Status.FINISHED
+2025-08-05 21:10:57,240 root         DEBUG    predict_pollution_24: Status.FINISHED
+2025-08-05 21:10:57,247 root         DEBUG    predict_pollution_8: Status.FINISHED
+2025-08-05 21:10:57,248 root         DEBUG    predict_pollution_16: Status.FINISHED
+2025-08-05 21:10:57,250 root         DEBUG    predict_pollution_35: Status.FINISHED
+2025-08-05 21:10:57,701 root         DEBUG    predict_pollution_27: Status.FINISHED
+2025-08-05 21:10:58,796 root         DEBUG    cloud_11 Completed in 7.983036041259766 seconds ---
+2025-08-05 21:10:58,796 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428222165-fog_11
+2025-08-05 21:10:58,797 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428249015-cloud_11
+2025-08-05 21:10:59,472 root         DEBUG    cloud_4 Completed in 9.360143661499023 seconds ---
+2025-08-05 21:10:59,473 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428222174-fog_4
+2025-08-05 21:10:59,473 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428248236-cloud_4
+2025-08-05 21:10:59,909 root         DEBUG    cloud_8 Completed in 9.26201844215393 seconds ---
+2025-08-05 21:10:59,909 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428222167-fog_8
+2025-08-05 21:10:59,909 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428248736-cloud_8
+2025-08-05 21:11:01,000 root         DEBUG    cloud_24 Completed in 7.742673873901367 seconds ---
+2025-08-05 21:11:01,000 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428224973-fog_24
+2025-08-05 21:11:01,001 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428251522-cloud_24
+2025-08-05 21:11:01,156 root         DEBUG    cloud_11: Status.FINISHED
+2025-08-05 21:11:01,836 root         DEBUG    cloud_4: Status.FINISHED
+2025-08-05 21:11:02,229 root         DEBUG    cloud_17 Completed in 8.055406093597412 seconds ---
+2025-08-05 21:11:02,229 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428224982-fog_17
+2025-08-05 21:11:02,230 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428252237-cloud_17
+2025-08-05 21:11:02,267 root         DEBUG    cloud_8: Status.FINISHED
+2025-08-05 21:11:03,362 root         DEBUG    cloud_24: Status.FINISHED
+2025-08-05 21:11:03,543 root         DEBUG    cloud_18 Completed in 8.585246562957764 seconds ---
+2025-08-05 21:11:03,544 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428224963-fog_18
+2025-08-05 21:11:03,544 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428253266-cloud_18
+2025-08-05 21:11:03,911 root         DEBUG    cloud_16 Completed in 8.399889707565308 seconds ---
+2025-08-05 21:11:03,911 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428224970-fog_16
+2025-08-05 21:11:03,912 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428253535-cloud_16
+2025-08-05 21:11:04,590 root         DEBUG    cloud_17: Status.FINISHED
+2025-08-05 21:11:04,668 root         DEBUG    cloud_35 Completed in 9.009539604187012 seconds ---
+2025-08-05 21:11:04,668 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428226219-fog_35
+2025-08-05 21:11:04,669 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428253820-cloud_35
+2025-08-05 21:11:05,059 root         DEBUG    cloud_27 Completed in 8.66470718383789 seconds ---
+2025-08-05 21:11:05,060 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428226223-fog_27
+2025-08-05 21:11:05,060 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428254332-cloud_27
+2025-08-05 21:11:05,447 root         DEBUG    cloud_36 Completed in 9.319404602050781 seconds ---
+2025-08-05 21:11:05,448 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428226230-fog_36
+2025-08-05 21:11:05,448 root         DEBUG    Removing /home/cc/dagonstar/tests/benchmarks/dynostore/dagonresults//1754428254334-cloud_36
+2025-08-05 21:11:05,907 root         DEBUG    cloud_18: Status.FINISHED
+2025-08-05 21:11:06,271 root         DEBUG    cloud_16: Status.FINISHED
+2025-08-05 21:11:07,029 root         DEBUG    cloud_35: Status.FINISHED
+2025-08-05 21:11:07,420 root         DEBUG    cloud_27: Status.FINISHED
+2025-08-05 21:11:07,810 root         DEBUG    cloud_36: Status.FINISHED
+2025-08-05 21:11:07,810 root         INFO     Workflow 'airqualityworkflow' completed in 75.76373839378357 seconds ---
+48
+edge_8_01_01
+edge_4_10_01
+edge_4_05_01
+edge_4_07_01
+edge_8_02_01
+edge_4_06_01
+edge_8_09_01
+edge_4_08_01
+edge_8_06_01
+edge_11_01_01
+edge_11_09_01
+edge_4_02_01
+edge_4_09_01
+edge_4_03_01
+edge_8_04_01
+edge_11_02_01
+edge_11_08_01
+edge_11_03_01
+edge_16_01_01
+edge_8_03_01
+edge_11_06_01
+edge_4_04_01
+edge_11_07_01
+edge_4_11_01
+edge_11_05_01
+edge_16_02_01
+edge_8_08_01
+edge_4_01_01
+edge_11_10_01
+edge_18_02_01
+edge_18_01_01
+edge_8_07_01
+edge_16_05_01
+edge_17_05_01
+edge_18_03_01
+edge_24_02_01
+edge_24_11_01
+edge_18_07_01
+edge_16_09_01
+edge_17_02_01
+edge_24_09_01
+edge_17_08_01
+edge_17_03_01
+edge_35_09_01
+edge_17_01_01
+edge_18_08_01
+edge_27_01_01
+edge_8_05_01
+edge_8_11_01
+train_model
+edge_27_08_01
+edge_17_10_01
+edge_35_10_01
+edge_35_06_01
+edge_17_09_01
+edge_18_04_01
+edge_27_04_01
+edge_8_10_01
+edge_16_10_01
+edge_16_04_01
+edge_17_07_01
+edge_24_08_01
+edge_27_10_01
+edge_11_04_01
+edge_16_08_01
+edge_24_07_01
+edge_35_07_01
+edge_27_05_01
+edge_27_07_01
+edge_11_11_01
+edge_36_10_01
+edge_27_09_01
+edge_16_11_01
+edge_35_04_01
+edge_27_02_01
+edge_36_07_01
+edge_16_07_01
+edge_18_09_01
+edge_35_02_01
+edge_36_08_01
+edge_16_06_01
+edge_18_05_01
+edge_36_01_01
+edge_24_03_01
+edge_27_03_01
+edge_24_05_01
+edge_36_05_01
+edge_35_01_01
+edge_18_06_01
+edge_24_06_01
+edge_24_04_01
+edge_16_03_01
+edge_27_06_01
+edge_17_04_01
+edge_18_11_01
+edge_36_03_01
+edge_36_09_01
+edge_24_10_01
+edge_36_04_01
+edge_35_11_01
+edge_35_03_01
+edge_18_10_01
+edge_24_01_01
+edge_17_11_01
+edge_36_06_01
+edge_17_06_01
+edge_35_08_01
+edge_35_05_01
+edge_36_02_01
+edge_27_11_01
+edge_36_11_01
+fog_11
+fog_4
+fog_8
+fog_17
+fog_24
+fog_18
+fog_16
+fog_35
+fog_36
+fog_27
+predict_pollution_11
+predict_pollution_17
+predict_pollution_18
+predict_pollution_36
+predict_pollution_4
+predict_pollution_24
+predict_pollution_16
+predict_pollution_35
+predict_pollution_8
+predict_pollution_27
+cloud_4
+cloud_8
+cloud_11
+cloud_24
+cloud_17
+cloud_18
+cloud_16
+cloud_35
+cloud_36
+cloud_27

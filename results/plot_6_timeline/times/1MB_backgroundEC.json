@@ -1,0 +1,29 @@
+{
+  "upload_start": 1754152453549171189,
+  "Object transmission": {
+    "start": 1754152453549269644,
+    "end": 1754152458499358125
+  },
+  "catalog": {
+    "start": 1754152458499546548,
+    "end": 1754152458515009176
+  },
+  "catalog_perf": 15461666,
+  "Metadata registration": {
+    "start": 1754152458515015869,
+    "end": 1754152458647973831
+  },
+  "ec_thread_dispatch": {
+    "start": 1754152458647998517
+  },
+  "upload_end": 1754152458648270256,
+  "upload_total_perf_ns": 5099099096,
+  "Erasure coding": {
+    "start": 1754152458648247163,
+    "end": 1754152459245395843
+  },
+  "Chunk upload": {
+    "start": 1754152459245396394,
+    "end": 1754152461068995408
+  }
+}

@@ -1,0 +1,3 @@
+system,operation,file_size_mb,avg_time,std_dev
+s3object,upload,1000,24.2852,2.0404
+s3,download,1000,23.124,3.1932
