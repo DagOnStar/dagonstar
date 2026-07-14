@@ -3,7 +3,7 @@ import logging
 import subprocess
 import tempfile
 import shutil
-from dagon import Batch
+from dagon.batch import Batch
 from dagon.task import Task
 from dagon.remote import RemoteTask
 import time

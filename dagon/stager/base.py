@@ -1,12 +1,14 @@
 from enum import Enum
 import os
+import logging
+from typing import Dict, Any
 
 from dagon.batch import Batch
 from dagon.batch import Slurm
 
 from dagon.remote import RemoteTask
 from dagon.communication.data_transfer import GlobusManager
-
+from dagon.shell import quote, remote_target
 
 
 class DataMover(Enum):
@@ -33,7 +35,8 @@ class DataMover(Enum):
     FTP = 6
     SFTP = 7
     GRIDFTP = 8
-    DYNOSTORE = 9
+    SKYCDS = 9
+    DYNOSTORE = 10
 
 
 class StagerMover(Enum):
@@ -68,12 +71,13 @@ class Stager(object):
     Choose the transference protocol to move data between tasks
     """
 
-    def __init__(self, data_mover, stager_mover, cfg):
+    def __init__(self, data_mover: DataMover, stager_mover: StagerMover, cfg: Dict[str, Dict[str, str]]):
         self.data_mover = data_mover
         self.stager_mover = stager_mover
         self.cfg = cfg
+        self.logger = logging.getLogger()
 
-    def stage_in(self, dst_task, src_task, dst_path, local_path):
+    def stage_in(self, dst_task: Any, src_task: Any, dst_path: str, local_path: str) -> str:
         """
         Evaluates the context of the machines and choose the transfer protocol
 
@@ -102,11 +106,7 @@ class Stager(object):
         src_task_info = src_task.get_info()
         
         # check transference protocols and remote machine info if is available
-        # if dynostore is available, use it
-
-        if "dynostore" in src_task.workflow.cfg:
-            data_mover = DataMover.DYNOSTORE
-        elif dst_task_info is not None and src_task_info is not None:
+        if dst_task_info is not None and src_task_info is not None:
             if dst_task_info['ip'] == src_task_info['ip']:
                 data_mover = self.data_mover
             else:
@@ -128,73 +128,71 @@ class Stager(object):
         src = src_task.get_scratch_dir() + "/" + local_path
 
         dst = dst_path + "/" + os.path.dirname(os.path.abspath(local_path))
-
+        
         # Check if the symbolic link have to be used...
-        if data_mover == DataMover.DYNOSTORE:
-            dyno_conf = src_task.workflow.cfg['dynostore']
-            dyno_server = f"{dyno_conf.get("host")}:{dyno_conf.get("port")}"
-            command = command + "# Add the dynostore command\n"
-            command += f"sleep 1\n"
-            command += f"$PYTHON -m dynostore.cli  --server {dyno_server} get_catalog {os.path.basename(src_task.get_scratch_dir())} {dst}"
-        elif data_mover == DataMover.GRIDFTP:
+        if data_mover == DataMover.GRIDFTP:
+            from dagon.communication.data_transfer import GlobusManager
+
             # data could be copy using globus sdk
             ep1 = src_task.get_endpoint()
             ep2 = dst_task.get_endpoint()
-            gm = GlobusManager(
-                ep1, ep2, self.cfg["globus"]["clientid"], self.cfg["globus"]["intermadiate_endpoint"])
+            gm = GlobusManager(ep1, ep2, self.cfg["globus"]["clientid"], self.cfg["globus"]["intermadiate_endpoint"])
 
             # generate tar with data
-            # tar_path = src + "/data.tar"
-            # command_tar = "tar -czvf %s %s --exclude=*.tar" % (tar_path, src_task.get_scratch_dir())
-            # result = src_task.execute_command(command_tar)
+            #tar_path = src + "/data.tar"
+            #command_tar = "tar -czvf %s %s --exclude=*.tar" % (tar_path, src_task.get_scratch_dir())
+            #result = src_task.execute_command(command_tar)
 
-            # get filename from path
+            #get filename from path 
             intermediate_filename = os.path.basename(local_path)
-            dst = dst_path + "/" + \
-                os.path.dirname(os.path.abspath(local_path)) + \
-                "/" + intermediate_filename
+            dst = dst_path + "/" + os.path.dirname(os.path.abspath(local_path)) + "/" + intermediate_filename
 
-            # + "/" + "data.tar.gz")
-            gm.copy_data(src, dst, intermediate_filename)
+            gm.copy_data(src, dst, intermediate_filename)# + "/" + "data.tar.gz")
+
+        elif data_mover == DataMover.SKYCDS:
+            from dagon.communication.data_transfer import SKYCDS
+
+            skycds = SKYCDS()
+            upload_result = skycds.upload_data(src_task, src_task.get_scratch_dir(), encryption=True)
+            download_result = skycds.download_data(dst_task, dst_path)
+
 
         elif data_mover == DataMover.LINK:
             # Add the link command
             command = command + "# Add the link command\n"
-            cmd = "ln -sf $file $dst"
+            cmd = "ln -sf \"$file\" \"$dst\""
             if StagerMover(self.stager_mover) == StagerMover.PARALLEL:
-                cmd = "ln -sf {} $dst"
-            command = command + \
-                self.generate_command(src, dst, cmd, self.stager_mover.value)
+                cmd = "ln -sf {} \"$dst\""
+            command = command + self.generate_command(src, dst, cmd, self.stager_mover.value)
 
         # Check if the copy have to be used...
         elif data_mover == DataMover.COPY:
             # Add the copy command
             command = command + "# Add the copy command\n"
-            cmd = "cp -r $file $dst"
+            cmd = "cp -r \"$file\" \"$dst\""
             if StagerMover(self.stager_mover) == StagerMover.PARALLEL:
-                cmd = "cp -r {} $dst"
-            command = command + \
-                self.generate_command(src, dst, cmd, self.stager_mover.value)
+                cmd = "cp -r {} \"$dst\""
+            command = command + self.generate_command(src, dst, cmd, self.stager_mover.value)
 
         # Check if the secure copy have to be used...
         elif data_mover == DataMover.SCP:
             # Add the copy command
             command = command + "# Add the secure copy command\n"
-            # if source is accessible from destiny machine
-            if isinstance(src_task, RemoteTask):
+            if isinstance(src_task, RemoteTask):  # if source is accessible from destiny machine
                 # copy my public key
                 key = dst_task.get_public_key()
                 src_task.add_public_key(key)
-                cmd = "scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i " + dst_task.working_dir + \
-                    "/.dagon/ssh_key -r " + src_task.get_user() + "@" + src_task.get_ip() + ":" + \
-                    "$file $dst \n\n"
+                key_path = dst_task.working_dir + "/.dagon/ssh_key"
+                source = remote_target(src_task.get_user(), src_task.get_ip(), '"$file"')
+                cmd = ("scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no "
+                       "-o UserKnownHostsFile=/dev/null -i " + quote(key_path) +
+                       " -r " + source + ' "$dst"\n\n')
                 if StagerMover(self.stager_mover) == StagerMover.PARALLEL:
-                    cmd = "scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i " + dst_task.working_dir + \
-                          "/.dagon/ssh_key -r " + src_task.get_user() + "@" + src_task.get_ip() + ":" + \
-                        "{} $dst \n\n"
-                command = command + \
-                    self.generate_command(
-                        src, dst, cmd, self.stager_mover.value)
+                    source = remote_target(src_task.get_user(), src_task.get_ip(), "{}")
+                    cmd = ("scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no "
+                           "-o UserKnownHostsFile=/dev/null -i " + quote(key_path) +
+                           " -r " + source + ' "$dst"\n\n')
+                command = command + self.generate_command(src, dst, cmd, self.stager_mover.value)
                 command += "\nif [ $? -ne 0 ]; then code=1; fi"
                 # command += "\n rm " + dst_task.working_dir + "/.dagon/ssh_key"
             else:  # if source is a local machine
@@ -202,49 +200,51 @@ class Stager(object):
                 key = src_task.get_public_key()
                 dst_task.add_public_key(key)
 
-                command_mkdir = "mkdir -p " + dst_path + \
-                    "/" + os.path.dirname(local_path) + "\n\n"
+                command_mkdir = "mkdir -p " + quote(dst_path + "/" + os.path.dirname(local_path)) + "\n\n"
                 res = dst_task.ssh_connection.execute_command(command_mkdir)
 
                 if res['code']:
-                    raise Exception("Couldn't create directory %s" %
-                                    dst_path + "/" + os.path.dirname(local_path))
+                    raise Exception("Couldn't create directory %s" % dst_path + "/" + os.path.dirname(local_path))
 
-                cmd = "scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i " + src_task.working_dir + \
-                    "/.dagon/ssh_key -r " + src + " " +  \
-                    dst_task.get_user() + "@" + dst_task.get_ip() + ":" + dst_path + " \n\n"
+                key_path = src_task.working_dir + "/.dagon/ssh_key"
+                destination = remote_target(dst_task.get_user(), dst_task.get_ip(), '"$dst"')
+                cmd = ("scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no "
+                       "-o UserKnownHostsFile=/dev/null -i " + quote(key_path) +
+                       ' -r "$file" ' + destination + "\n\n")
                 if StagerMover(self.stager_mover) == StagerMover.PARALLEL:
-                    cmd = "scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i " + src_task.working_dir + \
-                        "/.dagon/ssh_key -r " + " {} " + \
-                        dst_task.get_user() + "@" + dst_task.get_ip() + ":$dst \n\n"
-                #command_local = self.generate_command(
-                #    src, dst, cmd, self.stager_mover.value)
-
-                res = Batch.execute_command(cmd)
+                    destination = remote_target(dst_task.get_user(), dst_task.get_ip(), '"$dst"')
+                    cmd = ("scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no "
+                           "-o UserKnownHostsFile=/dev/null -i " + quote(key_path) +
+                           " -r {} " + destination + "\n\n")
+                command_local = self.generate_command(src, dst, cmd, self.stager_mover.value)
+                res = Batch.execute_command(command_local)
 
                 if res['code']:
-                    raise Exception("Couldn't copy data from %s to %s" % (
-                        src_task.get_ip(), dst_task.get_ip()))
+                    raise Exception("Couldn't copy data from %s to %s" % (src_task.get_ip(), dst_task.get_ip()))
 
         command += "\nif [ $? -ne 0 ]; then code=1; fi"
 
         return command
 
-    def generate_command(self, src, dst, cmd, mode):
+    def generate_command(self, src: str, dst: str, cmd: str, mode: int) -> str:
+        batch_cfg = self.cfg.get("batch", {})
+        slurm_cfg = self.cfg.get("slurm", {})
+        jobs = batch_cfg.get("threads", "1")
+        partition = slurm_cfg.get("partition", "")
         return """
 #! /bin/bash
 
-src={}
-dst={}
-mode={}
-jobs={}
-partition={}
+src={src}
+dst={dst}
+mode={mode}
+jobs={jobs}
+partition={partition}
 
 job_ids=()
 
 for file in $src
 do
-cmd="{}"
+cmd="{cmd}"
 case $mode in
     1)
     # Run in parallel using local queue
@@ -258,7 +258,7 @@ case $mode in
     ;;
     *)
     # Run requentially
-    $cmd
+    eval "$cmd"
     ;;
 esac
 done
@@ -276,4 +276,11 @@ if [ "${{#job_ids[@]}}" -gt 0 ]; then
         sleep 5
     done
 fi
-        """.format(src, dst, mode, self.cfg["batch"]["threads"], self.cfg["slurm"]["partition"], cmd)
+        """.format(
+            src=quote(src),
+            dst=quote(dst),
+            mode=int(mode),
+            jobs=quote(jobs),
+            partition=quote(partition),
+            cmd=cmd.replace('"', '\\"'),
+        )

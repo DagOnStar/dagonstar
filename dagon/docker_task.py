@@ -1,6 +1,6 @@
 from typing import Any, List, Optional
 
-from dagon import Batch
+from dagon.batch import Batch
 from dagon.remote import RemoteTask
 from dagon.task import ExecutionResult, Task
 from dagon.shell import join_command

@@ -147,3 +147,4 @@ tests/case_study_pollution/fog/*.csv
 tests/case_study_pollution/cloud/*.png
 tests/case_study_pollution/cloud/*.csv
 tests/benchmarks/dynostore/dagonresults/*
+tests/out.txt

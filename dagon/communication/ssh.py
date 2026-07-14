@@ -120,7 +120,9 @@ class SSHManager:
         stdout = "\n".join(stdout.readlines())
         stderr = "\n".join(stderr.readlines())
 
-        if code == 0:
-            return {"code": 0, "output": stdout}
+        if len(stderr):
+            return {"code": 1, "message": stderr}
+        elif code > 0:
+            return {"code": 1, "message": stdout}
         else:
-            return {"code": 1, "message": stdout + stderr}
+            return {"code": 0, "output": stdout}

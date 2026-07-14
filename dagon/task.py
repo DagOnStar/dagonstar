@@ -175,13 +175,14 @@ class Task(Thread):
         self.mode = "sequential"
         self.globusendpoint = globusendpoint
         self.new_tasks = []
+        self.completetion_time = 0
         self.logger = logging.getLogger()
         # Declarations are inert unless the owning workflow enables FAIR.
         self.fair_inputs = []
         self.fair_outputs = []
         self.fair_annotations = {}
         self.fair_checkpoint_reused = False
-        self.completetion_time = 0
+        
 
     def declare_inputs(self, *artifacts: Any) -> "Task":
         """Attach intentional input artifact metadata and return this task."""
@@ -830,6 +831,9 @@ class Task(Thread):
             dyno_server = f"{dyno_conf.get("host")}:{dyno_conf.get("port")}"
             footer += f"echo \"Pushing data to DynoStore server {dyno_server}\"\n"
             footer += f"$PYTHON -m dynostore.cli --server {dyno_server} put {self.working_dir} --recursive --catalog={os.path.basename(self.working_dir)}\n"
+            footer += "DYNO_EXIT_CODE=$?\n"
+            footer += "echo \"DynoStore exited with code: $DYNO_EXIT_CODE\"\n"
+            footer += "if [ $DYNO_EXIT_CODE -ne 0 ]; then echo 'DynoStore upload failed'; code=1; fi\n"
             # an sleep for sync
             footer += f"sleep 1\n"
         footer += "exit $code"
@@ -1012,7 +1016,6 @@ class Task(Thread):
 
                 # Invoke the actual executor
                 start_time = time()
-                print(self.name)
                 self.result = self.on_execute(launcher_script, "launcher.sh")
                 self.completetion_time = time() - start_time
                 self.workflow.logger.debug(
@@ -1195,6 +1198,7 @@ public_id="none"
 user="none"
 status_sshd="none"
 status_ftpd="none"
+status_skycds="none"
 #get http communication protocol
 curl_or_wget=$(if hash curl 2>/dev/null; then echo "curl"; elif hash wget 2>/dev/null; then echo "wget"; fi);
 
@@ -1254,6 +1258,16 @@ then
   status_gsiftpd="none"
 fi
 
+#check if skycds container is running
+status_docker=`systemctl status docker 2>/dev/null|grep "Active"| awk '{print $2}'`
+if [ "$status_gsiftpd" == "active" ]
+then
+    if [ "$(docker ps -aq -f status=running -f name=client)" ]; then
+    # cleanup
+        status_skycds="active"
+    fi
+fi
+
 
 # Get the user
 user=$USER
@@ -1261,6 +1275,6 @@ user=$USER
 echo "no" | ssh-keygen  -b 2048 -t rsa -f ssh_key -q -N ""  >/dev/null
 
 # Construct the json
-json="{\\\"type\\\":\\\"$machine_type\\\",\\\"public_ip\\\":\\\"$public_ip\\\",\\\"ip\\\":\\\"$private_ip\\\",\\\"user\\\":\\\"$user\\\",\\\"SCP\\\":\\\"$status_sshd\\\",\\\"FTP\\\":\\\"$status_ftpd\\\",\\\"GRIDFTP\\\":\\\"$status_gsiftpd\\\"}"
+json="{\\\"type\\\":\\\"$machine_type\\\",\\\"public_ip\\\":\\\"$public_ip\\\",\\\"ip\\\":\\\"$private_ip\\\",\\\"user\\\":\\\"$user\\\",\\\"SCP\\\":\\\"$status_sshd\\\",\\\"FTP\\\":\\\"$status_ftpd\\\",\\\"GRIDFTP\\\":\\\"$status_gsiftpd\\\",\\\"SKYCDS\\\":\\\"$status_skycds\\\"}"
 echo $json
 """

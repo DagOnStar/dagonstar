@@ -18,6 +18,20 @@ from dagon.api import API
 from dagon.stager.base import DataMover
 from dagon.stager.base import StagerMover
 
+def __getattr__(name):
+    if name == "WorkflowServer":
+        try:
+            from dagon.api.server import WorkflowServer
+        except ImportError as exc:
+            if exc.name in {"flask", "flask_api", "werkzeug"}:
+                raise ImportError(
+                    "API server support requires the 'api' extra: "
+                    "python -m pip install 'dagonstar[api]'"
+                ) from exc
+            raise
+        return WorkflowServer
+    raise AttributeError(f"module 'dagon' has no attribute {name!r}")
+
 
 class Status(Enum):
     """
