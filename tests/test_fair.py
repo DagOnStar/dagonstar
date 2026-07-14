@@ -16,7 +16,12 @@ class FairTests(unittest.TestCase):
 
     def test_declarations_are_chainable_without_fair_mode(self):
         task = DagonTask(TaskType.BATCH, "A", "echo hello")
-        self.assertIs(task, task.declare_inputs(Artifact("in.txt")).declare_outputs(Artifact("out.txt")).annotate(description="test"))
+        self.assertIs(
+            task,
+            task.declare_inputs(Artifact("in.txt"))
+                    .declare_outputs(Artifact("out.txt"))
+                    .annotate(description="test")
+        )
         self.assertEqual(task.fair_annotations["description"], "test")
 
     def test_strict_profile_rejects_missing_core_metadata(self):
@@ -28,10 +33,25 @@ class FairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as output_dir:
             workflow = make_workflow("FairLocal")
             recorder = workflow.enable_fair(self.profile(output_dir))
-            first = DagonTask(TaskType.BATCH, "A", "mkdir -p output; echo hello > output/message.txt").declare_outputs(Artifact("output/message.txt", media_type="text/plain"))
-            second = DagonTask(TaskType.BATCH, "B", "cat workflow:///A/output/message.txt > copied-message.txt").declare_outputs(Artifact("copied-message.txt", media_type="text/plain"))
-            workflow.add_task(first); workflow.add_task(second); workflow.run()
-            for name in ("run.json", "ro-crate-metadata.json", "prov.json", "fairness-report.json", "report.md", "checksums.sha256"):
+            first = DagonTask(
+                TaskType.BATCH, "A",
+                "mkdir -p output; echo hello > output/message.txt"
+            ).declare_outputs(Artifact("output/message.txt", media_type="text/plain"))
+            second = DagonTask(
+                TaskType.BATCH, "B",
+                "cat workflow:///A/output/message.txt > copied-message.txt"
+            ).declare_outputs(Artifact("copied-message.txt", media_type="text/plain"))
+            workflow.add_task(first)
+            workflow.add_task(second)
+            workflow.run()
+            for name in (
+                "run.json",
+                "ro-crate-metadata.json",
+                "prov.json",
+                "fairness-report.json",
+                "report.md",
+                "checksums.sha256"
+                ):
                 self.assertTrue(os.path.exists(os.path.join(output_dir, name)), name)
             with open(os.path.join(output_dir, "run.json"), encoding="utf-8") as source:
                 run = json.load(source)
