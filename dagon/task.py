@@ -39,6 +39,7 @@ class TaskType(Enum):
     LLM = "llm"
     NATIVE = "native"
     WEB = "web"
+    FAAS = "faas"
 
 
 # Different types os tasks and their module and class name
@@ -59,6 +60,7 @@ tasks_types: Dict[TaskType, TaskTypeSpec] = {
     TaskType.LLM: ("dagon.llm", "LLMTask"),
     TaskType.NATIVE: ("dagon.native", "NativeTask"),
     TaskType.WEB: ("dagon.web", "WebTask"),
+    TaskType.FAAS: ("dagon.faas", "FaaSTask"),
 }
 
 
@@ -198,6 +200,10 @@ class Task(Thread):
         """Attach task-level FAIR annotations and return this task."""
         self.fair_annotations.update(metadata)
         return self
+
+    def get_execution_metadata(self) -> Dict[str, Any]:
+        """Return sanitized backend metadata for optional provenance recorders."""
+        return {}
 
     def get_endpoint(self) -> Optional[str]:
         return self.globusendpoint

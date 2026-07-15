@@ -157,6 +157,12 @@ When changing implementation:
 Scientific documentation should be precise enough for a researcher to reproduce
 the computational method and honest about operational assumptions.
 
+FaaS providers must extend the dependency-free adapter contract, import optional
+SDKs only at invocation time, use standard credential chains, and sanitize all
+metadata. Test new adapters with mocks; changes to FaaS structured references
+also need LLM, Web, and Native traversal regressions. FaaS invocation is not a
+deployment lifecycle.
+
 ## Current technical debt
 
 - Automated tests cover core local behavior, checkpointing, staging, command

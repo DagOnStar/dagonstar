@@ -161,6 +161,14 @@ task = DagonTask(
 
 `TaskType.WEB` authentication is supplied through environment-variable names in the task specification, such as `token_env`, `username_env`, `password_env`, or `value_env`. Do not place HTTP tokens, passwords, or API keys in configuration samples or workflow files.
 
+FaaS named profiles use `[faas.<provider>.<profile>]`, for example
+`[faas.aws.production]` with a non-secret `region`, or `[faas.http.local]` with an
+`endpoint`. Select them with `provider="aws", profile="production"`. Explicit
+`provider_options` override profile values. Store only endpoints, regions,
+audiences, and environment-variable names; AWS/Azure/GCP adapters use their
+standard credential chains and never serialize resolved credentials. See
+[FaaS providers](faas_providers.md).
+
 ```ini
 [llm.example]
 endpoint=https://api.example.org

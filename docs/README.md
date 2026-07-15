@@ -12,6 +12,10 @@ repository.
 - [LLM Tasks](llm_tasks.md)
 - [Web Tasks](web_tasks.md)
 - [Native Tasks](native_tasks.md)
+- [FaaS Tasks](faas_tasks.md)
+- [FaaS Providers](faas_providers.md)
+- [FaaS FAIR mapping](faas_fair.md)
+- [FaaS CWL export](faas_cwl.md)
 - [Architecture](architecture.md)
 - [FAIR by Design](fair_principles.md)
 - [User Guide](user_guide.md)
@@ -49,6 +53,10 @@ repository.
 - [Lesson 15: FAIR by design](tutorial/lesson_15_fair_by_design.md)
 - [Lesson 16: Use DynoStore with DAGonStar](tutorial/lesson_16_using_dynostore.md)
 - [Lesson 17: Interoperate with Common Workflow Language](tutorial/lesson_17_cwl_interoperability.md)
+- [Lesson 18: Local mock FaaS](tutorial/lesson_18_faas_mock.md)
+- [Lesson 19: FaaS workflow artifacts](tutorial/lesson_19_faas_artifacts.md)
+- [Lesson 20: FaaS FAIR and exports](tutorial/lesson_20_faas_fair_exports.md)
+- [Lesson 21: Cloud FaaS profiles](tutorial/lesson_21_faas_cloud_profiles.md)
 
 ## Example family documentation
 

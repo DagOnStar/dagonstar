@@ -138,6 +138,7 @@ DAGonStar's public task types are defined in `dagon.task.TaskType`:
 - `LLM`
 - `NATIVE`
 - `WEB`
+- `FAAS`
 - `CHECKPOINT`
 
 Remote variants are selected by keyword arguments. For example, a batch task
@@ -150,6 +151,8 @@ credentials.
 
 `LLM` tasks call configured OpenAI-compatible Chat Completions providers and
 can consume local UTF-8 producer files with `workflow://`; see [LLM Tasks](llm_tasks.md).
+`FAAS` tasks invoke already-deployed functions through provider adapters and
+support nested artifact references; see [FaaS Tasks](faas_tasks.md).
 
 ## Documentation map
 
@@ -159,4 +162,4 @@ can consume local UTF-8 producer files with `workflow://`; see [LLM Tasks](llm_t
 - [User Guide](user_guide.md): practical workflow authoring guidance.
 - [Reference Guide](reference_guide.md): API-oriented reference.
 - [Developer Guide](developer_guide.md): testing, maintenance, and contribution.
-- [Tutorials](tutorial/README.md): seventeen incremental lessons.
+- [Tutorials](tutorial/README.md): twenty-one incremental lessons.

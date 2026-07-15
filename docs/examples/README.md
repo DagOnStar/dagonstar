@@ -32,6 +32,7 @@ verification strategy.
   skeleton.
 - [Native Python task example](native.md): staged files, scalar parameters, and declared outputs.
 - [Web task example](web_tasks.md): local HTTP execution, staged uploads, and response outputs.
+- [FaaS examples](../../examples/faas/README.md): mock invocation, staged artifacts, JSON, and CWL.
 - [DynoStore examples](dynostore.md): offline command/graph inspection and an
   optional live catalog upload/download workflow.
 - [CWL interoperability](cwl.md): deterministic local export and a checked-in,

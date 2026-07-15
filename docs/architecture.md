@@ -19,6 +19,9 @@ repository.
 dagon/
   __init__.py                 Workflow, Status, DataMover, Stager
   task.py                     TaskType, DagonTask, Task base class
+  faas.py                     Provider-neutral FaaS lifecycle and artifacts
+  faas_providers.py           Lazy mock, HTTP, AWS, Azure, and GCP adapters
+  faas_models.py              Dependency-free invocation/provider contracts
   batch.py                    Batch, RemoteBatch, Slurm, RemoteSlurm
   remote.py                   RemoteTask, CloudTask
   docker_task.py              DockerTask, DockerRemoteTask

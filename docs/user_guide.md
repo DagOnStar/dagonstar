@@ -229,6 +229,15 @@ workflow.set_dry(True)
 Dry mode prevents task execution after launcher generation. It is useful when
 inspecting dependency resolution and generated scripts.
 
+## Function-as-a-Service tasks
+
+Use `TaskType.FAAS` when the workflow invokes an already-deployed function and
+needs provider identity, retry, idempotency, declared output, and invocation
+provenance. Use `WEB` for a general HTTP resource and `NATIVE` for an importable
+local Python function. Start with the credential-free mock example; cloud calls
+require an optional adapter, provider-standard identity, an external deployment,
+and an artifact transport accessible to that function. See [FaaS tasks](faas_tasks.md).
+
 ## Recommended workflow design
 
 For scientific workflows:

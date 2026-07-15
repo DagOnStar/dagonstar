@@ -85,6 +85,9 @@ class FairRecorder:
     def on_task_end(self, task: Any) -> None:
         record = self._record(task); record.update({"end_time": _utc(), "status": task.status.value,
             "checkpoint_reused": bool(task.fair_checkpoint_reused)})
+        execution = task.get_execution_metadata()
+        if execution:
+            record["execution"] = execution
         for declared in task.fair_outputs:
             artifact = self._artifact(declared); artifact.update({"task": task.name, "declared_output": True, "id": self._artifact_id(task.name, declared.path)})
             candidate = Path(task.working_dir or "") / declared.path
@@ -93,6 +96,17 @@ class FairRecorder:
                 artifact["size_bytes"] = candidate.stat().st_size; artifact["checksum"] = _checksum(candidate)
                 artifact["media_type"] = artifact.get("media_type") or mimetypes.guess_type(str(candidate))[0]
             self.run["artifacts"].append(artifact)
+        if type(task).__name__ == "FaaSTask":
+            for name, declared in task.outputs.items():
+                relative = "outputs/" + declared["path"]
+                candidate = Path(task.working_dir or "") / relative
+                artifact = {"name": name, "path": relative, "required": declared.get("required", True),
+                    "task": task.name, "declared_output": True, "id": self._artifact_id(task.name, relative),
+                    "exists": candidate.is_file(), "local_path": str(candidate)}
+                if artifact["exists"]:
+                    artifact.update({"size_bytes": candidate.stat().st_size, "checksum": _checksum(candidate),
+                        "media_type": declared.get("media_type") or mimetypes.guess_type(str(candidate))[0]})
+                self.run["artifacts"].append(artifact)
 
     def on_workflow_end(self, workflow: Any) -> None:
         if self.output_dir is None: return
@@ -128,7 +142,18 @@ class FairRecorder:
         graph: List[Dict[str, Any]] = [{"@id": "ro-crate-metadata.json", "@type": "CreativeWork", "about": {"@id": "./"}, "conformsTo": {"@id": "https://w3id.org/ro/crate/1.2"}},
           {"@id": "./", "@type": "Dataset", "name": self.profile.title, "description": self.profile.description, "license": self.profile.license}]
         graph += [{"@id": item["id"], "@type": "File", "name": item.get("name") or item["path"], "sha256": item.get("checksum"), "contentSize": item.get("size_bytes"), "encodingFormat": item.get("media_type")} for item in self.run["artifacts"]]
-        graph += [{"@id": item["id"], "@type": "CreateAction", "name": item["name"], "startTime": item.get("start_time"), "endTime": item.get("end_time"), "actionStatus": item.get("status")} for item in self.run["tasks"].values()]
+        actions = []
+        services = []
+        for item in self.run["tasks"].values():
+            action = {"@id": item["id"], "@type": "CreateAction", "name": item["name"], "startTime": item.get("start_time"), "endTime": item.get("end_time"), "actionStatus": item.get("status")}
+            execution = item.get("execution", {})
+            if execution.get("model") == "faas":
+                identity = "urn:dagonstar:function:%s:%s" % (_safe(str(execution.get("provider"))), _safe(str(execution.get("function"))))
+                action["instrument"] = {"@id": identity}
+                services.append({"@id": identity, "@type": ["SoftwareApplication", "Service"],
+                                 "name": str(execution.get("function")), "runtimePlatform": str(execution.get("provider"))})
+            actions.append(action)
+        graph += actions + services
         return {"@context": "https://w3id.org/ro/crate/1.2/context", "@graph": graph}
     def _datacite(self) -> Dict[str, Any]: return {"types": {"resourceTypeGeneral": "Workflow"}, "identifiers": [{"identifier": self.run["run_id"], "identifierType": "URN"}], "creators": [{"name": item["name"]} for item in self.run["profile"]["creators"]], "titles": [{"title": self.profile.title}], "publisher": "DAGonStar", "publicationYear": datetime.now().year, "descriptions": [{"description": self.profile.description, "descriptionType": "Abstract"}], "subjects": [{"subject": item} for item in self.profile.keywords], "rightsList": [{"rights": self.profile.license}]}
     def _codemeta(self) -> Dict[str, Any]: return {"@context": "https://doi.org/10.5063/schema/codemeta-2.0", "@type": "SoftwareApplication", "name": "DAGonStar", "description": self.profile.description, "license": self.profile.license, "programmingLanguage": "Python", "runtimePlatform": platform.platform(), "author": self.run["profile"]["creators"]}

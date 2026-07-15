@@ -89,6 +89,20 @@ configuration validation separately from live integration behavior.
 - Be careful with shell command construction. Existing code builds many commands
   from strings; quote new path/user inputs defensively.
 
+## FaaS maintenance
+
+- `TaskType.FAAS` invokes already-deployed functions; deployment and infrastructure
+  provisioning are outside the task lifecycle.
+- Preserve the provider-neutral task contract and keep provider SDK imports lazy
+  inside adapters. Base imports and the mock provider must remain cloud-SDK-free.
+- Use mock or local HTTP providers in tests and default examples. Never record
+  credentials, tokens, signed URLs, function keys, or raw SDK configuration.
+- Changes to structured `workflow://` traversal require regression coverage for
+  FaaS, LLM, Web, and Native tasks. FaaS behavior changes also require JSON, CWL,
+  FAIR, checkpoint, and mixed-task interoperability tests.
+- Sanitize provider metadata before logs, scratch records, JSON, or FAIR exports,
+  and keep cloud limits adapter-reported rather than timeless framework claims.
+
 ## Documentation standards
 
 - Authoritative consistency clause: all repository documentation, including

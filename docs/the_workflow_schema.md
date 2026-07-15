@@ -195,6 +195,21 @@ dependency, and copies local UTF-8 text inputs into its `.dagon/inputs` folder
 before including their content in the API request. See [LLM Tasks](llm_tasks.md)
 for the provider configuration and prompt form.
 
+## FaaS structured inputs
+
+`TaskType.FAAS` discovers `workflow://` references recursively inside input
+mappings and lists. Each unique reference infers the normal producer dependency.
+At runtime the referenced file is copied below the consumer's `inputs/` tree and
+the request receives a portable artifact descriptor with logical reference,
+task-relative path, media type, size, SHA-256, and transport. Workflow JSON and
+CWL retain the logical reference and never embed the resolved scratch path.
+
+This permits mixed chains such as Batch → FaaS → Native. Invalid producer names,
+path traversal, missing files, and dependency cycles retain the normal workflow
+errors. The local mock and fixture HTTP providers use `local-file`; a remote
+function needs inline data or an externally accessible object reference. See
+[FaaS tasks](faas_tasks.md).
+
 ## Best practices
 
 - Use stable task names.

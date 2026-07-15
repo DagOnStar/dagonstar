@@ -473,6 +473,21 @@ class Workflow(object):
             if image:
                 tool["hints"] = {"DockerRequirement": {"dockerPull": image}}
 
+            if type(task).__name__ == "FaaSTask":
+                portable_spec = task._portable_spec()
+                tool.update({
+                    "baseCommand": ["python", "-m", "dagon.faas_runner"],
+                    "arguments": ["--spec", "faas-task.json"],
+                    "requirements": {
+                        "InitialWorkDirRequirement": {
+                            "listing": [{"entryname": "faas-task.json", "entry": json.dumps(portable_spec, sort_keys=True)}]
+                        }
+                    },
+                    "hints": {"dagon:FaaSInvocation": {
+                        "provider": task.provider, "profile": task.profile, "function": task.function,
+                    }},
+                })
+
             steps[task_ids[task]] = {
                 "label": str(task.name),
                 "in": step_inputs,
@@ -496,6 +511,8 @@ class Workflow(object):
             "outputs": outputs,
             "steps": steps,
         }
+        if any(type(task).__name__ == "FaaSTask" for task in self.tasks):
+            document["$namespaces"] = {"dagon": "https://dagonstar.org/cwl#"}
         with open(os.fspath(filename), "w", encoding="utf-8") as stream:
             json.dump(document, stream, indent=2, sort_keys=False)
             stream.write("\n")
@@ -586,6 +603,13 @@ class Workflow(object):
                 tk = DagonTask(TaskType.WEB, temp['name'], temp['specification'],
                                executor=temp.get('executor', 'local'), resources=temp.get('resources'),
                                python=temp.get('python', 'python'), environment=temp.get('environment'),
+                               working_dir=temp.get('working_dir'))
+            elif temp['type'].upper() == 'FAAS':
+                specification = {key: temp.get(key) for key in (
+                    'provider', 'profile', 'function', 'inputs', 'outputs', 'invocation', 'timeout', 'retry',
+                    'completion', 'input_policy', 'output_policy', 'provider_options', 'annotations')
+                    if temp.get(key) is not None}
+                tk = DagonTask(TaskType.FAAS, temp['name'], specification,
                                working_dir=temp.get('working_dir'))
             else:
                 tk = DagonTask(TaskType[temp['type'].upper()], temp['name'], temp['command'], **options)

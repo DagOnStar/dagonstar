@@ -76,6 +76,12 @@ as `TOKEN`, `SECRET`, `PASSWORD`, `PRIVATE_KEY`, `AWS_`, `GCP_`, or `AZURE_`.
 The recorder does not export raw `dagon.ini` content, credentials, keys, or
 tokens.
 
+FaaS activities add only substantiated, sanitized provider/function identity,
+request identifiers, attempts, and materialized-output fixity. RO-Crate links
+the invocation action to a deployed-function service entity without claiming
+that DAGonStar deployed or published it. Provider credentials, authorization
+headers, signed query values, and raw SDK objects remain excluded.
+
 This is local export only. It does not yet validate a full Workflow Run RO-Crate
 profile, emit PROV-O Turtle, package/copy data, publish to repositories, provide
 a FAIR CLI, or calculate remote/container checksums.

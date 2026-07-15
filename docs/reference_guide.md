@@ -424,6 +424,16 @@ than local `Workflow` behavior. When using transversal workflows for production
 science, verify the exact scenario with representative workflows and preserve the
 verification command with the experiment record.
 
+## FaaS task reference
+
+`DagonTask(TaskType.FAAS, name, ...)` requires `provider` and `function`. Optional
+fields are `profile`, nested JSON `inputs`, declared `outputs`, `invocation`,
+`timeout`, `retry`, completion and artifact policies, provider-namespaced options,
+and annotations. Output paths must remain relative. The task supports mock,
+HTTP/Knative, AWS Lambda, Azure Functions, and Google Cloud Run function adapters;
+cloud SDKs are optional and lazy. See [FaaS tasks](faas_tasks.md) for the complete
+contract and [FaaS providers](faas_providers.md) for configuration.
+
 ## Service API
 
 `dagon.api.API` communicates with a DAGon service endpoint. It supports:

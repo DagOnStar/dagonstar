@@ -130,7 +130,7 @@ The full documentation set is available in `docs/`:
 - [Using DAGonStar from Jupyter Notebook](docs/jupyter_notebook.md)
 - [Running DAGonStar demos in Google Colab](docs/colab.md)
 - [Examples Catalog](docs/examples/README.md)
-- [Tutorials: seventeen incremental lessons](docs/tutorial/README.md)
+- [Tutorials: twenty-one incremental lessons](docs/tutorial/README.md)
 
 ## What DAGonStar supports
 
@@ -144,6 +144,8 @@ The full documentation set is available in `docs/`:
 - OpenAI-compatible LLM tasks with JSON prompts and `workflow://` text inputs.
 - Native Python-function tasks with staged file bindings and JSON result metadata.
 - Web tasks for structured HTTP/HTTPS requests with scratch-local response outputs.
+- Provider-neutral FaaS invocation tasks for mock, HTTP/Knative, AWS Lambda,
+  Azure Functions, and Google Cloud Run functions.
 - Data staging by link, copy, SCP, Globus, and SKYCDS.
 - Checkpoint/resume support.
 - Self-contained Common Workflow Language (CWL) v1.2 command-graph export.
@@ -166,6 +168,10 @@ local exports without adding dependencies or changing existing workflows.
 Workflows can also be saved as self-contained CWL v1.2 JSON documents for
 interchange and validation by CWL-aware tools; executor-specific DAGonStar
 staging and remote runtime behavior remain outside that export boundary.
+FaaS invocation is now a provider-neutral task type with a credential-free mock,
+lazy cloud adapters, structured artifact staging, sanitized provenance, and a
+runner-based CWL representation. Cloud deployment and automatic object-store
+artifact upload remain outside the implemented boundary.
 
 The repository has a sound baseline for changes to the core behavior:
 
@@ -231,10 +237,13 @@ python -m pip install -e ".[docker]"
 python -m pip install -e ".[cloud]"
 python -m pip install -e ".[globus]"
 python -m pip install -e ".[api]"
+python -m pip install -e ".[faas-aws]"
+python -m pip install -e ".[faas-azure]"
+python -m pip install -e ".[faas-gcp]"
 python -m pip install -e ".[all]"
 ```
 
-The base package does not install Docker, cloud, Globus, or Flask service
+The base package does not install Docker, cloud-provider FaaS SDKs, Globus, or Flask service
 libraries. If an integration is requested without its extra, DAGonStar reports
 the corresponding install command at the integration boundary.
 
@@ -342,6 +351,7 @@ Example groups:
 - `examples/async`: local asynchronous launch and lifecycle-callback example.
 - `examples/native`: importable Python functions with staged `workflow://` inputs.
 - `examples/web`: local HTTP request, staged upload, and downstream native processing.
+- `examples/faas`: credential-free mock invocation plus JSON and CWL export.
 
 Generate and test the portable CWL example without a private configuration:
 
@@ -369,6 +379,25 @@ DagonTask(TaskType.NATIVE, "transform", "myworkflow.tasks:transform", inputs={"i
 ```
 
 File arguments are staged below `inputs/`, outputs are paths below `outputs/`, and the JSON return value is written to `.dagon/native_result.json`. See the [native example](examples/native/README.md) and [tutorial lesson](docs/tutorial/lesson_14_native_tasks.md).
+
+## FaaS tasks
+
+`TaskType.FAAS` invokes an already-deployed function through a provider adapter:
+
+```python
+DagonTask(TaskType.FAAS, "invoke", provider="mock", function="double-value",
+          inputs={"document": "workflow:///prepare/outputs/input.json"},
+          outputs={"result": "result.json"})
+```
+
+The mock provider is local and credential-free. HTTP/Knative uses a JSON envelope;
+AWS Lambda, Azure Functions, and Google Cloud Run functions use optional adapters
+and provider-standard credential chains. DAGonStar does not deploy functions.
+Large remote artifacts require an accessible transport such as object storage;
+automatic object upload is not currently implemented. See the [task guide](docs/faas_tasks.md),
+[providers](docs/faas_providers.md), [FAIR mapping](docs/faas_fair.md),
+[CWL mapping](docs/faas_cwl.md), [examples](examples/faas/README.md), and
+[Lesson 18](docs/tutorial/lesson_18_faas_mock.md).
 
 ## Development
 
