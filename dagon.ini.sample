@@ -14,6 +14,13 @@ run_base=
 remove_dir=False
 threads=1
 
+; Use DynoStore to store intermedary results in a reliabile storage system
+; [dynostore]
+; host=localhost
+; port=80
+; cypher=True
+;reliability=True
+
 [slurm]
 partition=
 

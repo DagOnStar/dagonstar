@@ -10,3 +10,7 @@ flask==2.2.2
 Flask-API==3.1
 werkzeug==2.2.2
 pycryptodome==3.20.0
+pyyaml>=5.4.0
+kubernetes>=18.0.0
+pytest>=7.0.0
+pymongo[srv]>=4.7

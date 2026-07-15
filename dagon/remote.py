@@ -19,9 +19,12 @@ class RemoteTask(Task):
 
     :ivar ssh_username: Username to connect by SSH
     :vartype ssh_username: str
+    
+    :ivar ssh_port: SSH port (default: 22)
+    :vartype ssh_port: int
 
     :ivar ssh_connection: SSH connection with the machine
-    :vartype ssh_connection: :class:`dagon.communDataFlow-Demication.ssh.SSHManager`
+    :vartype ssh_connection: :class:`dagon.communication.ssh.SSHManager`
     """
 
     def __init__(
@@ -31,6 +34,7 @@ class RemoteTask(Task):
             ssh_username: Optional[str] = None,
             keypath: Optional[str] = None,
             ip: Optional[str] = None,
+            ssh_port: int = 22,
             working_dir: Optional[str] = None,
             globusendpoint: Optional[str] = None,
             transversal_workflow: Optional[str] = None) -> None:
@@ -50,6 +54,9 @@ class RemoteTask(Task):
 
         :param ip: IP address to connect to the remote machine
         :type ip: str
+        
+        :param ssh_port: SSH port (default: 22)
+        :type ssh_port: int
 
         :param working_dir: Path of the working directory on the remote machine
         :type working_dir: str
@@ -58,14 +65,18 @@ class RemoteTask(Task):
         :type endpoint: str
 
         """
-        Task.__init__(self, name, command, working_dir=working_dir, transversal_workflow=transversal_workflow, globusendpoint=globusendpoint)
+        Task.__init__(self, name, command, working_dir=working_dir, 
+                      transversal_workflow=transversal_workflow, 
+                      globusendpoint=globusendpoint)
         self.transfer = None
         self.ip = ip
+        self.ssh_port = ssh_port
         self.keypath = abspath(keypath) if keypath is not None else keypath
         self.ssh_username = ssh_username
         self.ssh_connection = None
         if self.ip is not None and self.ssh_username is not None:
-            self.ssh_connection = SSHManager(self.ssh_username, self.ip, self.keypath)
+            self.ssh_connection = SSHManager(self.ssh_username, self.ip, 
+                                            self.keypath, port=self.ssh_port)
 
     def add_public_key(self, key: str) -> ExecutionResult:
         """

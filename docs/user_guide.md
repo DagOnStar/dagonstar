@@ -1,5 +1,12 @@
 # User Guide
 
+## FAIR metadata and provenance
+
+Enable `FairProfile` on a workflow and use task `declare_outputs(Artifact(...))`
+or `declare_inputs()` for intentional data metadata. The recorder writes local
+RO-Crate, PROV, DataCite, CodeMeta, SHA-256 and human-readable reports. See the
+[FAIR principles](fair_principles.md) and [FAIR tutorial](tutorial/lesson_15_fair_by_design.md)
+for the implemented model and a runnable example.
 This guide explains how to author DAGonStar workflows for scientific computing.
 
 ## Basic workflow structure

@@ -15,7 +15,17 @@ class OptionalIntegrationTests(unittest.TestCase):
             task = Batch("RemoteBatch", "echo remote", ip="192.0.2.10", ssh_username="user", keypath="/tmp/key")
 
         self.assertIsInstance(task, RemoteBatch)
-        ssh_manager.assert_called_once_with("user", "192.0.2.10", "/tmp/key")
+        ssh_manager.assert_called_once_with("user", "192.0.2.10", "/tmp/key", port=22)
+
+    def test_remote_task_passes_custom_ssh_port_to_connection(self):
+        with mock.patch("dagon.remote.SSHManager") as ssh_manager:
+            task = RemoteTask(
+                "Remote", "echo remote", ip="192.0.2.10", ssh_username="user",
+                keypath="/tmp/key", ssh_port=2200,
+            )
+
+        self.assertEqual(task.ssh_port, 2200)
+        ssh_manager.assert_called_once_with("user", "192.0.2.10", "/tmp/key", port=2200)
 
     def test_remote_task_does_not_open_ssh_without_complete_connection_info(self):
         with mock.patch("dagon.remote.SSHManager") as ssh_manager:
@@ -74,7 +84,7 @@ class OptionalIntegrationTests(unittest.TestCase):
             )
 
         self.assertIsInstance(task, RemoteSlurm)
-        ssh_manager.assert_called_once_with("user", "192.0.2.20", "/tmp/key")
+        ssh_manager.assert_called_once_with("user", "192.0.2.20", "/tmp/key", port=22)
 
     def test_cloud_task_defers_provider_import_and_connection_until_execute(self):
         task = CloudTask(

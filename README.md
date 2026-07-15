@@ -1,5 +1,7 @@
 # DAGonStar
 
+## DAGonStar: FAIR by design
+
 DAGonStar, also written as DAGon\*, is a lightweight Python workflow engine for
 running directed acyclic graph (DAG) workflows across local machines, remote
 servers, HPC clusters, containers, and cloud infrastructure.
@@ -9,12 +11,6 @@ servers, HPC clusters, containers, and cloud infrastructure.
 DAGonStar workflows are ordinary Python programs. Tasks can depend explicitly on
 other tasks, or implicitly through `workflow://` data references that DAGonStar
 resolves into task dependencies and staging operations.
-
-DAGonStar is used as the primary workflow engine to run real-world production-level
-applications.
-
-DAGonStar is in production at the [Center for Monitoring and Modeling Marine and Atmosphere](https:/meteo.uniparthenope.it)
-applications hosted at the University of Naples "Parthenope".
 
 # Motivation
 Thanks to the advent of public, private, and hybrid clouds, the democratization of
@@ -26,6 +22,7 @@ computational scientists. However, nowadays, any science field can be considered
 engines is crucial.
 
 # Acknowledgments
+
 The following initiatives support DAGonStar development:
 
 * Research agreement "Modelling mytilus farming at scale"
@@ -121,6 +118,7 @@ The full documentation set is available in `docs/`:
 - [Getting Started](docs/getting_started.md)
 - [Configuration](docs/configuration.md)
 - [Architecture](docs/architecture.md)
+- [FAIR by Design](docs/fair_principles.md)
 - [User Guide](docs/user_guide.md)
 - [Reference Guide](docs/reference_guide.md)
 - [Developer Guide](docs/developer_guide.md)
@@ -131,7 +129,7 @@ The full documentation set is available in `docs/`:
 - [Using DAGonStar from Jupyter Notebook](docs/jupyter_notebook.md)
 - [Running DAGonStar demos in Google Colab](docs/colab.md)
 - [Examples Catalog](docs/examples/README.md)
-- [Tutorials: fourteen incremental lessons](docs/tutorial/README.md)
+- [Tutorials: fifteen incremental lessons](docs/tutorial/README.md)
 
 ## What DAGonStar supports
 
@@ -147,6 +145,8 @@ The full documentation set is available in `docs/`:
 - Web tasks for structured HTTP/HTTPS requests with scratch-local response outputs.
 - Data staging by link, copy, SCP, Globus, and SKYCDS.
 - Checkpoint/resume support.
+- Native, opt-in FAIR metadata and provenance recording with RO-Crate, PROV,
+  DataCite, CodeMeta, local output fixity, validation, and reports.
 - Meta-workflows that coordinate multiple workflows.
 
 ## Project status and quality assessment
@@ -156,14 +156,18 @@ core, rather than a fully polished modern library. Its strongest areas are the
 compact Python workflow model, explicit and `workflow://`-derived dependencies,
 checkpointing, and a broad set of execution and staging integrations.
 Workflows can also run in a background thread with lifecycle callbacks for
-local progress reporting.
+local progress reporting. The opt-in FAIR recorder makes lifecycle, task,
+dependency, output, fixity, and checkpoint-reuse metadata available in standard
+local exports without adding dependencies or changing existing workflows.
 
 The repository has a sound baseline for changes to the core behavior:
 
-- 47 unit tests cover configuration parsing, workflow defaults, and dependency
+- unit tests cover configuration parsing, workflow defaults and dependency
   discovery, cycle validation, JSON serialization, checkpoint reuse, staging
-  command generation, packaging extras, optional integration boundaries, and
-  selected shell-quoting behavior;
+  command generation, Docker and remote-container construction, SSH-port
+  forwarding, packaging extras, optional integration boundaries,
+  selected shell-quoting behavior, and FAIR profiles, artifact declarations,
+  recorder exports, validation, and safe environment defaults;
 - GitHub Actions runs that suite and source compilation on Python 3.8 and
   Python 3.12, plus focused Ruff and mypy checks on Python 3.12;
 - package extras keep Docker, cloud, Globus, and API dependencies out of the
@@ -172,11 +176,15 @@ The repository has a sound baseline for changes to the core behavior:
   allowing hosted notebook environments such as Google Colab to retain their
   platform dependencies;
 - documentation covers configuration, architecture, checkpoints, examples,
-  and the incremental tutorial; and
+  FAIR principles, and the incremental tutorial; and
 - sample configuration avoids committed credentials and the SKYCDS path checks
   for required runtime configuration; and
 - the LLM task boundary has local tests and a fully local mock-provider example.
 - native Python tasks have local staging, dependency, output, and runner tests.
+
+FAIR exports are local metadata artifacts, not repository publication: they do
+not copy large outputs, obtain remote checksums, or validate every optional
+external profile. Credential capture remains disabled by default.
 
 The test suite is intentionally fast and local: it validates command generation,
 failure propagation, and integration boundaries, not live Docker, SSH, Slurm,
@@ -218,6 +226,28 @@ python -m pip install -e ".[all]"
 The base package does not install Docker, cloud, Globus, or Flask service
 libraries. If an integration is requested without its extra, DAGonStar reports
 the corresponding install command at the integration boundary.
+
+### Minimal FAIR workflow
+
+FAIR recording is opt-in and uses the standard library. It emits local RO-Crate
+JSON-LD, PROV JSON, citation/software metadata, fixity, and a report without
+changing workflows that do not enable it.
+
+```python
+from dagon import Workflow
+from dagon.task import DagonTask, TaskType
+from dagon.fair import Agent, Artifact, FairProfile
+workflow = Workflow("FAIR-Demo")
+workflow.enable_fair(FairProfile(title="FAIR demo", description="Local provenance.",
+    creators=[Agent(name="DAGonStar Team")], license="Apache-2.0"))
+workflow.add_task(DagonTask(TaskType.BATCH, "A", "echo hello > message.txt").declare_outputs(
+    Artifact("message.txt", media_type="text/plain", license="Apache-2.0")))
+workflow.run()
+```
+
+Outputs are written below `<scratch>/.dagon/fair/<workflow>/<run>/`, including
+`run.json`, `ro-crate-metadata.json`, `prov.json`, `checksums.sha256`, and a
+FAIRness report. See [Lesson 15](docs/tutorial/lesson_15_fair_by_design.md).
 
 `requirements.txt` remains a full development/demo environment that installs
 the optional integration dependencies together.
@@ -327,7 +357,7 @@ Useful checks:
 python -m unittest discover -s tests -v
 python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py
 python -m ruff check dagon/shell.py tests
-python -m mypy dagon/shell.py
+python -m mypy --follow-imports=skip dagon/shell.py
 python -m pip install -e .
 ```
 

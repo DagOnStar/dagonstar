@@ -1,6 +1,6 @@
 import unittest
 
-from dagon import DataMover, Stager, StagerMover
+from dagon.stager.base import Stager, StagerMover, DataMover
 
 from tests.helpers import minimal_config
 
@@ -24,6 +24,15 @@ class StagingTests(unittest.TestCase):
         self.assertIn("jobs='2 workers'", script)
         self.assertIn("partition='debug partition'", script)
         self.assertIn('cmd="cp -r \\"$file\\" \\"$dst\\""', script)
+
+    def test_generate_command_supports_all_staging_modes(self):
+        stager = Stager(DataMover.COPY, StagerMover.NORMAL, minimal_config())
+
+        for mode in StagerMover:
+            with self.subTest(mode=mode):
+                script = stager.generate_command("/tmp/source", "/tmp/destination", "cp", mode.value)
+                self.assertIn("src=/tmp/source", script)
+                self.assertIn("job_ids=()", script)
 
 
 if __name__ == "__main__":

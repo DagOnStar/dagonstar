@@ -1,0 +1,900 @@
+[{
+  "_id": {
+    "$oid": "697731bffb51a45daad274d5"
+  },
+  "execution_id": "20260126_101321",
+  "workflow": "DHT-Sensor-Capture-And-Preprocess",
+  "export_timestamp": {
+    "$date": "2026-01-26T09:19:59.538Z"
+  },
+  "raspberry_pi": "192.168.1.50",
+  "summary": {
+    "count": 291,
+    "mean_humidity": 63,
+    "mean_temp_c": 19.479725085910655,
+    "min_humidity": 63,
+    "max_humidity": 63,
+    "min_temp_c": 19.4,
+    "max_temp_c": 19.5,
+    "start_time": 1769418867.2607934,
+    "end_time": 1769419168.1742833
+  },
+  "metrics": {
+    "task_B_task_duration": 16.6034,
+    "task_B_task_success": 1,
+    "task_B_task_records_total": 291,
+    "task_B_execution_start_timestamp": 1769419172.582949
+  },
+  "total_duration_seconds": 16.6034,
+  "raw_data_count": 291,
+  "source_file": "/tmp/fog_data_20260126_101321/sensor_output_20260126_101321_preprocessed.json",
+  "all_tasks_successful": false,
+  "energy_metrics_added_at": {
+    "$date": "2026-01-26T09:20:04.296Z"
+  },
+  "energy_monitoring": {
+    "enabled": true,
+    "prometheus_url": "http://localhost:9090",
+    "sampling_interval_seconds": 2,
+    "collection_duration_seconds": 401.04909920692444,
+    "samples_count": 198,
+    "raspberry_pi": {
+      "power": {
+        "mean_watts": 1.6623401751505187,
+        "max_watts": 3.12735188017768,
+        "min_watts": 1.42713492455001,
+        "std_watts": 0.3427294744195327
+      },
+      "cpu": {
+        "mean_percent": 4.81863247863247,
+        "max_percent": 38.69999999999967
+      },
+      "ram": {
+        "mean_percent": 6.654997983055159,
+        "max_percent": 7.156726714622352
+      },
+      "temperature": {
+        "mean_celsius": 47.11985858585859,
+        "max_celsius": 47.337
+      },
+      "energy": {
+        "total_joules": 666.3089659458481,
+        "total_wh": 0.18508582387384667
+      }
+    },
+    "pc": {
+      "power": {
+        "mean_watts": 2.967285429292929,
+        "max_watts": 6.42484,
+        "min_watts": 2.053369,
+        "std_watts": 1.007667689252249
+      },
+      "cpu": {
+        "mean_percent": 8.595982905982899,
+        "max_percent": 26.783333333333232
+      },
+      "ram": {
+        "mean_percent": 64.21272419889765,
+        "max_percent": 69.71951367822611
+      },
+      "temperature": {
+        "mean_celsius": 44.601010101010104,
+        "max_celsius": 61
+      },
+      "energy": {
+        "total_joules": 1185.0759990744405,
+        "total_wh": 0.3291877775206779
+      }
+    }
+  }
+},
+{
+  "_id": {
+    "$oid": "697735f46c40064cb3b5dd9a"
+  },
+  "execution_id": "20260126_103123",
+  "workflow": "DHT-Sensor-Capture-And-Preprocess",
+  "export_timestamp": {
+    "$date": "2026-01-26T09:37:56.761Z"
+  },
+  "raspberry_pi": "192.168.1.50",
+  "summary": {
+    "count": 292,
+    "mean_humidity": 63,
+    "mean_temp_c": 19.66986301369863,
+    "min_humidity": 63,
+    "max_humidity": 63,
+    "min_temp_c": 19.6,
+    "max_temp_c": 19.7,
+    "start_time": 1769419944.0128648,
+    "end_time": 1769420244.9202864
+  },
+  "metrics": {
+    "task_B_task_duration": 17.2165,
+    "task_B_task_success": 1,
+    "task_B_task_records_total": 292,
+    "task_B_execution_start_timestamp": 1769420249.1252298
+  },
+  "total_duration_seconds": 17.2165,
+  "raw_data_count": 292,
+  "source_file": "/tmp/fog_data_20260126_103123/sensor_output_20260126_103123_preprocessed.json",
+  "all_tasks_successful": false,
+  "energy_metrics_added_at": {
+    "$date": "2026-01-26T09:38:00.466Z"
+  },
+  "energy_monitoring": {
+    "enabled": true,
+    "prometheus_url": "http://localhost:9090",
+    "sampling_interval_seconds": 2,
+    "collection_duration_seconds": 396.1147928237915,
+    "samples_count": 195,
+    "raspberry_pi": {
+      "power": {
+        "mean_watts": 1.6217759156579863,
+        "max_watts": 1.9863381044371002,
+        "min_watts": 1.42384336330193,
+        "std_watts": 0.18087470104675904
+      },
+      "cpu": {
+        "mean_percent": 3.6365979381443125,
+        "max_percent": 19.71666666666654
+      },
+      "ram": {
+        "mean_percent": 6.577772358382863,
+        "max_percent": 7.254782649138036
+      },
+      "temperature": {
+        "mean_celsius": 48.21892820512821,
+        "max_celsius": 48.499
+      },
+      "energy": {
+        "total_joules": 639.6442439700882,
+        "total_wh": 0.1776789566583578
+      }
+    },
+    "pc": {
+      "power": {
+        "mean_watts": 2.9643604974358975,
+        "max_watts": 6.971035,
+        "min_watts": 2.114948,
+        "std_watts": 1.0515540972710042
+      },
+      "cpu": {
+        "mean_percent": 8.524355670103064,
+        "max_percent": 30.099999999999923
+      },
+      "ram": {
+        "mean_percent": 70.46284430969409,
+        "max_percent": 76.0188627562856
+      },
+      "temperature": {
+        "mean_celsius": 46.712820512820514,
+        "max_celsius": 63
+      },
+      "energy": {
+        "total_joules": 1166.5054537487822,
+        "total_wh": 0.3240292927079951
+      }
+    }
+  }
+},
+{
+  "_id": {
+    "$oid": "69773c3c517e901e73205663"
+  },
+  "execution_id": "20260126_105802",
+  "workflow": "DHT-Sensor-Capture-And-Preprocess",
+  "export_timestamp": {
+    "$date": "2026-01-26T10:04:44.095Z"
+  },
+  "raspberry_pi": "192.168.1.50",
+  "summary": {
+    "count": 292,
+    "mean_humidity": 58,
+    "mean_temp_c": 19.642465753424656,
+    "min_humidity": 58,
+    "max_humidity": 58,
+    "min_temp_c": 19.6,
+    "max_temp_c": 19.7,
+    "start_time": 1769421550.9937797,
+    "end_time": 1769421851.8890705
+  },
+  "metrics": {
+    "task_B_task_duration": 16.8904,
+    "task_B_task_success": 1,
+    "task_B_task_records_total": 292,
+    "task_B_execution_start_timestamp": 1769421856.2896569
+  },
+  "total_duration_seconds": 16.8904,
+  "raw_data_count": 292,
+  "source_file": "/tmp/fog_data_20260126_105802/sensor_output_20260126_105802_preprocessed.json",
+  "all_tasks_successful": false,
+  "energy_metrics_added_at": {
+    "$date": "2026-01-26T10:04:47.862Z"
+  },
+  "energy_monitoring": {
+    "enabled": true,
+    "prometheus_url": "http://localhost:9090",
+    "sampling_interval_seconds": 2,
+    "collection_duration_seconds": 404.35492515563965,
+    "samples_count": 199,
+    "raspberry_pi": {
+      "power": {
+        "mean_watts": 1.5958934908858873,
+        "max_watts": 1.9131975903716,
+        "min_watts": 1.42731213970589,
+        "std_watts": 0.17064442269493466
+      },
+      "cpu": {
+        "mean_percent": 4.839730639730655,
+        "max_percent": 35.46666666666776
+      },
+      "ram": {
+        "mean_percent": 6.6106793969226025,
+        "max_percent": 7.279005953119189
+      },
+      "temperature": {
+        "mean_celsius": 47.337,
+        "max_celsius": 47.918
+      },
+      "energy": {
+        "total_joules": 642.4799254047379,
+        "total_wh": 0.1784666459457605
+      }
+    },
+    "pc": {
+      "power": {
+        "mean_watts": 2.5941329949748746,
+        "max_watts": 6.274142,
+        "min_watts": 2.133307,
+        "std_watts": 0.7958568679917395
+      },
+      "cpu": {
+        "mean_percent": 5.790566835871454,
+        "max_percent": 17.783333333332692
+      },
+      "ram": {
+        "mean_percent": 66.1838637545666,
+        "max_percent": 67.92939309797698
+      },
+      "temperature": {
+        "mean_celsius": 44.36683417085427,
+        "max_celsius": 60
+      },
+      "energy": {
+        "total_joules": 1040.139120220251,
+        "total_wh": 0.28892753339451416
+      }
+    }
+  }
+},
+{
+  "_id": {
+    "$oid": "697742e19b84e39bd163abdd"
+  },
+  "execution_id": "20260126_112635",
+  "workflow": "DHT-Sensor-Capture-And-Preprocess",
+  "export_timestamp": {
+    "$date": "2026-01-26T10:33:05.106Z"
+  },
+  "raspberry_pi": "192.168.1.50",
+  "summary": {
+    "count": 290,
+    "mean_humidity": 59.88275862068966,
+    "mean_temp_c": 19.804827586206898,
+    "min_humidity": 59,
+    "max_humidity": 60,
+    "min_temp_c": 19.7,
+    "max_temp_c": 19.9,
+    "start_time": 1769423255.2942302,
+    "end_time": 1769423553.4712486
+  },
+  "metrics": {
+    "task_B_task_duration": 17.2577,
+    "task_B_task_success": 1,
+    "task_B_task_records_total": 290,
+    "task_B_execution_start_timestamp": 1769423557.9048476
+  },
+  "total_duration_seconds": 17.2577,
+  "raw_data_count": 290,
+  "source_file": "/tmp/fog_data_20260126_112635/sensor_output_20260126_112635_preprocessed.json",
+  "all_tasks_successful": false,
+  "energy_metrics_added_at": {
+    "$date": "2026-01-26T10:33:10.009Z"
+  },
+  "energy_monitoring": {
+    "enabled": true,
+    "prometheus_url": "http://localhost:9090",
+    "sampling_interval_seconds": 2,
+    "collection_duration_seconds": 392.81313729286194,
+    "samples_count": 194,
+    "raspberry_pi": {
+      "power": {
+        "mean_watts": 1.6471488095156994,
+        "max_watts": 2.2545100822855098,
+        "min_watts": 1.4381197188864603,
+        "std_watts": 0.22400653603232615
+      },
+      "cpu": {
+        "mean_percent": 3.7594127806562883,
+        "max_percent": 28.6666666666694
+      },
+      "ram": {
+        "mean_percent": 6.610691489123665,
+        "max_percent": 7.007511162098479
+      },
+      "temperature": {
+        "mean_celsius": 48.45707216494846,
+        "max_celsius": 49.08
+      },
+      "energy": {
+        "total_joules": 646.5920557889044,
+        "total_wh": 0.1796089043858068
+      }
+    },
+    "pc": {
+      "power": {
+        "mean_watts": 2.7327764175257734,
+        "max_watts": 6.647063,
+        "min_watts": 2.125061,
+        "std_watts": 0.9104213807426217
+      },
+      "cpu": {
+        "mean_percent": 6.853515624999986,
+        "max_percent": 17.699999999999065
+      },
+      "ram": {
+        "mean_percent": 62.46916765562211,
+        "max_percent": 65.01825922991854
+      },
+      "temperature": {
+        "mean_celsius": 45.329896907216494,
+        "max_celsius": 61
+      },
+      "energy": {
+        "total_joules": 1067.88060662948,
+        "total_wh": 0.29663350184152226
+      }
+    }
+  }
+},
+{
+  "_id": {
+    "$oid": "697744fc843f066662ad02a7"
+  },
+  "execution_id": "20260126_113538",
+  "workflow": "DHT-Sensor-Capture-And-Preprocess",
+  "export_timestamp": {
+    "$date": "2026-01-26T10:42:04.368Z"
+  },
+  "raspberry_pi": "192.168.1.50",
+  "summary": {
+    "count": 291,
+    "mean_humidity": 59.4639175257732,
+    "mean_temp_c": 20.74742268041237,
+    "min_humidity": 58,
+    "max_humidity": 67,
+    "min_temp_c": 20.1,
+    "max_temp_c": 21,
+    "start_time": 1769423792.1013117,
+    "end_time": 1769424092.9898403
+  },
+  "metrics": {
+    "task_B_task_duration": 16.4537,
+    "task_B_task_success": 1,
+    "task_B_task_records_total": 291,
+    "task_B_execution_start_timestamp": 1769424097.2147763
+  },
+  "total_duration_seconds": 16.4537,
+  "raw_data_count": 291,
+  "source_file": "/tmp/fog_data_20260126_113538/sensor_output_20260126_113538_preprocessed.json",
+  "all_tasks_successful": false,
+  "energy_metrics_added_at": {
+    "$date": "2026-01-26T10:42:09.005Z"
+  },
+  "energy_monitoring": {
+    "enabled": true,
+    "prometheus_url": "http://localhost:9090",
+    "sampling_interval_seconds": 2,
+    "collection_duration_seconds": 388.8975374698639,
+    "samples_count": 192,
+    "raspberry_pi": {
+      "power": {
+        "mean_watts": 1.6559597378318898,
+        "max_watts": 2.32316033452648,
+        "min_watts": 1.4352773741826799,
+        "std_watts": 0.2549906392171325
+      },
+      "cpu": {
+        "mean_percent": 4.194851657940662,
+        "max_percent": 24.216666666667763
+      },
+      "ram": {
+        "mean_percent": 6.818346334788025,
+        "max_percent": 7.247418764727764
+      },
+      "temperature": {
+        "mean_celsius": 48.744109375,
+        "max_celsius": 49.08
+      },
+      "energy": {
+        "total_joules": 642.7980459175404,
+        "total_wh": 0.17855501275487234
+      }
+    },
+    "pc": {
+      "power": {
+        "mean_watts": 2.6194349479166665,
+        "max_watts": 6.655767,
+        "min_watts": 2.056334,
+        "std_watts": 0.8012102323327692
+      },
+      "cpu": {
+        "mean_percent": 5.7093033509700675,
+        "max_percent": 15.725000000001415
+      },
+      "ram": {
+        "mean_percent": 62.31855138896308,
+        "max_percent": 63.36350586307111
+      },
+      "temperature": {
+        "mean_celsius": 45.473958333333336,
+        "max_celsius": 67
+      },
+      "energy": {
+        "total_joules": 1012.5471354956398,
+        "total_wh": 0.2812630931932333
+      }
+    }
+  }
+},
+{
+  "_id": {
+    "$oid": "6977473dd98524cf0b715ff8"
+  },
+  "execution_id": "20260126_114504",
+  "workflow": "DHT-Sensor-Capture-And-Preprocess",
+  "export_timestamp": {
+    "$date": "2026-01-26T10:51:41.419Z"
+  },
+  "raspberry_pi": "192.168.1.50",
+  "summary": {
+    "count": 292,
+    "mean_humidity": 59.23287671232877,
+    "mean_temp_c": 20.458219178082196,
+    "min_humidity": 59,
+    "max_humidity": 60,
+    "min_temp_c": 20.3,
+    "max_temp_c": 20.6,
+    "start_time": 1769424369.947705,
+    "end_time": 1769424670.8364232
+  },
+  "metrics": {
+    "task_B_task_duration": 16.031,
+    "task_B_task_success": 1,
+    "task_B_task_records_total": 292,
+    "task_B_execution_start_timestamp": 1769424675.0175385
+  },
+  "total_duration_seconds": 16.031,
+  "raw_data_count": 292,
+  "source_file": "/tmp/fog_data_20260126_114504/sensor_output_20260126_114504_preprocessed.json",
+  "all_tasks_successful": false,
+  "energy_metrics_added_at": {
+    "$date": "2026-01-26T10:51:45.118Z"
+  },
+  "energy_monitoring": {
+    "enabled": true,
+    "prometheus_url": "http://localhost:9090",
+    "sampling_interval_seconds": 2,
+    "collection_duration_seconds": 400.1278336048126,
+    "samples_count": 197,
+    "raspberry_pi": {
+      "power": {
+        "mean_watts": 1.618820367860709,
+        "max_watts": 1.8459112909207802,
+        "min_watts": 1.4355952653897,
+        "std_watts": 0.1584277919856211
+      },
+      "cpu": {
+        "mean_percent": 5.5601374570447195,
+        "max_percent": 49.49999999999666
+      },
+      "ram": {
+        "mean_percent": 7.0452601688102146,
+        "max_percent": 7.75145727396751
+      },
+      "temperature": {
+        "mean_celsius": 48.37808121827411,
+        "max_celsius": 49.08
+      },
+      "energy": {
+        "total_joules": 644.4612620282197,
+        "total_wh": 0.17901701723006103
+      }
+    },
+    "pc": {
+      "power": {
+        "mean_watts": 2.5895640609137054,
+        "max_watts": 6.787761,
+        "min_watts": 2.121022,
+        "std_watts": 0.8375012008748359
+      },
+      "cpu": {
+        "mean_percent": 5.529725085910668,
+        "max_percent": 16.741666666666788
+      },
+      "ram": {
+        "mean_percent": 62.761074540367105,
+        "max_percent": 63.64804979149356
+      },
+      "temperature": {
+        "mean_celsius": 45.370558375634516,
+        "max_celsius": 65
+      },
+      "energy": {
+        "total_joules": 1028.8578828373636,
+        "total_wh": 0.2857938563437121
+      }
+    }
+  }
+},
+{
+  "_id": {
+    "$oid": "69774c57afcf4602885a608c"
+  },
+  "execution_id": "20260126_120643",
+  "workflow": "DHT-Sensor-Capture-And-Preprocess",
+  "export_timestamp": {
+    "$date": "2026-01-26T11:13:27.484Z"
+  },
+  "raspberry_pi": "192.168.1.50",
+  "summary": {
+    "count": 291,
+    "mean_humidity": 18.378006872852232,
+    "mean_temp_c": 45.761168384879724,
+    "min_humidity": 15,
+    "max_humidity": 23,
+    "min_temp_c": 40.3,
+    "max_temp_c": 52,
+    "start_time": 1769425663.5063329,
+    "end_time": 1769425963.7208269
+  },
+  "metrics": {
+    "task_B_task_duration": 23.3084,
+    "task_B_task_success": 1,
+    "task_B_task_records_total": 291,
+    "task_B_execution_start_timestamp": 1769425969.2481015
+  },
+  "total_duration_seconds": 23.3084,
+  "raw_data_count": 291,
+  "source_file": "/tmp/fog_data_20260126_120643/sensor_output_20260126_120643_preprocessed.json",
+  "all_tasks_successful": false,
+  "energy_metrics_added_at": {
+    "$date": "2026-01-26T11:13:33.798Z"
+  },
+  "energy_monitoring": {
+    "enabled": true,
+    "prometheus_url": "http://localhost:9090",
+    "sampling_interval_seconds": 2,
+    "collection_duration_seconds": 408.4440996646881,
+    "samples_count": 201,
+    "raspberry_pi": {
+      "power": {
+        "mean_watts": 1.6280059851412203,
+        "max_watts": 1.97480012239179,
+        "min_watts": 1.4382277738465703,
+        "std_watts": 0.17653127374743757
+      },
+      "cpu": {
+        "mean_percent": 4.311892797320011,
+        "max_percent": 33.716666666665944
+      },
+      "ram": {
+        "mean_percent": 6.690236495804497,
+        "max_percent": 7.323383046012655
+      },
+      "temperature": {
+        "mean_celsius": 52.07810945273632,
+        "max_celsius": 54.31
+      },
+      "energy": {
+        "total_joules": 663.8671408878338,
+        "total_wh": 0.1844075391355094
+      }
+    },
+    "pc": {
+      "power": {
+        "mean_watts": 4.171624651741293,
+        "max_watts": 9.691327,
+        "min_watts": 2.167177,
+        "std_watts": 2.158413914645925
+      },
+      "cpu": {
+        "mean_percent": 16.95639730639743,
+        "max_percent": 80.82499999999982
+      },
+      "ram": {
+        "mean_percent": 71.65592484052857,
+        "max_percent": 96.90508041903597
+      },
+      "temperature": {
+        "mean_celsius": 51.49751243781095,
+        "max_celsius": 69
+      },
+      "energy": {
+        "total_joules": 1702.0265305725543,
+        "total_wh": 0.4727851473812651
+      }
+    }
+  }
+},
+{
+  "_id": {
+    "$oid": "69774fbcc39778301e046bc2"
+  },
+  "execution_id": "20260126_122103",
+  "workflow": "DHT-Sensor-Capture-And-Preprocess",
+  "export_timestamp": {
+    "$date": "2026-01-26T11:27:56.269Z"
+  },
+  "raspberry_pi": "192.168.1.50",
+  "summary": {
+    "count": 291,
+    "mean_humidity": 53.63917525773196,
+    "mean_temp_c": 22.878006872852232,
+    "min_humidity": 51,
+    "max_humidity": 54,
+    "min_temp_c": 22.5,
+    "max_temp_c": 23.3,
+    "start_time": 1769426533.5949469,
+    "end_time": 1769426834.4778411
+  },
+  "metrics": {
+    "task_B_task_duration": 23.9489,
+    "task_B_task_success": 1,
+    "task_B_task_records_total": 291,
+    "task_B_execution_start_timestamp": 1769426839.770736
+  },
+  "total_duration_seconds": 23.9489,
+  "raw_data_count": 291,
+  "source_file": "/tmp/fog_data_20260126_122103/sensor_output_20260126_122103_preprocessed.json",
+  "all_tasks_successful": false,
+  "energy_metrics_added_at": {
+    "$date": "2026-01-26T11:28:01.598Z"
+  },
+  "energy_monitoring": {
+    "enabled": true,
+    "prometheus_url": "http://localhost:9090",
+    "sampling_interval_seconds": 2,
+    "collection_duration_seconds": 415.8557653427124,
+    "samples_count": 205,
+    "raspberry_pi": {
+      "power": {
+        "mean_watts": 1.5286667046128142,
+        "max_watts": 1.9280487031355,
+        "min_watts": 1.37557824592919,
+        "std_watts": 0.169999543629098
+      },
+      "cpu": {
+        "mean_percent": 5.225735294117537,
+        "max_percent": 44.366666666664976
+      },
+      "ram": {
+        "mean_percent": 5.8763239867143815,
+        "max_percent": 6.540873434205629
+      },
+      "temperature": {
+        "mean_celsius": 40.16289268292683,
+        "max_celsius": 50.242000000000004
+      },
+      "energy": {
+        "total_joules": 635.5941272634335,
+        "total_wh": 0.17655392423984265
+      }
+    },
+    "pc": {
+      "power": {
+        "mean_watts": 2.1874016878048783,
+        "max_watts": 3.314436,
+        "min_watts": 1.886872,
+        "std_watts": 0.30552116401835006
+      },
+      "cpu": {
+        "mean_percent": 7.003583333333342,
+        "max_percent": 20.683333333334616
+      },
+      "ram": {
+        "mean_percent": 63.53202031581026,
+        "max_percent": 65.24881539480967
+      },
+      "temperature": {
+        "mean_celsius": 42.604878048780485,
+        "max_celsius": 45
+      },
+      "energy": {
+        "total_joules": 908.7967409681347,
+        "total_wh": 0.2524435391578152
+      }
+    }
+  }
+},
+{
+  "_id": {
+    "$oid": "69775277bb348a8d7fafd273"
+  },
+  "execution_id": "20260126_123314",
+  "workflow": "DHT-Sensor-Capture-And-Preprocess",
+  "export_timestamp": {
+    "$date": "2026-01-26T11:39:35.387Z"
+  },
+  "raspberry_pi": "192.168.1.50",
+  "summary": {
+    "count": 291,
+    "mean_humidity": 51.41580756013746,
+    "mean_temp_c": 22.35876288659794,
+    "min_humidity": 51,
+    "max_humidity": 52,
+    "min_temp_c": 22.1,
+    "max_temp_c": 22.4,
+    "start_time": 1769427243.3461173,
+    "end_time": 1769427544.2387652
+  },
+  "metrics": {
+    "task_B_task_duration": 16.5004,
+    "task_B_task_success": 1,
+    "task_B_task_records_total": 291,
+    "task_B_execution_start_timestamp": 1769427548.4369054
+  },
+  "total_duration_seconds": 16.5004,
+  "raw_data_count": 291,
+  "source_file": "/tmp/fog_data_20260126_123314/sensor_output_20260126_123314_preprocessed.json",
+  "all_tasks_successful": false,
+  "energy_metrics_added_at": {
+    "$date": "2026-01-26T11:39:40.976Z"
+  },
+  "energy_monitoring": {
+    "enabled": true,
+    "prometheus_url": "http://localhost:9090",
+    "sampling_interval_seconds": 2,
+    "collection_duration_seconds": 384.2105824947357,
+    "samples_count": 190,
+    "raspberry_pi": {
+      "power": {
+        "mean_watts": 1.7353553086963078,
+        "max_watts": 3.4616818391260202,
+        "min_watts": 1.4205526080329298,
+        "std_watts": 0.42487680130565075
+      },
+      "cpu": {
+        "mean_percent": 3.77195767195759,
+        "max_percent": 29.15000000000569
+      },
+      "ram": {
+        "mean_percent": 5.987820216779702,
+        "max_percent": 6.57808042912067
+      },
+      "temperature": {
+        "mean_celsius": 46.254505263157895,
+        "max_celsius": 46.756
+      },
+      "energy": {
+        "total_joules": 667.2624303799392,
+        "total_wh": 0.18535067510553868
+      }
+    },
+    "pc": {
+      "power": {
+        "mean_watts": 2.6421068631578946,
+        "max_watts": 6.350094,
+        "min_watts": 2.120332,
+        "std_watts": 0.8864250107635419
+      },
+      "cpu": {
+        "mean_percent": 6.304812834224596,
+        "max_percent": 15.991666666664074
+      },
+      "ram": {
+        "mean_percent": 64.08817000384823,
+        "max_percent": 68.21086824826187
+      },
+      "temperature": {
+        "mean_celsius": 46.22105263157895,
+        "max_celsius": 68
+      },
+      "energy": {
+        "total_joules": 1012.6094906085817,
+        "total_wh": 0.28128041405793935
+      }
+    }
+  }
+},
+{
+  "_id": {
+    "$oid": "69793765cc3ca268a7b96f0d"
+  },
+  "execution_id": "20260127_230047",
+  "workflow": "DHT-Sensor-Capture-And-Preprocess",
+  "export_timestamp": {
+    "$date": "2026-01-27T22:08:37.123Z"
+  },
+  "raspberry_pi": "192.168.1.50",
+  "summary": {
+    "count": 292,
+    "mean_humidity": 62,
+    "mean_temp_c": 23.165753424657535,
+    "min_humidity": 62,
+    "max_humidity": 62,
+    "min_temp_c": 23.1,
+    "max_temp_c": 23.3,
+    "start_time": 1769551372.2791307,
+    "end_time": 1769551673.1983204
+  },
+  "metrics": {
+    "task_B_task_duration": 23.2332,
+    "task_B_task_success": 1,
+    "task_B_task_records_total": 292,
+    "task_B_execution_start_timestamp": 1769551680.39691
+  },
+  "total_duration_seconds": 23.2332,
+  "raw_data_count": 292,
+  "source_file": "/tmp/fog_data_20260127_230047/sensor_output_20260127_230047_preprocessed.json",
+  "all_tasks_successful": false,
+  "energy_metrics_added_at": {
+    "$date": "2026-01-27T22:08:42.025Z"
+  },
+  "energy_monitoring": {
+    "enabled": true,
+    "prometheus_url": "http://localhost:9090",
+    "sampling_interval_seconds": 2,
+    "collection_duration_seconds": 473.161554813385,
+    "samples_count": 231,
+    "raspberry_pi": {
+      "power": {
+        "mean_watts": 1.7355318183575936,
+        "max_watts": 3.50265860704048,
+        "min_watts": 1.44973111387051,
+        "std_watts": 0.3882094115813117
+      },
+      "cpu": {
+        "mean_percent": 8.499195906433032,
+        "max_percent": 49.416666666669094
+      },
+      "ram": {
+        "mean_percent": 7.127438118539446,
+        "max_percent": 7.549725598412504
+      },
+      "temperature": {
+        "mean_celsius": 50.10366666666667,
+        "max_celsius": 50.823
+      },
+      "energy": {
+        "total_joules": 818.23629383607,
+        "total_wh": 0.22728785939890833
+      }
+    },
+    "pc": {
+      "power": {
+        "mean_watts": 4.499679831168831,
+        "max_watts": 8.223058,
+        "min_watts": 3.317689,
+        "std_watts": 0.9969439022241409
+      },
+      "cpu": {
+        "mean_percent": 17.521585903083718,
+        "max_percent": 43.466666666651385
+      },
+      "ram": {
+        "mean_percent": 94.15333444300454,
+        "max_percent": 96.52983507581308
+      },
+      "temperature": {
+        "mean_celsius": 57.095238095238095,
+        "max_celsius": 68
+      },
+      "energy": {
+        "total_joules": 2124.459010688118,
+        "total_wh": 0.5901275029689216
+      }
+    }
+  }
+}]

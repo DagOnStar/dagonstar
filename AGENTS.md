@@ -15,6 +15,25 @@ local, remote, Slurm, Docker, cloud, and data-staging environments.
 - Treat `dagon.ini.sample` as documentation, not as a private configuration file.
 - Keep fixes conservative: many examples encode historical research workflows.
 - Prefer small, reviewable changes with an explicit verification command.
+- Keep `dagon/fair/` optional and dependency-free by default; FAIR metadata
+  must never include credentials. Update FAIR tests, examples, tutorials, and
+  affected documentation when its behavior changes.
+
+## FAIR-by-design requirement
+
+- Treat FAIR metadata as a first-class, opt-in concern when adding or changing
+  workflow, task, staging, checkpoint, or provenance behavior. Preserve the
+  behavior of workflows that do not enable FAIR recording.
+- Record only information the implementation can substantiate locally. Do not
+  present local exports as repository publication, remote validation, or copied
+  data, and do not fetch remote outputs merely to create metadata.
+- Keep provenance useful and safe: declare intentional inputs and outputs where
+  appropriate, retain `workflow://` producer/consumer relationships, use
+  licenses and access assumptions explicitly, and never capture credentials,
+  private keys, tokens, or unredacted configuration.
+- Maintain FAIR examples and tutorials as self-contained local demonstrations.
+  State Colab support precisely and use temporary or user-chosen scratch paths
+  rather than requiring a developer's private configuration.
 
 ## Important paths
 
@@ -87,7 +106,9 @@ configuration validation separately from live integration behavior.
 - The project has a unit test suite and CI baseline, including initial
   checkpoint, staging, packaging-extra, and core workflow checks, but coverage is
   not comprehensive yet. Prioritize command rewriting, local batch integration,
-  failure modes, and mocked external-service boundaries.
+  failure modes, and mocked external-service boundaries. When changing remote or
+  container task constructors, cover both the default and a non-default SSH port
+  without opening a real network connection.
 - Optional integrations have package extras, while `requirements.txt` remains a
   full development/demo environment. Preserve lazy imports and explicit extras
   for Docker, cloud, Globus, API, and other service-specific dependencies.

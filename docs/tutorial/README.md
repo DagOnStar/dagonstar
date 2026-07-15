@@ -1,6 +1,6 @@
 # DAGonStar Tutorial Sequence
 
-This tutorial contains fourteen incremental lessons. The lessons are designed to be
+This tutorial contains fifteen incremental lessons. The lessons are designed to be
 read in order and to remain consistent with the current DAGonStar implementation.
 
 For an executable Colab-ready version of the complete sequence, open
@@ -26,6 +26,7 @@ explicitly marked as optional integration exercises.
 12. [Run an LLM task locally](lesson_12_llm_tasks.md)
 13. [Execute a web task locally](lesson_13_web_tasks.md)
 14. [Execute native Python tasks](lesson_14_native_tasks.md)
+15. [Record FAIR metadata and provenance](lesson_15_fair_by_design.md)
 
 ## Google Colab compatibility
 
@@ -49,6 +50,7 @@ and treat remote services as separately configured backends.
 | 12 Local LLM task | Supported | Uses the included local mock provider. |
 | 13 Local web task | Supported | Starts its local service in the runtime. |
 | 14 Native Python tasks | Supported | Local Python functions. |
+| 15 FAIR metadata and provenance | Supported | Standard-library local metadata exports. |
 
 For supported lessons, first choose one installation method in a Colab cell:
 

@@ -1,4 +1,5 @@
 import json
+import configparser
 import os.path
 import time
 
@@ -7,6 +8,13 @@ from dagon.task import DagonTask, TaskType
 
 # Check if this is the main
 if __name__ == '__main__':
+    # Read SSH configuration from dagon.ini
+    config = configparser.ConfigParser()
+    config.read('dagon.ini')
+    REMOTE_IP = config.get('ssh', 'remote_ip')
+    SSH_USER = config.get('ssh', 'ssh_user')
+    SSH_PORT = config.getint('ssh', 'ssh_port')
+
     # Create the orchestration workflow
     workflow = Workflow("DataFlow-Demo-Docker-Remote")
 

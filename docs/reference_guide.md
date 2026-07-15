@@ -1,5 +1,15 @@
 # Reference Guide
 
+## FAIR API
+
+`Workflow.enable_fair(profile)` registers and returns a `FairRecorder`.
+`FairProfile` defines title, description, creators (`Agent`), license, keywords,
+`AccessPolicy`, strict validation and an optional output directory. `Artifact`
+describes a path and optional type, license, identifier, and semantic metadata.
+Tasks expose chainable `declare_inputs(*artifacts)`, `declare_outputs(*artifacts)`
+and `annotate(**metadata)` methods; they remain inert without FAIR mode.
+For export semantics, validation, and safety constraints, see
+[FAIR by Design](fair_principles.md).
 This guide summarizes the public API and important implementation classes in the
 current repository.
 
@@ -73,6 +83,9 @@ Factory task types:
 - `TaskType.SLURM`
 - `TaskType.CLOUD`
 - `TaskType.DOCKER`
+- `TaskType.KUBERNETES`
+- `TaskType.APPTAINER`
+- `TaskType.NOMAD`
 - `TaskType.LLM`
 - `TaskType.NATIVE`
 - `TaskType.WEB`
@@ -93,6 +106,9 @@ The concrete class is selected from `tasks_types`:
 | `BATCH` | `dagon.batch` | `Batch` |
 | `CLOUD` | `dagon.remote` | `CloudTask` |
 | `DOCKER` | `dagon.docker_task` | `DockerTask` |
+| `KUBERNETES` | `dagon.kubernetes_task` | `KubernetesTask` |
+| `APPTAINER` | `dagon.apptainer_task` | `ApptainerTask` |
+| `NOMAD` | `dagon.nomad_task` | `NomadTask` |
 | `LLM` | `dagon.llm` | `LLMTask` |
 | `NATIVE` | `dagon.native` | `NativeTask` |
 | `WEB` | `dagon.web` | `WebTask` |
@@ -218,20 +234,73 @@ be tested in the target environment.
 
 ## LLM tasks
 
-`LLMTask` invokes an OpenAI-compatible Chat Completions endpoint without an
-additional SDK. Its constructor is:
+`LLMTask` represents one request/reply call to an OpenAI-compatible Chat
+Completions endpoint. It uses the Python standard library rather than a
+provider SDK and persists the provider's complete JSON reply as a workflow
+artifact. It is appropriate for a bounded request whose inputs and output
+should participate in the DAG; it does not provide streaming, retries,
+provider-specific API translation, or file uploads.
+
+Create it through `DagonTask`:
 
 ```python
 DagonTask(TaskType.LLM, name, prompt, provider, params=None, input_files=None,
           working_dir=None, output_file="response.json", timeout=120)
 ```
 
-`prompt` is a JSON object (or a JSON string) containing `messages`; string
-values may use `{parameter}` placeholders from `params` or `input_files`.
-Provider configuration is read from `[llm.<provider>]`. `input_files` maps
-parameter names to `workflow://` references, which infer dependencies and stage
-local UTF-8 text before the request. See [LLM Tasks](llm_tasks.md) and the
-[local example](../examples/llm/local_mock_llm.py).
+| Parameter | Contract |
+| --- | --- |
+| `name` | Name of the workflow node. |
+| `prompt` | JSON object, or JSON string decoding to an object. It must contain `messages` when executed. All string values support Python `{name}` formatting; escape literal braces as `{{` and `}}`. |
+| `provider` | Name selecting runtime section `[llm.<provider>]`. It is required. |
+| `params` | Optional mapping supplying values for prompt placeholders. A missing placeholder raises `ValueError` before the request. |
+| `input_files` | Optional mapping from a prompt placeholder name to a `workflow://` producer file. Each file becomes UTF-8 text supplied for that placeholder. |
+| `working_dir` | Optional task working directory. |
+| `output_file` | Relative path inside the task directory for the response; defaults to `response.json`. Absolute paths and paths containing `..` are rejected. |
+| `timeout` | HTTP request timeout in seconds; defaults to `120`. |
+
+### Provider configuration and request
+
+The selected `[llm.<provider>]` section requires `endpoint` and either
+`api_key_env` or `api_key`; it may provide a default `model`. `api_key_env`
+names an environment variable and takes precedence when both key settings are
+present. A request-level `model` overrides the configured default. If neither
+provides a model, execution fails.
+
+The task sends a JSON `POST` with bearer authentication. An endpoint already
+ending in `/chat/completions` is used as-is; otherwise DAGonStar appends
+`/v1/chat/completions`. Keep credentials out of workflow definitions, source,
+and committed configuration.
+
+### Workflow inputs and output
+
+For `input_files={"report": "workflow:///prepare/output/report.txt"}`, the
+task infers the `prepare -> <LLM task>` dependency, copies the producer file
+under `.dagon/inputs/<workflow>/prepare/output/report.txt` in its own working
+directory, reads it as UTF-8, then uses the content to render `{report}`.
+References use `workflow://<workflow>/<task>/<relative-path>`; an empty
+workflow component, as in `workflow:///prepare/...`, means the current
+workflow. References may also appear inline in a prompt string, where their
+text replaces the reference itself.
+
+Producer paths must be relative to the producer directory and may not contain
+`..`. The producer and file must exist at execution time. This task accepts
+only local UTF-8 text inputs: it does not fetch remote-only data, decode binary
+files, or automatically extract document text.
+
+After a non-dry request, the exact JSON document returned by the provider is
+written to `<working_dir>/<output_file>`. Downstream tasks can reference that
+file with `workflow://`; LLM tasks do not automatically extract an assistant
+message from the response. In dry mode, input staging still occurs, but no HTTP
+request or response file is produced.
+
+LLM tasks serialize with `"type": "llm"`; their provider, prompt parameters,
+input-file mapping, and output filename are retained. The named provider must
+still be configured locally when a serialized workflow is run.
+
+See [LLM Tasks](llm_tasks.md) for runnable examples, configuration snippets,
+diagnostics, and operational guidance, or run the fully local
+[mock-provider example](../examples/llm/local_mock_llm.py).
 
 ## Native tasks
 
@@ -245,15 +314,47 @@ DagonTask(TaskType.NATIVE, name, function, inputs=None, outputs=None,
 
 Inputs may be JSON scalars, existing local files, or `workflow://` file references. File values are staged below `inputs/`; `outputs` maps parameter names to safe relative paths below `outputs/`. JSON return metadata is written to `.dagon/native_result.json`. `executor` accepts `local` and `slurm`; use existing Slurm settings in `resources`. Functions must be importable module-level callables.
 
+Lambdas and nested functions are not supported because a native task is run in a
+separate Python process and needs a stable `module:function` import target.
+`environment` supplies string environment variables to that runner, while
+`python` selects its interpreter. Dependencies are not installed automatically:
+install them, along with DAGonStar, into the selected environment before running
+the workflow. See [Native Tasks](native_tasks.md) for complete regular-function,
+lambda-replacement, dependency, and Slurm examples.
+
 ## Web tasks
 
-`WebTask` accepts a JSON-serializable HTTP/HTTPS specification:
+`WebTask` represents one JSON-serializable HTTP/HTTPS request. It is created
+through `DagonTask` and executes in the task scratch directory:
 
 ```python
-DagonTask(TaskType.WEB, name, {"method": "GET", "url": "https://example.org", "outputs": {"body": "response.json"}}, executor="local")
+DagonTask(
+    TaskType.WEB,
+    name,
+    {"method": "GET", "url": "https://example.org", "outputs": {"body": "response.json"}},
+    executor="local",
+)
 ```
 
-Specifications support `query`, `headers`, `json`, `data`, `multipart`, `auth`, `timeout`, retry settings, expected status codes, and `outputs`. Recursive `workflow://` values infer dependencies; referenced files are copied below `inputs/`. Body, headers, and metadata outputs are safe relative paths below `outputs/`; `.dagon/web_result.json` stores non-secret status metadata. Supported authentication is bearer, basic, API-key header, or API-key query, always through environment-variable names rather than literal secrets. `executor="slurm"` accepts existing scheduler options in `resources`.
+Supported methods are `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, and `HEAD`.
+Specifications support `query`, `headers`, `json`, `data`, `multipart`, `auth`,
+`timeout`, retry settings, expected status codes, and `outputs`. `GET`, `HEAD`,
+`PUT`, and `DELETE` may retry; retries for `POST` or `PATCH` require explicit
+`"retry_unsafe": True` in the specification.
+
+Recursive `workflow://` values infer dependencies; referenced files are copied
+below `inputs/`. The special values `{"text": "workflow://..."}` and
+`{"json_file": "workflow://..."}` load a staged UTF-8 text or JSON file into
+the request. Declared body output is raw response bytes, while headers and
+metadata outputs are JSON, all at safe relative paths below `outputs/`.
+`.dagon/web_result.json` records non-secret status metadata.
+
+Supported authentication is bearer, basic, API-key header, or API-key query,
+always by environment-variable name rather than literal secrets. The task
+accepts `executor="local"` (default) or `executor="slurm"`; the latter accepts
+existing scheduler options in `resources`. See [Web Tasks](web_tasks.md) for
+the complete field reference, authentication shapes, request examples, retry
+semantics, and scratch-artifact behavior.
 
 ## Data movement enums
 

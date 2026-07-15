@@ -180,7 +180,6 @@ class GlobusManager:
         if res != "OK":
             raise Exception(res)
 
-
 class SKYCDS:
     CLIENT_TOKEN = os.getenv("DAGON_SKYCDS_CLIENT_TOKEN", "")
     CATALOG_TOKEN = os.getenv("DAGON_SKYCDS_CATALOG_TOKEN", "")

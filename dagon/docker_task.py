@@ -1,6 +1,6 @@
-from typing import Any, Optional
+from typing import Any, List, Optional
 
-from dagon import Batch
+from dagon.batch import Batch
 from dagon.remote import RemoteTask
 from dagon.task import ExecutionResult, Task
 from dagon.shell import join_command
@@ -36,6 +36,8 @@ class DockerTask(Batch):
             globusendpoint: Optional[str] = None,
             remove: bool = True,
             volume: Optional[str] = None,
+            devices: Optional[List[str]] = None,
+            pull: bool = True,
             transversal_workflow: Optional[str] = None) -> None:
         """
         :param name: task name
@@ -55,6 +57,12 @@ class DockerTask(Batch):
 
         :param remove: if it's True the container is removed after the task ends its execution
         :type remove: bool
+        
+        :param pull: if it's True the image will be pulled from registry
+        :type pull: bool
+
+        :param devices: device mappings accepted by the Docker SDK
+        :type devices: list(str)
         """
 
         Task.__init__(self, name, command, working_dir=working_dir,
@@ -65,7 +73,12 @@ class DockerTask(Batch):
         self.remove = remove
         self.image = image
         self.volume = volume
-        self.docker_client2 = docker.from_env()
+        self.devices = devices or []
+        self.pull = pull
+        try:
+            self.docker_client2 = docker.from_env()
+        except Exception:
+            self.docker_client2 = None
 
         # self.docker_client = DockerClient()
 
@@ -122,7 +135,7 @@ class DockerTask(Batch):
             self.docker_client2.images.pull(image)  # Pull the Docker image
             self.workflow.logger.info(
                 "%s: Successfully pulled %s", self.name, image)
-        except docker.errors.APIError as e:
+        except Exception as e:
             self.workflow.logger.error(f"An error occurred: {e}")
 
         # return self.docker_client.pull_image(image)
@@ -131,29 +144,49 @@ class DockerTask(Batch):
     def create_container(self) -> Any:
         """
         Creates the container where the task will be executed
-
-        :return: container key
-        :rtype: string
-
-        :raises Exception: a problem occurred while container creation
         """
+        # ← MODIFICADO: Solo hacer pull si self.pull == True
+        if self.pull:
+            self.pull_image(self.image)
 
-        self.pull_image(self.image)  # pull image
-
-        volumes = {
-            self.workflow.get_scratch_dir_base(): {"bind": self.workflow.get_scratch_dir_base(), "mode": "rw"},
-        }
+        volumes = {}
+        
+        # Añadir scratch directory base normalizado
+        scratch_base = self.workflow.get_scratch_dir_base().rstrip('/')
+        volumes[scratch_base] = {"bind": scratch_base, "mode": "rw"}
 
         if self.volume is not None:
-            volumes[self.volume] = {"bind": self.volume, "mode": "rw"}
+            # Parse volume string (format: host_path:container_path or just host_path)
+            if ':' in self.volume:
+                host_path, container_path = self.volume.split(':', 1)
+                host_path = host_path.rstrip('/')
+                container_path = container_path.rstrip('/')
+                
+                if host_path not in volumes:
+                    volumes[host_path] = {"bind": container_path, "mode": "rw"}
+            else:
+                normalized_volume = self.volume.rstrip('/')
+                if normalized_volume not in volumes:
+                    volumes[normalized_volume] = {"bind": normalized_volume, "mode": "rw"}
 
+        # AÑADIR SOPORTE PARA DEVICES
         try:
-            container = self.docker_client2.containers.run(
-                self.image, detach=True, stdin_open=True, volumes=volumes)
-            self.workflow.logger.info(
-                "%s: Container created with %s", self.name, container.id)
+            container_kwargs = {
+                "image": self.image,
+                "detach": True,
+                "stdin_open": True,
+                "volumes": volumes
+            }
+            
+            # Añadir devices si están especificados
+            if self.devices:
+                container_kwargs["devices"] = self.devices
+            
+            container = self.docker_client2.containers.run(**container_kwargs)
+            self.workflow.logger.info("%s: Container created with %s", self.name, container.id)
             return container
         except Exception as e:
+            self.workflow.logger.error("%s: Failed to create container.", self.name)
             raise Exception(str(e))
 
     def get_running_container(self) -> Any:
@@ -219,7 +252,11 @@ class DockerRemoteTask(RemoteTask, DockerTask):
             keypath: Optional[str] = None,
             working_dir: Optional[str] = None,
             remove: bool = True,
-            globusendpoint: Optional[str] = None) -> None:
+            globusendpoint: Optional[str] = None,
+            volume: Optional[str] = None,
+            devices: Optional[List[str]] = None,
+            pull: bool = True,
+            ssh_port: int = 22) -> None:
         """
         :param name: task name
         :type name: str
@@ -247,13 +284,29 @@ class DockerRemoteTask(RemoteTask, DockerTask):
 
         :param keypath: Path to the public key
         :type keypath: str
+        
+        :param volume: Volume to mount in the container (host_path:container_path)
+        :type volume: str
+        
+        :param ssh_port: SSH port (default: 22)
+        :type ssh_port: int
+        
+        :param pull: if it's True the image will be pulled from registry
+        :type pull: bool
         """
 
         DockerTask.__init__(self, name, command, container_id=container_id, working_dir=working_dir, image=image,
-                            remove=remove, globusendpoint=globusendpoint)
+                            remove=remove, globusendpoint=globusendpoint, volume=volume, devices=devices, pull=pull)
         RemoteTask.__init__(self, name=name, ssh_username=ssh_username, keypath=keypath, command=command, ip=ip,
-                            working_dir=working_dir, globusendpoint=globusendpoint)
-        self.docker_client2 = docker.DockerClient(base_url=f"ssh://{ssh_username}@{ip}")
+                            working_dir=working_dir, globusendpoint=globusendpoint, ssh_port=ssh_port)
+        
+        # Construir la URL SSH con el puerto si no es el 22 por defecto
+        if ssh_port != 22:
+            base_url = f"ssh://{ssh_username}@{ip}:{ssh_port}"
+        else:
+            base_url = f"ssh://{ssh_username}@{ip}"
+            
+        self.docker_client2 = docker.DockerClient(base_url=base_url, timeout=300)
 
     def on_execute(self, launcher_script: str, script_name: str) -> ExecutionResult:
         """

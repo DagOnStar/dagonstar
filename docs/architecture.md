@@ -1,5 +1,14 @@
 # Architecture
 
+## FAIR recorder
+
+`dagon/fair/` is an optional standard-library package. `Workflow.enable_fair()`
+registers a recorder on lifecycle hooks; it has no effect otherwise. Dependency
+construction emits `on_dependencies_made`, allowing `workflow://` producer and
+consumer edges to be exported as PROV/RO-Crate relationships. Local exports live
+under the scratch directory and validation is permissive unless `strict=True`.
+The complete current model and its boundaries are documented in
+[FAIR by Design](fair_principles.md).
 This document describes the current DAGonStar implementation. It is descriptive,
 not aspirational: documentation must remain consistent with the software in this
 repository.
@@ -16,6 +25,7 @@ dagon/
   checkpoint.py               Checkpoint tasks
   config.py                   INI configuration reader
   dag_tps.py                  Meta-workflow coordination
+  fair/                       Optional FAIR models, recorder, validation, exporters
   api/                        HTTP client and workflow service
   cloud/                      Apache Libcloud helpers
   communication/              SSH, SCP, Globus, SKYCDS helpers
