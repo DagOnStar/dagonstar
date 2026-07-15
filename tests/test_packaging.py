@@ -16,12 +16,15 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("cloud", extras)
         self.assertIn("globus", extras)
         self.assertIn("api", extras)
+        self.assertIn("kubernetes", extras)
         self.assertNotIn("docker==7.1.0", install_requires)
         self.assertNotIn("globus_sdk==3.28.0", install_requires)
         self.assertNotIn("apache-libcloud==3.8.0", install_requires)
         self.assertIn("docker==7.1.0", extras["docker"])
         self.assertIn("globus_sdk==3.28.0", extras["globus"])
         self.assertIn("flask==2.2.2", extras["api"])
+        self.assertIn('kubernetes==35.0.0; python_version < "3.9"', extras["kubernetes"])
+        self.assertIn('kubernetes==36.0.2; python_version >= "3.9"', extras["kubernetes"])
 
     def test_optional_dependencies_do_not_leak_into_base_install(self):
         parser = configparser.ConfigParser()
@@ -45,7 +48,7 @@ class PackagingTests(unittest.TestCase):
         extras = parser["options.extras_require"]
         all_requirements = set(extras["all"].splitlines())
 
-        for extra_name in ("docker", "cloud", "globus", "api"):
+        for extra_name in ("docker", "cloud", "globus", "api", "kubernetes"):
             with self.subTest(extra=extra_name):
                 self.assertLessEqual(
                     set(extras[extra_name].splitlines()), all_requirements
