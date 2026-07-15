@@ -69,6 +69,8 @@ Lesson 22 verifies every `TaskType` together without external connections:
 
 This proves construction and portable interoperability; it does not turn Colab
 into a Docker, Kubernetes, Nomad, Apptainer, Slurm, or cloud execution host.
+Install `.[all]` and set `portable_emulation=True` to execute every task type
+locally without those services.
 
 ## Persistence and architecture
 

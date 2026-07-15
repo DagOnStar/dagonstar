@@ -190,7 +190,7 @@ class NativeTask(Task):
         if not self.workflow.dry:
             command = [self.python, "-m", "dagon.native_runner", ".dagon/native_spec.json"]
             env = dict(os.environ, **self.environment)
-            if self.executor == "local":
+            if self.executor == "local" or self.workflow.is_portable_emulation() is True:
                 completed = subprocess.run(command, cwd=self.working_dir, env=env, text=True, capture_output=True)
                 Path(self.working_dir, ".dagon", "native_stdout.txt").write_text(completed.stdout, encoding="utf-8")
                 Path(self.working_dir, ".dagon", "native_stderr.txt").write_text(completed.stderr, encoding="utf-8")

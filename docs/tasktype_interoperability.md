@@ -21,6 +21,20 @@ constructs one graph containing all task types and verifies dependency
 discovery, FAIR declarations, checkpoint reuse, and CWL export. Backend-specific
 tests separately mock service boundaries without requiring live services.
 
+## Portable emulation
+
+Pass `portable_emulation=True` to `Workflow` to run every task type locally
+without contacting Docker, SSH, Slurm, cloud, Kubernetes, Apptainer, or Nomad:
+
+```python
+workflow = Workflow("portable-demo", config=config, portable_emulation=True)
+```
+
+Command tasks run in isolated local scratch directories. LLM, Web, and FaaS use
+credential-free deterministic emulators; Native runs locally. Original task
+types remain visible in FAIR metadata, JSON, checkpoints, and the DAG. This
+profile supports CI, teaching, Colab, Jupyter, and portable validation.
+
 ## Backend matrix
 
 | Type | Execution requirement | Notebook/Colab interpretation |

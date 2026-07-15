@@ -265,6 +265,8 @@ class CloudTask(RemoteTask):
 
         :raises Exception: a problem occurred while the execution of the task
         """
+        if self.workflow.is_portable_emulation() is True:
+            return Task.execute(self)
         self.instance_name = self.instance_name if self.instance_name is not None else self.workflow.name.strip() + \
                                                                                        "-" + self.name
         try:

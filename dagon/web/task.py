@@ -122,6 +122,17 @@ class WebTask(Task):
             self.workflow._fire_event("on_task_staging_in_end", self)
         self.workflow._fire_event("on_task_execute_start", self)
         if not self.workflow.dry:
+            if self.workflow.is_portable_emulation() is True:
+                outputs = resolved.get("outputs") or {}
+                for name, relative in outputs.items():
+                    target = Path(self.working_dir, "outputs", relative)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(json.dumps({"portable": True, "output": name,
+                                                  "request": resolved}, sort_keys=True) + "\n",
+                                      encoding="utf-8")
+                self.workflow.checkpoints[key]["code"] = 0
+                self._release_references()
+                return
             command = [self.python, "-m", "dagon.web.runner", ".dagon/web_request.json"]
             environment = dict(os.environ, **self.environment)
             if self.executor == "local":

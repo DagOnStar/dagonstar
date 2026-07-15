@@ -39,6 +39,14 @@ cwltool cwl-example.cwl
 
 ## Portability boundary
 
+With `portable_emulation=True`, export is directly runnable: every step exposes
+its working directory as a CWL `Directory`, `workflow://` values become CWL
+input paths, infrastructure hints are suppressed, and service tasks use local
+emulation. The all-type contract validates and executes this document with
+`cwltool` when the reference runner is installed.
+
+Without portable emulation, the following backend boundary applies.
+
 The export describes commands and graph ordering; it is not a lossless
 translation of every DAGonStar executor. CWL runs exported commands in its own
 working directories. DAGonStar scratch management, checkpointing, remote SSH,

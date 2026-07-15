@@ -30,16 +30,19 @@ request specifications, and nested FaaS inputs.
 
 ## Notebook exercise
 
+Create the workflow with `portable_emulation=True`; this retains every original
+task type while executing its credential-free local semantics.
+
 Run the credential-free contract test:
 
 ```python
 !python3 -m unittest tests.test_tasktype_interoperability -v
 ```
 
-It constructs a single workflow containing every `TaskType`, without opening
+It constructs and executes a single workflow containing every `TaskType`, without opening
 external connections, and verifies dependencies, FAIR declarations, checkpoint
-reuse, and CWL export. This is safe in Jupyter and Colab after cloning the
-repository and installing its development dependencies.
+reuse, and runnable CWL export. This is safe in Jupyter and Colab after cloning
+the repository and installing `.[all]`.
 
 For live execution, configure each selected backend. A mixed workflow is
 operable when those backends are reachable and the selected staging method can

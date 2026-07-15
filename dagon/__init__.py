@@ -125,7 +125,8 @@ class Workflow(object):
             config_file: str = 'dagon.ini',
             max_threads: int = 10,
             jsonload: Optional[Dict[str, Any]] = None,
-            checkpoint_file: Optional[str] = None):
+            checkpoint_file: Optional[str] = None,
+            portable_emulation: bool = False):
         """
         Create a workflow
 
@@ -152,6 +153,7 @@ class Workflow(object):
 
         self._scratch_dir = None
         self.checkpoint_file = checkpoint_file
+        self.portable_emulation = bool(portable_emulation)
         self.logger = logging.getLogger()
         self.dag_tps = None
         self.dry = False
@@ -205,6 +207,10 @@ class Workflow(object):
                 self.logger.debug("Workflow registration success id = %s" % self.workflow_id)
             except Exception as e:
                 raise Exception(e)
+
+    def is_portable_emulation(self) -> bool:
+        """Return whether external backends must use credential-free local execution."""
+        return self.portable_emulation
 
     def get_dry(self):
         return self.dry
@@ -451,14 +457,33 @@ class Workflow(object):
                         % (task.name, self.name)
                     )
                 input_id = "after_" + task_ids[previous]
-                tool_inputs[input_id] = "boolean"
-                step_inputs[input_id] = task_ids[previous] + "/completed"
+                tool_inputs[input_id] = "Directory" if self.portable_emulation else "boolean"
+                step_inputs[input_id] = task_ids[previous] + ("/task_dir" if self.portable_emulation else "/completed")
+
+            if self.portable_emulation:
+                command_types = {"Checkpoint", "RemoteCheckpoint", "Batch", "RemoteBatch", "Slurm",
+                                 "RemoteSlurm", "CloudTask", "DockerTask", "DockerRemoteTask",
+                                 "KubernetesTask", "RemoteKubernetesTask", "ApptainerTask",
+                                 "RemoteApptainerTask", "NomadTask", "RemoteNomadTask"}
+                if type(task).__name__ in command_types:
+                    if type(task).__name__ in {"Checkpoint", "RemoteCheckpoint"}:
+                        command = command.split("checkpoint.sh ", 1)[-1]
+                    for previous in task.prevs:
+                        input_id = "after_" + task_ids[previous]
+                        for prefix in ("workflow:///%s/" % previous.name,
+                                       "workflow://%s/%s/" % (self.name, previous.name)):
+                            command = command.replace(prefix, "$(inputs.%s.path)/" % input_id)
+                    if type(task).__name__ in {"Checkpoint", "RemoteCheckpoint"}:
+                        command = "test -f " + command
+                else:
+                    command = "mkdir -p outputs; printf '%s\\n' '{\"portable_emulation\":true}' > outputs/result.json"
 
             tool = {
                 "class": "CommandLineTool",
                 "label": str(task.name),
                 "requirements": {"InlineJavascriptRequirement": {}},
-                "baseCommand": ["/bin/sh", "-c", command],
+                "baseCommand": ["/bin/sh", "-c"] if self.portable_emulation else ["/bin/sh", "-c", command],
+                **({"arguments": [command]} if self.portable_emulation else {}),
                 "inputs": tool_inputs,
                 "outputs": {
                     "completed": {
@@ -466,14 +491,16 @@ class Workflow(object):
                         "outputBinding": {
                             "outputEval": "$(runtime.exitCode === 0)"
                         },
-                    }
+                    },
+                    **({"task_dir": {"type": "Directory", "outputBinding": {"glob": "."}}}
+                       if self.portable_emulation else {})
                 },
             }
             image = getattr(task, "image", None)
-            if image:
+            if image and not self.portable_emulation:
                 tool["hints"] = {"DockerRequirement": {"dockerPull": image}}
 
-            if type(task).__name__ == "FaaSTask":
+            if type(task).__name__ == "FaaSTask" and not self.portable_emulation:
                 portable_spec = task._portable_spec()
                 tool.update({
                     "baseCommand": ["python", "-m", "dagon.faas_runner"],
@@ -491,7 +518,7 @@ class Workflow(object):
             steps[task_ids[task]] = {
                 "label": str(task.name),
                 "in": step_inputs,
-                "out": ["completed"],
+                "out": ["completed"] + (["task_dir"] if self.portable_emulation else []),
                 "run": tool,
             }
 

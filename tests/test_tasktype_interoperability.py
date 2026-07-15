@@ -8,12 +8,16 @@ cover command generation and mocked provider behavior separately.
 import tempfile
 import unittest
 import json
+import shutil
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
 from dagon.fair import Agent, Artifact, FairProfile
 from dagon.task import DagonTask, TaskType
 from tests.helpers import make_workflow
+from tests.helpers import minimal_config
+from dagon import Workflow, Status
 
 
 class TaskTypeInteroperabilityTests(unittest.TestCase):
@@ -110,7 +114,8 @@ class TaskTypeInteroperabilityTests(unittest.TestCase):
                 self.assertTrue(task.fair_checkpoint_reused)
 
     def test_mixed_tasktype_graph_exports_as_deterministic_cwl(self):
-        workflow = make_workflow("mixed-cwl")
+        config = minimal_config()
+        workflow = Workflow("mixed-cwl", config=config, portable_emulation=True)
         workflow.add_task(DagonTask(TaskType.BATCH, "producer",
                                     "mkdir -p output; echo value > output/value.txt"))
         for task in self._tasks().values():
@@ -119,8 +124,41 @@ class TaskTypeInteroperabilityTests(unittest.TestCase):
             target = Path(directory, "mixed.cwl")
             workflow.saveAsCWL(target)
             document = json.loads(target.read_text(encoding="utf-8"))
+            if shutil.which("cwltool"):
+                subprocess.run(["cwltool", "--validate", str(target)], check=True,
+                               text=True, capture_output=True)
+                executed = subprocess.run(["cwltool", "--no-container", str(target)],
+                                          text=True, capture_output=True)
+                self.assertEqual(executed.returncode, 0, executed.stderr)
         self.assertEqual(document["cwlVersion"], "v1.2")
         self.assertEqual(len(document["steps"]), len(TaskType) + 1)
+        self.assertNotIn("workflow://", json.dumps(document))
+        for step in document["steps"].values():
+            self.assertIn("task_dir", step["out"])
+
+    def test_every_task_type_executes_together_in_portable_emulation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = minimal_config()
+            config["batch"]["scratch_dir_base"] = directory
+            workflow = Workflow("portable-all", config=config, portable_emulation=True,
+                                checkpoint_file=str(Path(directory, "checkpoint.json")))
+            fair_dir = str(Path(directory, "fair"))
+            workflow.enable_fair(FairProfile(
+                title="Portable all-task execution",
+                description="Credential-free execution of every task type.",
+                creators=[Agent(name="DAGonStar tests")], license="Apache-2.0",
+                output_dir=fair_dir,
+            ))
+            workflow.add_task(DagonTask(TaskType.BATCH, "producer",
+                                        "mkdir -p output; printf '1\\n2\\n' > output/value.txt"))
+            tasks = self._tasks()
+            for task in tasks.values():
+                workflow.add_task(task)
+            workflow.run()
+            self.assertTrue(all(task.status is Status.FINISHED for task in workflow.tasks))
+            self.assertTrue(Path(directory, "checkpoint.json").is_file())
+            run = json.loads(Path(fair_dir, "run.json").read_text(encoding="utf-8"))
+            self.assertEqual(set(run["tasks"]), {task.name for task in workflow.tasks})
 
 
 if __name__ == "__main__":

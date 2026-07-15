@@ -195,7 +195,8 @@ The repository has a sound baseline for changes to the core behavior:
   FAIR principles, CWL export semantics, and the incremental tutorial; and
 - an all-factory contract test constructs a mixed workflow containing every
   `TaskType` and verifies `workflow://`, FAIR declarations, checkpoint reuse,
-  and deterministic CWL export without live external services;
+  portable execution, and runnable deterministic CWL export without live
+  external services;
 - sample configuration avoids committed credentials and the SKYCDS path checks
   for required runtime configuration; and
 - the LLM task boundary has local tests and a fully local mock-provider example.

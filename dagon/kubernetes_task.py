@@ -52,10 +52,12 @@ class KubernetesTask(Batch):
                       transversal_workflow=transversal_workflow)
 
         # Load Kubernetes configuration (from ~/.kube/config)
-        config.load_kube_config()
-
-        # API for managing pods
-        self.v1 = client.CoreV1Api()
+        try:
+            config.load_kube_config()
+            self.v1 = client.CoreV1Api()
+        except Exception:
+            # Portable emulation and CWL authoring do not require kubeconfig.
+            self.v1 = None
 
         self.image = image
         self.namespace = namespace

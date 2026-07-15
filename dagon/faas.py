@@ -281,11 +281,11 @@ class FaaSTask(Task):
             self.workflow._fire_event("on_task_staging_in_end", self)
         self.workflow._fire_event("on_task_execute_start", self)
         if not self.workflow.dry:
-            provider = get_provider(self.provider)
+            provider = get_provider("mock" if self.workflow.is_portable_emulation() is True else self.provider)
             capabilities = provider.capabilities()
             if self.invocation == "async" and not capabilities.supports_async:
                 raise FaaSError("Provider does not support asynchronous invocation", "unsupported_capability")
-            options = self._profile_options()
+            options = {} if self.workflow.is_portable_emulation() is True else self._profile_options()
             last_error = None
             for attempt in range(1, self.retry.max_attempts + 1):
                 envelope = self._envelope(resolved_inputs, attempt)

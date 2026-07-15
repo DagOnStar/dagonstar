@@ -79,6 +79,8 @@ Verify every task factory in one mixed workflow with:
 See [Task-type interoperability](tasktype_interoperability.md) for the backend
 matrix. Jupyter can execute any backend installed and configured on its host;
 otherwise it can still construct, validate, checkpoint, and export the graph.
+Set `portable_emulation=True` to execute every task type locally when its real
+backend is intentionally unavailable.
 
 ## Persistent outputs and scratch directories
 

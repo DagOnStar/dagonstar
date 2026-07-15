@@ -2,6 +2,8 @@ import logging
 import shutil
 import glob
 import os
+import subprocess
+import shlex
 from json import loads, dumps
 from threading import Thread
 from threading import Semaphore
@@ -241,6 +243,46 @@ class Task(Thread):
         }
         self.workflow.checkpoints[self.checkpoint_key()] = checkpoint
         return checkpoint
+
+    def portable_command(self) -> str:
+        """Resolve workflow references to local producer artifacts."""
+        command = self.command
+        checkpoint_task = type(self).__name__ in {"Checkpoint", "RemoteCheckpoint"}
+        if checkpoint_task:
+            command = command.split("checkpoint.sh ", 1)[-1]
+        for previous in self.prevs:
+            for prefix in ("workflow:///%s/" % previous.name,
+                           "workflow://%s/%s/" % (self.workflow.name, previous.name)):
+                while prefix in command:
+                    start = command.index(prefix)
+                    end = start + len(prefix)
+                    while end < len(command) and not command[end].isspace() and command[end] not in "'\";|)&":
+                        end += 1
+                    relative = command[start + len(prefix):end]
+                    command = command[:start] + os.path.join(previous.working_dir, relative) + command[end:]
+        return "test -f " + " ".join(shlex.quote(item) for item in command.split()) if checkpoint_task else command
+
+    def execute_portable(self) -> None:
+        """Execute a command task locally without contacting its configured backend."""
+        key = self.checkpoint_key()
+        if self.reuse_checkpoint():
+            self.remove_reference_workflow()
+            return
+        self.remove_scratch_dir = self.workflow.get_remove_dir_op()
+        if self.working_dir is None:
+            self.working_dir = os.path.join(self.workflow.get_scratch_dir_base(), self.get_scratch_name())
+        os.makedirs(os.path.join(self.working_dir, ".dagon"), exist_ok=True)
+        self.initialize_checkpoint()
+        self.workflow._fire_event("on_task_execute_start", self)
+        completed = subprocess.run(self.portable_command(), cwd=self.working_dir,
+                                   shell=True, executable="/bin/bash", text=True,
+                                   capture_output=True)
+        self.result = {"code": completed.returncode, "message": completed.stderr,
+                       "output": completed.stdout}
+        self.workflow.checkpoints[key]["code"] = completed.returncode
+        if completed.returncode:
+            raise RuntimeError("Portable task failed: " + completed.stderr)
+        self.remove_reference_workflow()
 
     def get_endpoint(self) -> Optional[str]:
         return self.globusendpoint
@@ -1015,6 +1057,8 @@ class Task(Thread):
 
         :raises Exception: a problem occurred during the task  execution
         """
+        if self.workflow.is_portable_emulation() is True:
+            return self.execute_portable()
         key = self.checkpoint_key()
 
         # Local checkpoint
