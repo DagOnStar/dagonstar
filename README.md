@@ -182,6 +182,8 @@ The repository has a sound baseline for changes to the core behavior:
   for required runtime configuration; and
 - the LLM task boundary has local tests and a fully local mock-provider example.
 - native Python tasks have local staging, dependency, output, and runner tests.
+- DynoStore has documented, tested task-level command examples; its
+  `DataMover` value remains reserved rather than an automatic stager.
 
 FAIR exports are local metadata artifacts, not repository publication: they do
 not copy large outputs, obtain remote checksums, or validate every optional

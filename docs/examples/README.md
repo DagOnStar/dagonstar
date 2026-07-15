@@ -32,6 +32,8 @@ verification strategy.
   skeleton.
 - [Native Python task example](native.md): staged files, scalar parameters, and declared outputs.
 - [Web task example](web_tasks.md): local HTTP execution, staged uploads, and response outputs.
+- [DynoStore examples](dynostore.md): offline command/graph inspection and an
+  optional live catalog upload/download workflow.
 - [Tutorial source programs](../../examples/tutorial/README.md): runnable local
   sources for the advanced LLM and web lessons.
 - [Colab notebook authoring](colab_notebooks.md): how to pair DAGonStar Python

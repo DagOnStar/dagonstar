@@ -370,6 +370,7 @@ semantics, and scratch-artifact behavior.
 - `SFTP`
 - `GRIDFTP`
 - `SKYCDS`
+- `DYNOSTORE` (reserved; automatic staging is not implemented on `master`)
 
 `StagerMover`:
 

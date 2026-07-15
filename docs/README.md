@@ -24,6 +24,7 @@ repository.
 - [LLM task tutorial](tutorial/lesson_12_llm_tasks.md)
 - [Web task tutorial](tutorial/lesson_13_web_tasks.md)
 - [Native task tutorial](tutorial/lesson_14_native_tasks.md)
+- [DynoStore integration](tutorial/lesson_16_using_dynostore.md)
 - [Examples Catalog](examples/README.md)
 
 ## Tutorials
@@ -44,6 +45,7 @@ repository.
 - [Lesson 13: Execute a web task locally](tutorial/lesson_13_web_tasks.md)
 - [Lesson 14: Execute native Python tasks](tutorial/lesson_14_native_tasks.md)
 - [Lesson 15: FAIR by design](tutorial/lesson_15_fair_by_design.md)
+- [Lesson 16: Use DynoStore with DAGonStar](tutorial/lesson_16_using_dynostore.md)
 
 ## Example family documentation
 
@@ -57,3 +59,4 @@ repository.
 - [HiPES tutorial examples](examples/hipes_tutorial.md)
 - [Environmental application examples](examples/environmental_application.md)
 - [LLM task example](examples/llm.md)
+- [DynoStore examples](examples/dynostore.md)
