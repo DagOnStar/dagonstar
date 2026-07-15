@@ -9,7 +9,8 @@ class TutorialValidationTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         path = root / "tools" / "validate_tutorial.py"
         spec = importlib.util.spec_from_file_location("validate_tutorial", path)
-        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
         self.assertEqual(module.validate(), [])
 
     def test_notebook_is_valid_json(self):
