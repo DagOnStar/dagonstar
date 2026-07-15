@@ -105,6 +105,21 @@ configuration validation separately from live integration behavior.
 
 ## Documentation standards
 
+- Preserve the tutorial's pedagogical order: graph construction, execution and
+  data movement, structured task models, distributed infrastructure, then FAIR
+  composition and CWL interoperability.
+- Every numbered tutorial lesson must retain the common metadata and headings
+  validated by `tools/validate_tutorial.py`, including a controlled experiment,
+  deterministic verification, scientific-practice discussion, and transition.
+- Verify tutorial claims against current source and tests. Update the tutorial
+  notebook, syllabus, example index, and inbound links whenever lessons change.
+- Keep infrastructure-dependent capabilities outside the mandatory local path;
+  label optional integrations as locally testable, infrastructure-dependent,
+  experimental, or reserved/planned.
+- Run tutorial structure/link checks, local examples, relevant unit tests, and
+  notebook JSON validation after documentation changes. Preserve formal academic
+  tone and distinguish observed evidence from inference.
+
 - All documentation, tutorials, Jupyter notebooks, and examples must remain
   mutually consistent and accurately reflect the current implementation.
 - Authoritative consistency clause: all repository documentation, including

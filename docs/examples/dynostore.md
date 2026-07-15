@@ -15,5 +15,5 @@ DAGonStar owns task execution and the explicit producer-to-consumer edge.
 
 This is currently a task-level integration, not an automatic DAGonStar stager.
 `DataMover.DYNOSTORE` is reserved in the enum, but `Stager.stage_in` does not
-execute it on `master`. See [Lesson 16](../tutorial/lesson_16_using_dynostore.md)
+execute it on the repository's documented branch. See the [optional DynoStore case study](../tutorial/integrations/dynostore.md)
 and the example README for setup, security, durability, and verification.

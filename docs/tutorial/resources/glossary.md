@@ -1,0 +1,20 @@
+# DAGonStar tutorial glossary
+
+- **Workflow:** a named collection of tasks and dependency edges.
+- **Task:** one unit of work with an execution model and managed working directory.
+- **Dependency edge:** a directed ordering relation from producer to consumer.
+- **Control dependency:** an edge that constrains order without identifying data.
+- **Data dependency:** an artifact relationship that also induces execution order.
+- **Producer / consumer:** the task creating an artifact / the task using it.
+- **Task working directory:** scratch location in which one task executes.
+- **Scratch root:** configured parent directory for task working directories.
+- **Staging:** materialising a producer artifact for a consumer.
+- **Launcher:** generated script that invokes a task command.
+- **Checkpoint:** persisted execution state used for conditional reuse.
+- **Synchronous / asynchronous execution:** caller-blocking run / background-thread launch.
+- **Backend:** execution environment such as local batch, Docker, SSH, or Slurm.
+- **Executor:** mechanism used by structured tasks to run locally or through Slurm.
+- **Declared artifact:** an intentional input or output described for provenance.
+- **Provenance:** evidence connecting agents, activities, inputs, and outputs.
+- **FAIR metadata:** descriptions supporting findability, accessibility, interoperability, and reuse; metadata alone is not publication.
+- **Export:** generation of a representation such as CWL; export does not execute it.

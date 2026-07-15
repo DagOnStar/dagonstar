@@ -41,7 +41,7 @@ no credentials.
 python3 examples/llm/local_mock_llm.py
 ```
 
-For a narrated version, see [Lesson 12: Run an LLM task locally](tutorial/lesson_12_llm_tasks.md).
+For a narrated version, see [Lesson 11: Execute an LLM task responsibly](tutorial/lesson_11_execute_an_llm_task_responsibly.md).
 
 ## Configure a provider
 

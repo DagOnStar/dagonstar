@@ -5,7 +5,7 @@
 Enable `FairProfile` on a workflow and use task `declare_outputs(Artifact(...))`
 or `declare_inputs()` for intentional data metadata. The recorder writes local
 RO-Crate, PROV, DataCite, CodeMeta, SHA-256 and human-readable reports. See the
-[FAIR principles](fair_principles.md) and [FAIR tutorial](tutorial/lesson_15_fair_by_design.md)
+[FAIR principles](fair_principles.md) and [FAIR tutorial](tutorial/lesson_15_make_a_workflow_fair_by_design.md)
 for the implemented model and a runnable example.
 This guide explains how to author DAGonStar workflows for scientific computing.
 
@@ -182,7 +182,7 @@ DagonTask(
 
 Configure `[llm.research]` locally with an endpoint, model, and `api_key_env`.
 The response is saved as `response.json` in the task directory. Use the
-[local mock example](../examples/llm/local_mock_llm.py) or [Lesson 12](tutorial/lesson_12_llm_tasks.md)
+[local mock example](../examples/llm/local_mock_llm.py) or [Lesson 11](tutorial/lesson_11_execute_an_llm_task_responsibly.md)
 before connecting a real provider.
 
 ## Data movement

@@ -62,8 +62,8 @@ Run commands from the repository root so relative paths resolve consistently:
 
 ```python
 %cd /path/to/dagonstar
-!python examples/tutorial/lesson_12_llm_tasks.py
-!python examples/tutorial/lesson_13_web_tasks.py
+!python examples/tutorial/lesson_11_llm_tasks.py
+!python examples/tutorial/lesson_10_web_tasks.py
 ```
 
 For a notebook-native lesson, split the script into cells for configuration,

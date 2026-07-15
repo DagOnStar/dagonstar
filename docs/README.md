@@ -1,74 +1,32 @@
-# DAGonStar Documentation
+# DAGonStar documentation
 
-This directory contains the full DAGonStar documentation set. The documentation
-is authoritative only when it matches the current implementation in this
-repository.
+Start with the [academic tutorial syllabus](tutorial/README.md). It presents the curriculum by module rather than as a feature catalogue:
 
-## Core documents
+- orientation and setup;
+- workflow graph construction;
+- execution, staging, checkpointing, and lifecycle;
+- native Python, web, and LLM task models;
+- optional Docker, SSH, and Slurm infrastructure;
+- FAIR metadata, meta-workflows, and CWL interoperability;
+- [optional integrations](tutorial/integrations/README.md).
 
-- [Introduction to Scientific Workflows](introduction_to_scientific_workflow.md)
-- [Getting Started](getting_started.md)
-- [Configuration](configuration.md)
-- [LLM Tasks](llm_tasks.md)
-- [Web Tasks](web_tasks.md)
-- [Native Tasks](native_tasks.md)
-- [FaaS Tasks](faas_tasks.md)
-- [FaaS Providers](faas_providers.md)
-- [FaaS FAIR mapping](faas_fair.md)
-- [FaaS CWL export](faas_cwl.md)
-- [Architecture](architecture.md)
-- [FAIR by Design](fair_principles.md)
-- [User Guide](user_guide.md)
-- [Reference Guide](reference_guide.md)
-- [Developer Guide](developer_guide.md)
-- [Running External Scientific Software](running_external_software.md)
-- [The `workflow://` Schema](the_workflow_schema.md)
-- [Checkpoints](checkpoints.md)
-- [Exporting workflows to CWL](cwl_export.md)
-- [Asynchronous workflow launch](asynch_launch.md)
-- [LLM task tutorial](tutorial/lesson_12_llm_tasks.md)
-- [Web task tutorial](tutorial/lesson_13_web_tasks.md)
-- [Native task tutorial](tutorial/lesson_14_native_tasks.md)
-- [DynoStore integration](tutorial/lesson_16_using_dynostore.md)
-- [CWL interoperability tutorial](tutorial/lesson_17_cwl_interoperability.md)
-- [Examples Catalog](examples/README.md)
+The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) covers the core and task-model path. Use the [glossary](tutorial/resources/glossary.md) and [troubleshooting guide](tutorial/resources/troubleshooting.md) while working through it.
 
-## Tutorials
+## Guides
 
-- [Tutorial index](tutorial/README.md)
-- [Lesson 01: Create a local workflow](tutorial/lesson_01_local_workflow.md)
-- [Lesson 02: Add explicit task dependencies](tutorial/lesson_02_explicit_dependencies.md)
-- [Lesson 03: Use `workflow://` data dependencies](tutorial/lesson_03_data_dependencies.md)
-- [Lesson 04: Inspect scratch directories and generated launchers](tutorial/lesson_04_scratch_and_launchers.md)
-- [Lesson 05: Detect and fix dependency cycles](tutorial/lesson_05_cycle_detection.md)
-- [Lesson 06: Use checkpoint files](tutorial/lesson_06_checkpointing.md)
-- [Lesson 07: Choose data staging modes](tutorial/lesson_07_data_staging.md)
-- [Lesson 08: Run Docker-backed tasks](tutorial/lesson_08_docker_tasks.md)
-- [Lesson 09: Prepare remote and Slurm workflows](tutorial/lesson_09_remote_and_slurm.md)
-- [Lesson 10: Compose meta-workflows](tutorial/lesson_10_meta_workflows.md)
-- [Lesson 11: Launch a workflow asynchronously](tutorial/lesson_11_asynchronous_launch.md)
-- [Lesson 12: Run an LLM task locally](tutorial/lesson_12_llm_tasks.md)
-- [Lesson 13: Execute a web task locally](tutorial/lesson_13_web_tasks.md)
-- [Lesson 14: Execute native Python tasks](tutorial/lesson_14_native_tasks.md)
-- [Lesson 15: FAIR by design](tutorial/lesson_15_fair_by_design.md)
-- [Lesson 16: Use DynoStore with DAGonStar](tutorial/lesson_16_using_dynostore.md)
-- [Lesson 17: Interoperate with Common Workflow Language](tutorial/lesson_17_cwl_interoperability.md)
-- [Lesson 18: Local mock FaaS](tutorial/lesson_18_faas_mock.md)
-- [Lesson 19: FaaS workflow artifacts](tutorial/lesson_19_faas_artifacts.md)
-- [Lesson 20: FaaS FAIR and exports](tutorial/lesson_20_faas_fair_exports.md)
-- [Lesson 21: Cloud FaaS profiles](tutorial/lesson_21_faas_cloud_profiles.md)
+- [Getting started](getting_started.md)
+- [User guide](user_guide.md)
+- [Reference guide](reference_guide.md)
+- [Developer guide](developer_guide.md)
+- [Scientific workflows](introduction_to_scientific_workflow.md)
+- [Workflow schema](the_workflow_schema.md)
+- [Checkpointing](checkpoints.md)
+- [Asynchronous launch](asynch_launch.md)
+- [Native tasks](native_tasks.md)
+- [Web tasks](web_tasks.md)
+- [LLM tasks](llm_tasks.md)
+- [FAIR principles](fair_principles.md)
+- [CWL export](cwl_export.md)
+- [Examples](examples/README.md)
 
-## Example family documentation
-
-- [Taskflow examples](examples/taskflow.md)
-- [Batch dataflow examples](examples/dataflow_batch.md)
-- [Docker dataflow examples](examples/dataflow_docker.md)
-- [Slurm dataflow examples](examples/dataflow_slurm.md)
-- [Cloud dataflow examples](examples/dataflow_cloud.md)
-- [Globus dataflow example](examples/dataflow_globus.md)
-- [Transversal and meta-workflow examples](examples/transversal.md)
-- [HiPES tutorial examples](examples/hipes_tutorial.md)
-- [CWL interoperability example](examples/cwl.md)
-- [Environmental application examples](examples/environmental_application.md)
-- [LLM task example](examples/llm.md)
-- [DynoStore examples](examples/dynostore.md)
+Documentation follows the implementation-first rule: source and passing tests define supported behavior. Infrastructure and experimental integrations are labelled explicitly and are never prerequisites for the local core track.

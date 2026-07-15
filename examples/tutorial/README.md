@@ -1,40 +1,23 @@
-# Tutorial source programs
+# DAGonStar tutorial examples
 
-These scripts are the authoritative, runnable sources for the advanced tutorial
-lessons. Run them from the repository root after installing DAGonStar:
+These scripts are authoritative runnable companions to the redesigned curriculum. Run them from the repository root after `python -m pip install -e .`.
 
-```bash
-python3 examples/tutorial/lesson_12_llm_tasks.py
-python3 examples/tutorial/lesson_13_web_tasks.py
-python3 examples/cwl/export_workflow.py --output /tmp/interoperable-workflow.cwl
-```
+~~~bash
+python examples/tutorial/lesson_01_first_local_task.py
+python examples/tutorial/lesson_02_build_a_dag.py
+python examples/tutorial/lesson_03_workflow_data_dependencies.py
+python examples/tutorial/lesson_04_validate_and_fix_cycles.py
+python examples/tutorial/lesson_05_scratch_launchers_and_logs.py
+python examples/tutorial/lesson_06_data_staging.py
+python examples/tutorial/lesson_07_checkpoint_and_resume.py
+python examples/tutorial/lesson_08_asynchronous_execution.py
+python examples/tutorial/lesson_09_native_python_tasks.py
+python examples/tutorial/lesson_10_web_tasks.py
+python examples/tutorial/lesson_11_llm_tasks.py
+~~~
 
-The LLM and web scripts use a temporary scratch directory and a local
-`127.0.0.1` service. The CWL lesson writes a deterministic document. None
-requires credentials or an Internet connection.
+Lessons 01–09 use local files and processes. Lessons 10 and 11 bind short-lived deterministic mock services to `127.0.0.1` on an available port and close them cleanly. They use no public service or real credential. Every script uses an isolated temporary scratch directory and exact assertions.
 
-## Google Colab
+Lessons 12–14 use repository unit tests for deterministic structural verification; optional live Docker, SSH, and Slurm checks require site infrastructure. Lesson 15 uses FAIR tests, Lesson 16 uses the transversal-dependency test, and Lesson 17 uses the CWL example test. See the [tutorial syllabus](../../docs/tutorial/README.md) for commands and limitations.
 
-> Colab compatibility: supported. Both scripts use local execution only and can
-> run in a hosted Colab runtime.
-
-Install either the packaged release or the latest GitHub version:
-
-```python
-!pip install dagonstar
-# or: !pip install git+https://github.com/DagOnStar/dagonstar.git
-```
-
-To run these repository scripts, clone the tree first:
-
-```python
-!git clone https://github.com/DagOnStar/dagonstar.git
-%cd dagonstar
-!pip install -e .
-!python examples/tutorial/lesson_12_llm_tasks.py
-!python examples/tutorial/lesson_13_web_tasks.py
-!python examples/cwl/export_workflow.py --output /tmp/interoperable-workflow.cwl
-```
-
-Do not place provider keys or other credentials in a notebook. The bundled
-examples use local mock services; real providers require secure configuration.
+The older `lesson_12_llm_tasks.py` and `lesson_13_web_tasks.py` remain as implementation sources for compatibility; canonical wrappers expose them as Lessons 11 and 10 respectively.
