@@ -105,6 +105,8 @@ configuration validation separately from live integration behavior.
 
 ## Documentation standards
 
+- All documentation, tutorials, Jupyter notebooks, and examples must remain
+  mutually consistent and accurately reflect the current implementation.
 - Authoritative consistency clause: all repository documentation, including
   `README.md`, `AGENTS.md`, and every file under `docs/`, must remain consistent
   with the current software implementation. Do not document aspirational,
