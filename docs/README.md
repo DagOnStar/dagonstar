@@ -26,6 +26,7 @@ repository.
 - [Web task tutorial](tutorial/lesson_13_web_tasks.md)
 - [Native task tutorial](tutorial/lesson_14_native_tasks.md)
 - [DynoStore integration](tutorial/lesson_16_using_dynostore.md)
+- [CWL interoperability tutorial](tutorial/lesson_17_cwl_interoperability.md)
 - [Examples Catalog](examples/README.md)
 
 ## Tutorials
@@ -47,6 +48,7 @@ repository.
 - [Lesson 14: Execute native Python tasks](tutorial/lesson_14_native_tasks.md)
 - [Lesson 15: FAIR by design](tutorial/lesson_15_fair_by_design.md)
 - [Lesson 16: Use DynoStore with DAGonStar](tutorial/lesson_16_using_dynostore.md)
+- [Lesson 17: Interoperate with Common Workflow Language](tutorial/lesson_17_cwl_interoperability.md)
 
 ## Example family documentation
 
@@ -58,6 +60,7 @@ repository.
 - [Globus dataflow example](examples/dataflow_globus.md)
 - [Transversal and meta-workflow examples](examples/transversal.md)
 - [HiPES tutorial examples](examples/hipes_tutorial.md)
+- [CWL interoperability example](examples/cwl.md)
 - [Environmental application examples](examples/environmental_application.md)
 - [LLM task example](examples/llm.md)
 - [DynoStore examples](examples/dynostore.md)

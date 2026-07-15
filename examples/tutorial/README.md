@@ -6,9 +6,11 @@ lessons. Run them from the repository root after installing DAGonStar:
 ```bash
 python3 examples/tutorial/lesson_12_llm_tasks.py
 python3 examples/tutorial/lesson_13_web_tasks.py
+python3 examples/cwl/export_workflow.py --output /tmp/interoperable-workflow.cwl
 ```
 
-Both use a temporary scratch directory and a local `127.0.0.1` service; neither
+The LLM and web scripts use a temporary scratch directory and a local
+`127.0.0.1` service. The CWL lesson writes a deterministic document. None
 requires credentials or an Internet connection.
 
 ## Google Colab
@@ -31,6 +33,7 @@ To run these repository scripts, clone the tree first:
 !pip install -e .
 !python examples/tutorial/lesson_12_llm_tasks.py
 !python examples/tutorial/lesson_13_web_tasks.py
+!python examples/cwl/export_workflow.py --output /tmp/interoperable-workflow.cwl
 ```
 
 Do not place provider keys or other credentials in a notebook. The bundled

@@ -1,10 +1,11 @@
 # DAGonStar Tutorial Sequence
 
-This tutorial contains sixteen incremental lessons. The lessons are designed to be
+This tutorial contains seventeen incremental lessons. The lessons are designed to be
 read in order and to remain consistent with the current DAGonStar implementation.
 
-For an executable Colab-ready version of the complete sequence, open
-[`DAGonStar_tutorial.ipynb`](DAGonStar_tutorial.ipynb).
+For an executable Colab-ready companion covering the core local sequence, open
+[`DAGonStar_tutorial.ipynb`](DAGonStar_tutorial.ipynb). Later integration
+lessons use the linked repository scripts and service-specific instructions.
 
 Most lessons use local batch workflows so they can be verified on a normal
 developer machine. Lessons involving Docker, SSH, Slurm, or cloud execution are
@@ -28,6 +29,7 @@ explicitly marked as optional integration exercises.
 14. [Execute native Python tasks](lesson_14_native_tasks.md)
 15. [Record FAIR metadata and provenance](lesson_15_fair_by_design.md)
 16. [Use DynoStore with DAGonStar](lesson_16_using_dynostore.md)
+17. [Interoperate with Common Workflow Language](lesson_17_cwl_interoperability.md)
 
 ## Google Colab compatibility
 
@@ -53,6 +55,7 @@ and treat remote services as separately configured backends.
 | 14 Native Python tasks | Supported | Local Python functions. |
 | 15 FAIR metadata and provenance | Supported | Standard-library local metadata exports. |
 | 16 DynoStore | Structural example supported | A live run requires a reachable DynoStore deployment and client. |
+| 17 CWL interoperability | Export supported | Generation is local; running needs a CWL v1.2 runner. |
 
 For supported lessons, first choose one installation method in a Colab cell:
 

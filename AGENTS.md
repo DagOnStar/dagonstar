@@ -35,6 +35,18 @@ local, remote, Slurm, Docker, cloud, and data-staging environments.
   State Colab support precisely and use temporary or user-chosen scratch paths
   rather than requiring a developer's private configuration.
 
+## Mandatory CWL interoperability
+
+- DAGonStar workflow, task, and dependency changes must preserve the supported
+  Common Workflow Language v1.2 interoperability contract exposed by
+  `Workflow.saveAsCWL(filename)`.
+- Keep CWL exports standards-valid, dependency-free in the base installation,
+  deterministic, credential-safe, and explicit about the boundary between
+  portable command-graph semantics and DAGonStar-specific execution or staging.
+- Any behavior change affecting CWL export must update the automated CWL tests,
+  `examples/cwl/`, `docs/cwl_export.md`, the CWL example guide, the CWL tutorial,
+  and all affected API and README documentation.
+
 ## Important paths
 
 - `dagon/`: core library code.

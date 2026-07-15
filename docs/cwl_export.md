@@ -55,3 +55,10 @@ provides a non-empty shell command.
 
 The exported file contains task commands and container image names. Review it
 before sharing, and never place credentials in commands.
+
+## Runnable interoperability material
+
+The [`examples/cwl/`](../examples/cwl/README.md) directory contains the Python
+source and its deterministic, checked-in CWL output. The [example guide](examples/cwl.md)
+and [Lesson 17](tutorial/lesson_17_cwl_interoperability.md) cover regeneration,
+automatic testing, runner validation, and the interoperability boundary.

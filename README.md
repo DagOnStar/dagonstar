@@ -130,7 +130,7 @@ The full documentation set is available in `docs/`:
 - [Using DAGonStar from Jupyter Notebook](docs/jupyter_notebook.md)
 - [Running DAGonStar demos in Google Colab](docs/colab.md)
 - [Examples Catalog](docs/examples/README.md)
-- [Tutorials: fifteen incremental lessons](docs/tutorial/README.md)
+- [Tutorials: seventeen incremental lessons](docs/tutorial/README.md)
 
 ## What DAGonStar supports
 
@@ -147,6 +147,8 @@ The full documentation set is available in `docs/`:
 - Data staging by link, copy, SCP, Globus, and SKYCDS.
 - Checkpoint/resume support.
 - Self-contained Common Workflow Language (CWL) v1.2 command-graph export.
+- A deterministic DAGonStar-to-CWL interoperability example, checked-in CWL
+  artifact, reference-runner validation hook, and incremental tutorial lesson.
 - Native, opt-in FAIR metadata and provenance recording with RO-Crate, PROV,
   DataCite, CodeMeta, local output fixity, validation, and reports.
 - Meta-workflows that coordinate multiple workflows.
@@ -168,7 +170,8 @@ staging and remote runtime behavior remain outside that export boundary.
 The repository has a sound baseline for changes to the core behavior:
 
 - unit tests cover configuration parsing, workflow defaults and dependency
-  discovery, cycle validation, JSON and CWL serialization, checkpoint reuse, staging
+  discovery, cycle validation, JSON and CWL serialization, deterministic CWL
+  example regeneration, checkpoint reuse, staging
   command generation, Docker and remote-container construction, SSH-port
   forwarding, packaging extras, optional integration boundaries,
   selected shell-quoting behavior, SSH host-key verification and safe remote
@@ -332,10 +335,20 @@ Example groups:
 - `examples/dataflow/cloud`: cloud-backed task examples.
 - `examples/transversal`: meta-workflow and transversal processing examples.
 - `examples/hipes-tutorial`: tutorial material for HiPES workflows.
+- `examples/cwl`: portable command-graph export plus a checked-in CWL v1.2
+  document; see the [example guide](docs/examples/cwl.md) and
+  [Lesson 17](docs/tutorial/lesson_17_cwl_interoperability.md).
 - `examples/envapp`: environmental application workflows and utilities.
 - `examples/async`: local asynchronous launch and lifecycle-callback example.
 - `examples/native`: importable Python functions with staged `workflow://` inputs.
 - `examples/web`: local HTTP request, staged upload, and downstream native processing.
+
+Generate and test the portable CWL example without a private configuration:
+
+```bash
+python3 examples/cwl/export_workflow.py --output /tmp/interoperable-workflow.cwl
+python3 -m unittest tests.test_cwl_example -v
+```
 
 ## Web tasks
 
