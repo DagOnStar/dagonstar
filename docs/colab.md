@@ -53,8 +53,8 @@ The ready-to-use notebooks are in
 tutorial scripts are also suitable for hosted Colab:
 
 ```python
-!python examples/tutorial/lesson_12_llm_tasks.py
-!python examples/tutorial/lesson_13_web_tasks.py
+!python examples/tutorial/lesson_11_llm_tasks.py
+!python examples/tutorial/lesson_10_web_tasks.py
 ```
 
 Lesson 15's FAIR workflow is also local and credential-free. Its complete

@@ -13,4 +13,4 @@ python3 examples/llm/local_mock_llm.py
 
 `llm-demo.py` is a real-provider skeleton and requires a locally configured
 `[llm.example]` provider. See [LLM Tasks](../llm_tasks.md) for configuration and
-[Lesson 12](../tutorial/lesson_12_llm_tasks.md) for the incremental explanation.
+[Lesson 11](../tutorial/lesson_11_execute_an_llm_task_responsibly.md) for the incremental explanation.

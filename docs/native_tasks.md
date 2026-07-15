@@ -280,4 +280,4 @@ install `requirements.txt` as part of submission.
 
 See the concise API summary in the [Reference Guide](reference_guide.md), the
 [native example](../examples/native/README.md), and the
-[native-task tutorial](tutorial/lesson_14_native_tasks.md).
+[native-task tutorial](tutorial/lesson_09_execute_native_python_functions.md).

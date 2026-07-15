@@ -272,7 +272,7 @@ workflow.run()
 
 Outputs are written below `<scratch>/.dagon/fair/<workflow>/<run>/`, including
 `run.json`, `ro-crate-metadata.json`, `prov.json`, `checksums.sha256`, and a
-FAIRness report. See [Lesson 15](docs/tutorial/lesson_15_fair_by_design.md).
+FAIRness report. See [Lesson 15](docs/tutorial/lesson_15_make_a_workflow_fair_by_design.md).
 
 `requirements.txt` remains a full development/demo environment that installs
 the optional integration dependencies together.
@@ -351,7 +351,7 @@ Example groups:
 - `examples/hipes-tutorial`: tutorial material for HiPES workflows.
 - `examples/cwl`: portable command-graph export plus a checked-in CWL v1.2
   document; see the [example guide](docs/examples/cwl.md) and
-  [Lesson 17](docs/tutorial/lesson_17_cwl_interoperability.md).
+  [Lesson 17](docs/tutorial/lesson_17_export_and_validate_common_workflow_language.md).
 - `examples/envapp`: environmental application workflows and utilities.
 - `examples/async`: local asynchronous launch and lifecycle-callback example.
 - `examples/native`: importable Python functions with staged `workflow://` inputs.
@@ -373,7 +373,7 @@ python3 -m unittest tests.test_cwl_example -v
 DagonTask(TaskType.WEB, "fetch", {"method": "GET", "url": "https://example.org/data", "outputs": {"body": "data.json"}})
 ```
 
-Responses are written below `outputs/` and request metadata is stored in `.dagon/`. Web tasks use the existing local or Slurm executor mode. Use environment-variable auth fields, never literal secrets. See the [example](examples/web/README.md), [example guide](docs/examples/web_tasks.md), and [tutorial](docs/tutorial/lesson_13_web_tasks.md).
+Responses are written below `outputs/` and request metadata is stored in `.dagon/`. Web tasks use the existing local or Slurm executor mode. Use environment-variable auth fields, never literal secrets. See the [example](examples/web/README.md), [example guide](docs/examples/web_tasks.md), and [tutorial](docs/tutorial/lesson_10_execute_a_web_service_task.md).
 
 ## Native Python tasks
 
@@ -383,7 +383,7 @@ Responses are written below `outputs/` and request metadata is stored in `.dagon
 DagonTask(TaskType.NATIVE, "transform", "myworkflow.tasks:transform", inputs={"input_file": "workflow:///prepare/data.csv", "scale": 0.7}, outputs={"output_file": "clean.csv"})
 ```
 
-File arguments are staged below `inputs/`, outputs are paths below `outputs/`, and the JSON return value is written to `.dagon/native_result.json`. See the [native example](examples/native/README.md) and [tutorial lesson](docs/tutorial/lesson_14_native_tasks.md).
+File arguments are staged below `inputs/`, outputs are paths below `outputs/`, and the JSON return value is written to `.dagon/native_result.json`. See the [native example](examples/native/README.md) and [tutorial lesson](docs/tutorial/lesson_09_execute_native_python_functions.md).
 
 ## FaaS tasks
 

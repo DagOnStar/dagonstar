@@ -8,7 +8,7 @@ directory, so its response can become an explicit input to downstream tasks.
 
 This guide is a reference for the implementation in this repository. For a
 self-contained local upload demonstration, see the
-[Web task tutorial](tutorial/lesson_13_web_tasks.md).
+[Web task tutorial](tutorial/lesson_10_execute_a_web_service_task.md).
 
 ## Quick start: an unauthenticated GET request
 
