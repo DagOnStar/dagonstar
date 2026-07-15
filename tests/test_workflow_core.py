@@ -2,6 +2,8 @@ import unittest
 import time
 import tempfile
 import threading
+import json
+import os
 
 import dagon
 from dagon.task import DagonTask, TaskType
@@ -129,6 +131,54 @@ class WorkflowCoreTests(unittest.TestCase):
         self.assertEqual(len(workflow.tasks), 1)
         self.assertEqual(workflow.tasks[0].command, "echo A")
         self.assertIs(workflow.tasks[0].workflow, workflow)
+
+    def test_save_as_cwl_exports_commands_dependencies_and_terminal_output(self):
+        workflow = make_workflow("CWL export")
+        prepare = DagonTask(TaskType.BATCH, "prepare-data", "echo data > result.txt")
+        analyze = DagonTask(TaskType.BATCH, "2 analyze", "wc -c workflow:///prepare-data/result.txt")
+        workflow.add_task(prepare)
+        workflow.add_task(analyze)
+
+        with tempfile.TemporaryDirectory() as directory:
+            filename = os.path.join(directory, "workflow.cwl")
+            workflow.saveAsCWL(filename)
+            with open(filename, encoding="utf-8") as stream:
+                document = json.load(stream)
+
+        self.assertEqual(document["cwlVersion"], "v1.2")
+        self.assertEqual(document["class"], "Workflow")
+        self.assertEqual(set(document["steps"]), {"prepare_data", "task_2_analyze"})
+        self.assertEqual(
+            document["steps"]["task_2_analyze"]["in"]["after_prepare_data"],
+            "prepare_data/completed",
+        )
+        self.assertEqual(
+            document["steps"]["prepare_data"]["run"]["baseCommand"],
+            ["/bin/sh", "-c", "echo data > result.txt"],
+        )
+        self.assertEqual(
+            document["outputs"]["task_2_analyze_completed"]["outputSource"],
+            "task_2_analyze/completed",
+        )
+
+    def test_save_as_cwl_preserves_explicit_dependencies(self):
+        workflow = make_workflow("ExplicitCWL")
+        first = DagonTask(TaskType.BATCH, "first", "echo first")
+        second = DagonTask(TaskType.BATCH, "second", "echo second")
+        workflow.add_task(first)
+        workflow.add_task(second)
+        second.add_dependency_to(first)
+
+        with tempfile.TemporaryDirectory() as directory:
+            filename = os.path.join(directory, "workflow.cwl")
+            workflow.saveAsCWL(filename)
+            with open(filename, encoding="utf-8") as stream:
+                document = json.load(stream)
+
+        self.assertEqual(
+            document["steps"]["second"]["in"]["after_first"],
+            "first/completed",
+        )
 
     def test_launch_wait_and_lifecycle_events(self):
         config = minimal_config()

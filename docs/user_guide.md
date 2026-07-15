@@ -27,6 +27,10 @@ workflow.make_dependencies()
 workflow.run()
 ```
 
+To exchange the command graph with CWL-aware tools, call
+`workflow.saveAsCWL("workflow.cwl")`. See [Exporting workflows to CWL](cwl_export.md)
+for validation instructions and the portability boundary.
+
 Use the `if __name__ == "__main__":` guard in scripts that may be imported by
 tests or other tools.
 

@@ -20,6 +20,7 @@ repository.
 - [Running External Scientific Software](running_external_software.md)
 - [The `workflow://` Schema](the_workflow_schema.md)
 - [Checkpoints](checkpoints.md)
+- [Exporting workflows to CWL](cwl_export.md)
 - [Asynchronous workflow launch](asynch_launch.md)
 - [LLM task tutorial](tutorial/lesson_12_llm_tasks.md)
 - [Web task tutorial](tutorial/lesson_13_web_tasks.md)

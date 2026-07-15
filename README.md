@@ -125,6 +125,7 @@ The full documentation set is available in `docs/`:
 - [Running External Scientific Software](docs/running_external_software.md)
 - [The `workflow://` Schema](docs/the_workflow_schema.md)
 - [Checkpoints](docs/checkpoints.md)
+- [Exporting workflows to CWL](docs/cwl_export.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
 - [Using DAGonStar from Jupyter Notebook](docs/jupyter_notebook.md)
 - [Running DAGonStar demos in Google Colab](docs/colab.md)
@@ -145,6 +146,7 @@ The full documentation set is available in `docs/`:
 - Web tasks for structured HTTP/HTTPS requests with scratch-local response outputs.
 - Data staging by link, copy, SCP, Globus, and SKYCDS.
 - Checkpoint/resume support.
+- Self-contained Common Workflow Language (CWL) v1.2 command-graph export.
 - Native, opt-in FAIR metadata and provenance recording with RO-Crate, PROV,
   DataCite, CodeMeta, local output fixity, validation, and reports.
 - Meta-workflows that coordinate multiple workflows.
@@ -159,11 +161,14 @@ Workflows can also run in a background thread with lifecycle callbacks for
 local progress reporting. The opt-in FAIR recorder makes lifecycle, task,
 dependency, output, fixity, and checkpoint-reuse metadata available in standard
 local exports without adding dependencies or changing existing workflows.
+Workflows can also be saved as self-contained CWL v1.2 JSON documents for
+interchange and validation by CWL-aware tools; executor-specific DAGonStar
+staging and remote runtime behavior remain outside that export boundary.
 
 The repository has a sound baseline for changes to the core behavior:
 
 - unit tests cover configuration parsing, workflow defaults and dependency
-  discovery, cycle validation, JSON serialization, checkpoint reuse, staging
+  discovery, cycle validation, JSON and CWL serialization, checkpoint reuse, staging
   command generation, Docker and remote-container construction, SSH-port
   forwarding, packaging extras, optional integration boundaries,
   selected shell-quoting behavior, SSH host-key verification and safe remote
@@ -177,7 +182,7 @@ The repository has a sound baseline for changes to the core behavior:
   allowing hosted notebook environments such as Google Colab to retain their
   platform dependencies;
 - documentation covers configuration, architecture, checkpoints, examples,
-  FAIR principles, and the incremental tutorial; and
+  FAIR principles, CWL export semantics, and the incremental tutorial; and
 - sample configuration avoids committed credentials and the SKYCDS path checks
   for required runtime configuration; and
 - the LLM task boundary has local tests and a fully local mock-provider example.

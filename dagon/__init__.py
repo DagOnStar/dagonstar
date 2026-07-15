@@ -2,6 +2,7 @@ import logging
 import logging.config
 import os
 import json
+import re
 from logging.config import fileConfig
 import threading
 from configparser import NoSectionError
@@ -386,6 +387,118 @@ class Workflow(object):
         for task in self.tasks:
             jsonWorkflow['tasks'][task.name] = task.as_json()
         return jsonWorkflow
+
+    def saveAsCWL(self, filename: str) -> None:
+        """Save this workflow as a self-contained CWL v1.2 document.
+
+        Each DAGonStar task is represented by an embedded ``CommandLineTool``
+        which invokes its command through ``/bin/sh -c``.  Boolean completion
+        outputs connect dependent steps, preserving both explicit and
+        ``workflow://``-discovered ordering without inventing file outputs.
+
+        :param filename: destination path for the JSON-form CWL document
+        :raises ValueError: if a task has no command that CWL can execute
+        """
+        # Dependency discovery normally happens immediately before a run.  Do
+        # it here as well, while retaining any explicit edges already attached
+        # by callers (make_dependencies rebuilds the discovered graph).
+        if not self._dependencies_made:
+            explicit_edges = [
+                (previous, task)
+                for task in self.tasks
+                for previous in task.prevs
+                if previous in self.tasks
+            ]
+            self.make_dependencies()
+            for previous, task in explicit_edges:
+                if previous not in task.prevs:
+                    previous.nexts.append(task)
+                    task.prevs.append(previous)
+            self.Validate_WF()
+
+        def cwl_identifier(value: str, used: set) -> str:
+            identifier = re.sub(r"[^A-Za-z0-9_]", "_", value)
+            if not identifier or not identifier[0].isalpha():
+                identifier = "task_" + identifier
+            candidate = identifier
+            suffix = 2
+            while candidate in used:
+                candidate = "%s_%d" % (identifier, suffix)
+                suffix += 1
+            used.add(candidate)
+            return candidate
+
+        used_ids = set()
+        task_ids = {
+            task: cwl_identifier(str(task.name), used_ids)
+            for task in self.tasks
+        }
+        steps = {}
+        for task in self.tasks:
+            command = getattr(task, "command", None)
+            if not isinstance(command, str) or not command:
+                raise ValueError(
+                    "Task %s has no shell command that can be exported to CWL"
+                    % task.name
+                )
+
+            step_inputs = {}
+            tool_inputs = {}
+            for previous in task.prevs:
+                if previous not in task_ids:
+                    raise ValueError(
+                        "Task %s depends on a task outside workflow %s"
+                        % (task.name, self.name)
+                    )
+                input_id = "after_" + task_ids[previous]
+                tool_inputs[input_id] = "boolean"
+                step_inputs[input_id] = task_ids[previous] + "/completed"
+
+            tool = {
+                "class": "CommandLineTool",
+                "label": str(task.name),
+                "requirements": {"InlineJavascriptRequirement": {}},
+                "baseCommand": ["/bin/sh", "-c", command],
+                "inputs": tool_inputs,
+                "outputs": {
+                    "completed": {
+                        "type": "boolean",
+                        "outputBinding": {
+                            "outputEval": "$(runtime.exitCode === 0)"
+                        },
+                    }
+                },
+            }
+            image = getattr(task, "image", None)
+            if image:
+                tool["hints"] = {"DockerRequirement": {"dockerPull": image}}
+
+            steps[task_ids[task]] = {
+                "label": str(task.name),
+                "in": step_inputs,
+                "out": ["completed"],
+                "run": tool,
+            }
+
+        terminal_tasks = [task for task in self.tasks if not task.nexts]
+        outputs = {
+            task_ids[task] + "_completed": {
+                "type": "boolean",
+                "outputSource": task_ids[task] + "/completed",
+            }
+            for task in terminal_tasks
+        }
+        document = {
+            "cwlVersion": "v1.2",
+            "class": "Workflow",
+            "label": self.name,
+            "inputs": {},
+            "outputs": outputs,
+            "steps": steps,
+        }
+        with open(os.fspath(filename), "w", encoding="utf-8") as stream:
+            json.dump(document, stream, indent=2, sort_keys=False)
+            stream.write("\n")
 
     def run(self, resume_checkpoint_file = None):
         """Run the workflow in the current thread."""

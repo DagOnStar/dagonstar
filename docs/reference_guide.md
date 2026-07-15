@@ -61,6 +61,8 @@ Selected methods:
 - `get_scratch_dir_base()`: compute or return workflow scratch base.
 - `find_task_by_name(workflow_name, task_name)`: locate a task.
 - `as_json()`: serialize workflow metadata.
+- `saveAsCWL(filename)`: save a self-contained CWL v1.2 JSON document. See
+  [Exporting workflows to CWL](cwl_export.md) for semantics and limitations.
 - `load_json(Json_data)`: load tasks from JSON-like data.
 - `Validate_WF()`: reject cycles.
 
