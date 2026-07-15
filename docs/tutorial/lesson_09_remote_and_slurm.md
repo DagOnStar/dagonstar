@@ -57,6 +57,10 @@ Before running, verify SSH:
 ssh -i /home/researcher/.ssh/id_rsa researcher@example.org hostname
 ```
 
+This interactive check must also enroll the verified server key in
+`known_hosts`. DAGonStar rejects unknown and changed host keys instead of
+silently trusting them.
+
 ## Slurm task
 
 ```python

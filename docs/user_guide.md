@@ -119,6 +119,12 @@ Before using remote tasks, verify SSH manually:
 ssh -i /path/to/key researcher@192.0.2.10 hostname
 ```
 
+DAGonStar verifies SSH host keys from the normal user/system `known_hosts`
+files and rejects unknown or changed keys. On first use, verify the host-key
+fingerprint through a trusted channel and enroll it with a normal interactive
+`ssh` connection (or your site's managed `known_hosts` deployment). Do not
+disable host-key checking to make an unattended workflow connect.
+
 ## Slurm tasks
 
 Use Slurm tasks for scheduler-managed HPC jobs:

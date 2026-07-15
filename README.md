@@ -166,7 +166,8 @@ The repository has a sound baseline for changes to the core behavior:
   discovery, cycle validation, JSON serialization, checkpoint reuse, staging
   command generation, Docker and remote-container construction, SSH-port
   forwarding, packaging extras, optional integration boundaries,
-  selected shell-quoting behavior, and FAIR profiles, artifact declarations,
+  selected shell-quoting behavior, SSH host-key verification and safe remote
+  launcher creation, and FAIR profiles, artifact declarations,
   recorder exports, validation, and safe environment defaults;
 - GitHub Actions runs that suite and source compilation on Python 3.8 and
   Python 3.12, plus focused Ruff and mypy checks on Python 3.12;

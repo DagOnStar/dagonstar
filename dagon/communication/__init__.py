@@ -17,7 +17,7 @@ def is_port_open(host, port, timeout=5):
     :return: True if the port is open
     :rtype: bool
     """
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(timeout)
-    result = sock.connect_ex((host, port))
-    return result == 0
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(timeout)
+        result = sock.connect_ex((host, port))
+        return result == 0

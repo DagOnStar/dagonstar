@@ -1,9 +1,20 @@
 import logging
+import secrets
 
 import paramiko
 from paramiko import SSHClient
 
 from dagon.communication import is_port_open
+from dagon.shell import join_command, quote
+
+
+def _heredoc_delimiter(content):
+    """Return a delimiter that cannot terminate the generated heredoc."""
+    lines = set(content.splitlines())
+    while True:
+        delimiter = "DAGON_EOF_" + secrets.token_hex(16)
+        if delimiter not in lines:
+            return delimiter
 
 
 # To manage SSH connections
@@ -71,16 +82,21 @@ class SSHManager:
         :type content: str
         """
         import os
-        import shlex
         
         # Create the directory using SSH command
         directory = os.path.dirname(filepath)
         if directory:
-            self.execute_command(f"mkdir -p {directory}")
+            result = self.execute_command(join_command(("mkdir", "-p", directory)))
+            if result['code'] != 0:
+                raise IOError(f"Failed to create directory {directory}: {result.get('message', 'Unknown error')}")
         
         # Write the file using SSH and heredoc (avoiding SFTP completely)
         # This is more reliable than SFTP for script files
-        command = f"cat > {shlex.quote(filepath)} << 'DAGON_EOF'\n{content}\nDAGON_EOF"
+        delimiter = _heredoc_delimiter(content)
+        command = (
+            f"cat > {quote(filepath)} << '{delimiter}'\n"
+            f"{content}\n{delimiter}"
+        )
         
         result = self.execute_command(command)
         
@@ -95,7 +111,8 @@ class SSHManager:
         """
 
         ssh = SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.load_system_host_keys()
+        ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
         # Esperar a que el puerto esté abierto (usa self.port en lugar de 22 hardcodeado)
         while not is_port_open(self.host, self.port):
             continue
@@ -120,9 +137,5 @@ class SSHManager:
         stdout = "\n".join(stdout.readlines())
         stderr = "\n".join(stderr.readlines())
 
-        if len(stderr):
-            return {"code": 1, "message": stderr}
-        elif code > 0:
-            return {"code": 1, "message": stdout}
-        else:
-            return {"code": 0, "output": stdout}
+        message = stderr if stderr else (stdout if code else "")
+        return {"code": code, "message": message, "output": stdout, "error": stderr}
