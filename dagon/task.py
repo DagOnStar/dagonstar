@@ -205,6 +205,43 @@ class Task(Thread):
         """Return sanitized backend metadata for optional provenance recorders."""
         return {}
 
+    def checkpoint_key(self) -> str:
+        """Return the stable checkpoint key used by every task backend."""
+        if self.workflow is None:
+            raise RuntimeError("Task must belong to a workflow before checkpoint access")
+        return self.workflow.name + "." + self.name
+
+    def reuse_checkpoint(self) -> bool:
+        """Reuse a successful, still-accessible checkpoint working directory.
+
+        Local and structured task implementations share this contract. Remote
+        command tasks additionally use their backend ``exists_dir`` check.
+        """
+        checkpoint = self.workflow.checkpoints.get(self.checkpoint_key(), {})
+        if checkpoint.get("code") != 0:
+            return False
+        working_dir = checkpoint.get("working_dir")
+        if not isinstance(working_dir, str) or not working_dir:
+            return False
+        accessible = path.isdir(working_dir)
+        if not accessible and self.ssh_connection is not None:
+            accessible = bool(self.exists_dir(working_dir))
+        if not accessible:
+            return False
+        self.working_dir = working_dir
+        self.fair_checkpoint_reused = True
+        return True
+
+    def initialize_checkpoint(self) -> Dict[str, Any]:
+        """Create the common checkpoint record after a working directory exists."""
+        checkpoint = {
+            "working_dir": self.working_dir,
+            "workflow": self.workflow.name,
+            "name": self.name,
+        }
+        self.workflow.checkpoints[self.checkpoint_key()] = checkpoint
+        return checkpoint
+
     def get_endpoint(self) -> Optional[str]:
         return self.globusendpoint
 
@@ -834,7 +871,7 @@ class Task(Thread):
         # if dynostore, push the data to dynostore
         if "dynostore" in self.workflow.cfg:
             dyno_conf = self.workflow.cfg['dynostore']
-            dyno_server = f"{dyno_conf.get("host")}:{dyno_conf.get("port")}"
+            dyno_server = f"{dyno_conf.get('host')}:{dyno_conf.get('port')}"
             footer += f"echo \"Pushing data to DynoStore server {dyno_server}\"\n"
             footer += f"$PYTHON -m dynostore.cli --server {dyno_server} put {self.working_dir} --recursive --catalog={os.path.basename(self.working_dir)}\n"
             footer += "DYNO_EXIT_CODE=$?\n"
@@ -978,32 +1015,15 @@ class Task(Thread):
 
         :raises Exception: a problem occurred during the task  execution
         """
-        key = self.workflow.name + "." + self.name
+        key = self.checkpoint_key()
 
         # Local checkpoint
-        if key in self.workflow.checkpoints and "code" in self.workflow.checkpoints[key] and \
-                self.workflow.checkpoints[key]["code"] == 0 and path.isdir(self.workflow.checkpoints[key]["working_dir"]):
-            self.working_dir = self.workflow.checkpoints[key]["working_dir"]
-            self.fair_checkpoint_reused = True
-
-            self.workflow.logger.debug(
-                "%s Already completed ---" % (self.name))
-        elif self.ssh_connection != None and key in self.workflow.checkpoints and \
-            "code" in self.workflow.checkpoints[key] and self.workflow.checkpoints[key]["code"] == 0 and \
-                self.exists_dir(self.workflow.checkpoints[key]["working_dir"]):
-            self.working_dir = self.workflow.checkpoints[key]["working_dir"]
-            self.fair_checkpoint_reused = True
-
+        if self.reuse_checkpoint():
             self.workflow.logger.debug(
                 "%s Already completed ---" % (self.name))
         else:
             self.create_working_dir()
-
-            self.workflow.checkpoints[self.workflow.name + "." + self.name] = {
-                "working_dir": self.working_dir,
-                "workflow": self.workflow.name,
-                "name": self.name
-            }
+            self.initialize_checkpoint()
 
             # ``pre_process_command`` creates the staging-in portion of the
             # launcher.  The generated launcher performs that staging when it

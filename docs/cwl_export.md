@@ -53,6 +53,10 @@ or adapt the exported document with explicit CWL `File`/`Directory` inputs and
 outputs. Native, web, and LLM tasks are exported only when their task object
 provides a non-empty shell command.
 
+The mixed-task contract exports a graph containing every registered
+`TaskType`. This verifies deterministic CWL graph representation, not execution
+of backend-specific infrastructure by a generic CWL runner.
+
 The exported file contains task commands and container image names. Review it
 before sharing, and never place credentials in commands.
 

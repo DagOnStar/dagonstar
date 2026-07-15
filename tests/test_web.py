@@ -8,7 +8,7 @@ from pathlib import Path
 
 from dagon.task import DagonTask, TaskType
 from dagon.web.runner import run
-from tests.helpers import minimal_config
+from tests.helpers import make_workflow, minimal_config
 from dagon import Workflow
 
 
@@ -39,6 +39,15 @@ class _Handler(BaseHTTPRequestHandler):
 
 
 class WebTaskTests(unittest.TestCase):
+    def test_successful_checkpoint_is_reused_without_http_request(self):
+        with tempfile.TemporaryDirectory() as completed:
+            workflow = make_workflow("web-checkpoint")
+            task = DagonTask(TaskType.WEB, "fetch", {"method": "GET", "url": "http://invalid.invalid"})
+            workflow.add_task(task)
+            workflow.checkpoints["web-checkpoint.fetch"] = {"working_dir": completed, "code": 0}
+            task.execute()
+            self.assertTrue(task.fair_checkpoint_reused)
+            self.assertEqual(task.working_dir, completed)
     @classmethod
     def setUpClass(cls):
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), _Handler)

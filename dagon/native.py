@@ -172,9 +172,12 @@ class NativeTask(Task):
         return slurm.generate_command(script_name)
 
     def execute(self) -> None:
+        if self.reuse_checkpoint():
+            self._release_references()
+            return
         self.create_working_dir()
-        key = self.workflow.name + "." + self.name
-        self.workflow.checkpoints[key] = {"working_dir": self.working_dir, "workflow": self.workflow.name, "name": self.name}
+        key = self.checkpoint_key()
+        self.initialize_checkpoint()
         spec = self._spec()
         spec_path = Path(self.working_dir, ".dagon", "native_spec.json")
         spec_path.write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -211,3 +214,11 @@ class NativeTask(Task):
                         producer.decrement_reference_count()
         finally:
             self.workflow._fire_event("on_task_staging_out_end", self)
+
+    def _release_references(self) -> None:
+        for _, _, parsed in self._file_inputs():
+            if parsed:
+                workflow_name, task_name, _ = parsed
+                producer = self.workflow.find_task_by_name(workflow_name or self.workflow.name, task_name)
+                if producer:
+                    producer.decrement_reference_count()

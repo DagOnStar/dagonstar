@@ -1,4 +1,3 @@
-import importlib.util
 import sys
 import unittest
 from pathlib import Path
@@ -7,8 +6,8 @@ from pathlib import Path
 EXAMPLE_DIR = Path(__file__).resolve().parents[1] / "examples" / "dynostore"
 sys.path.insert(0, str(EXAMPLE_DIR))
 
-from dynostore_commands import download_catalog, upload_catalog
-from dynostore_workflow import build_workflow
+from dynostore_commands import download_catalog, upload_catalog  # noqa: E402
+from dynostore_workflow import build_workflow  # noqa: E402
 
 
 class DynoStoreExampleTests(unittest.TestCase):

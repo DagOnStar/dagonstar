@@ -70,6 +70,16 @@ For a notebook-native lesson, split the script into cells for configuration,
 workflow and task creation, `workflow.run()`, and output inspection. The
 examples in [`examples/colab/`](../examples/colab/README.md) use that shape.
 
+Verify every task factory in one mixed workflow with:
+
+```python
+!python3 -m unittest tests.test_tasktype_interoperability -v
+```
+
+See [Task-type interoperability](tasktype_interoperability.md) for the backend
+matrix. Jupyter can execute any backend installed and configured on its host;
+otherwise it can still construct, validate, checkpoint, and export the graph.
+
 ## Persistent outputs and scratch directories
 
 By default, DAGonStar uses `batch.scratch_dir_base` from `dagon.ini` (normally

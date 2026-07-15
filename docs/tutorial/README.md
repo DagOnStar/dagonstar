@@ -1,6 +1,6 @@
 # DAGonStar Tutorial Sequence
 
-This tutorial contains twenty-one incremental lessons. The lessons are designed to be
+This tutorial contains twenty-two incremental lessons. The lessons are designed to be
 read in order and to remain consistent with the current DAGonStar implementation.
 
 For an executable Colab-ready companion covering the core local sequence, open
@@ -34,6 +34,7 @@ explicitly marked as optional integration exercises.
 19. [Connect workflow artifacts to FaaS](lesson_19_faas_artifacts.md)
 20. [Inspect FaaS FAIR and exports](lesson_20_faas_fair_exports.md)
 21. [Configure cloud FaaS profiles safely](lesson_21_faas_cloud_profiles.md)
+22. [Combine all task types safely](lesson_22_all_task_types.md)
 
 ## Google Colab compatibility
 
@@ -62,6 +63,7 @@ and treat remote services as separately configured backends.
 | 17 CWL interoperability | Export supported | Generation is local; running needs a CWL v1.2 runner. |
 | 18–20 Local FaaS and exports | Supported | Credential-free mock provider and local exports. |
 | 21 Cloud FaaS profiles | Supported with care | Requires an external deployment, optional SDK, identity, and may incur cost. |
+| 22 All task types | Structural support | Contract tests run locally; live external backends require their services. |
 
 For supported lessons, first choose one installation method in a Colab cell:
 

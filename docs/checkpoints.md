@@ -107,6 +107,11 @@ part of the implementation for explicit checkpoint behavior. The workflow-level
 `checkpoint_file` is the primary user-facing mechanism for recording and
 resuming task metadata.
 
+All registered task types use the same successful-checkpoint contract. LLM,
+Native, Web, and FaaS implement it in their structured executors;
+command-oriented tasks inherit it from `Task`. See
+[Task-type interoperability](tasktype_interoperability.md).
+
 ## Remote checkpointing
 
 Remote checkpoint reuse checks for the existence of the recorded directory on

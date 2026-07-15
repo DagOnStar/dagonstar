@@ -19,6 +19,8 @@ cloud backends.
 | Slurm/HPC | Possible as a client | Colab can submit remotely; it is not the cluster. |
 | Docker/container tasks | Limited | Hosted Colab is not a normal Docker host. |
 | Cloud execution | Possible | Requires credentials kept out of notebooks. |
+| Kubernetes, Apptainer, Nomad | Client/structural support | Live runs require a reachable cluster/runtime. |
+| LLM, Native, Web, FaaS | Yes with local mocks | Credential-free tutorial paths are available. |
 | Long production workflows | Not recommended | Runtimes are ephemeral and may disconnect. |
 
 ## Quick start
@@ -58,6 +60,15 @@ tutorial scripts are also suitable for hosted Colab:
 Lesson 15's FAIR workflow is also local and credential-free. Its complete
 notebook-ready source and persistence notes are in
 [the FAIR-by-design tutorial](tutorial/lesson_15_fair_by_design.md).
+
+Lesson 22 verifies every `TaskType` together without external connections:
+
+```python
+!python3 -m unittest tests.test_tasktype_interoperability -v
+```
+
+This proves construction and portable interoperability; it does not turn Colab
+into a Docker, Kubernetes, Nomad, Apptainer, Slurm, or cloud execution host.
 
 ## Persistence and architecture
 

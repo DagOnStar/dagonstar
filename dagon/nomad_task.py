@@ -9,7 +9,7 @@ import time
 import uuid
 import logging
 import requests
-from dagon import Batch
+from dagon.batch import Batch
 from dagon.task import Task
 from dagon.remote import RemoteTask
 

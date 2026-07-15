@@ -188,27 +188,28 @@ class LLMTask(Task):
             raise RuntimeError("Unable to contact LLM provider %r: %s" % (self.provider, exc.reason)) from exc
 
     def execute(self) -> None:
-        self.create_working_dir()
-        key = self.workflow.name + "." + self.name
-        self.workflow.checkpoints[key] = {"working_dir": self.working_dir, "workflow": self.workflow.name, "name": self.name}
-        input_values, reference_values = self._stage_input_files()
-        payload = self._render(self.prompt, dict(self.params, **input_values), reference_values)
-        if not isinstance(payload, dict):  # guarded in __init__, keeps type checkers honest
-            raise ValueError("LLM prompt must be a JSON object")
-        config = self._provider_config()
-        if "model" not in payload:
-            if not config["model"]:
-                raise ValueError("LLM prompt needs model or provider configuration needs model")
-            payload["model"] = config["model"]
-        if "messages" not in payload:
-            raise ValueError("LLM prompt must contain a messages array")
-        self.workflow._fire_event("on_task_execute_start", self)
-        if not self.workflow.dry:
-            self.result = self._request(payload, config)
-            output = Path(self.working_dir, self.output_file)
-            output.parent.mkdir(parents=True, exist_ok=True)
-            output.write_text(json.dumps(self.result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-            self.workflow.checkpoints[key]["code"] = 0
+        key = self.checkpoint_key()
+        if not self.reuse_checkpoint():
+            self.create_working_dir()
+            self.initialize_checkpoint()
+            input_values, reference_values = self._stage_input_files()
+            payload = self._render(self.prompt, dict(self.params, **input_values), reference_values)
+            if not isinstance(payload, dict):
+                raise ValueError("LLM prompt must be a JSON object")
+            config = self._provider_config()
+            if "model" not in payload:
+                if not config["model"]:
+                    raise ValueError("LLM prompt needs model or provider configuration needs model")
+                payload["model"] = config["model"]
+            if "messages" not in payload:
+                raise ValueError("LLM prompt must contain a messages array")
+            self.workflow._fire_event("on_task_execute_start", self)
+            if not self.workflow.dry:
+                self.result = self._request(payload, config)
+                output = Path(self.working_dir, self.output_file)
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text(json.dumps(self.result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+                self.workflow.checkpoints[key]["code"] = 0
         self.workflow._fire_event("on_task_staging_out_start", self)
         try:
             self.remove_reference_workflow()

@@ -8,6 +8,16 @@ from tests.helpers import make_workflow, minimal_config
 
 
 class NativeTaskTests(unittest.TestCase):
+    def test_successful_checkpoint_is_reused_without_function_execution(self):
+        with tempfile.TemporaryDirectory() as completed:
+            workflow = make_workflow("native-checkpoint")
+            task = DagonTask(TaskType.NATIVE, "native", "tests.native_functions:needs_value",
+                             inputs={"value": 1})
+            workflow.add_task(task)
+            workflow.checkpoints["native-checkpoint.native"] = {"working_dir": completed, "code": 0}
+            task.execute()
+            self.assertTrue(task.fair_checkpoint_reused)
+            self.assertEqual(task.working_dir, completed)
     def test_local_native_task_stages_workflow_file_and_writes_result(self):
         with tempfile.TemporaryDirectory() as directory:
             config = minimal_config()

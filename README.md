@@ -124,13 +124,14 @@ The full documentation set is available in `docs/`:
 - [Developer Guide](docs/developer_guide.md)
 - [Running External Scientific Software](docs/running_external_software.md)
 - [The `workflow://` Schema](docs/the_workflow_schema.md)
+- [Task-type interoperability](docs/tasktype_interoperability.md)
 - [Checkpoints](docs/checkpoints.md)
 - [Exporting workflows to CWL](docs/cwl_export.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
 - [Using DAGonStar from Jupyter Notebook](docs/jupyter_notebook.md)
 - [Running DAGonStar demos in Google Colab](docs/colab.md)
 - [Examples Catalog](docs/examples/README.md)
-- [Tutorials: twenty-one incremental lessons](docs/tutorial/README.md)
+- [Tutorials: twenty-two incremental lessons](docs/tutorial/README.md)
 
 ## What DAGonStar supports
 
@@ -192,6 +193,9 @@ The repository has a sound baseline for changes to the core behavior:
   platform dependencies;
 - documentation covers configuration, architecture, checkpoints, examples,
   FAIR principles, CWL export semantics, and the incremental tutorial; and
+- an all-factory contract test constructs a mixed workflow containing every
+  `TaskType` and verifies `workflow://`, FAIR declarations, checkpoint reuse,
+  and deterministic CWL export without live external services;
 - sample configuration avoids committed credentials and the SKYCDS path checks
   for required runtime configuration; and
 - the LLM task boundary has local tests and a fully local mock-provider example.

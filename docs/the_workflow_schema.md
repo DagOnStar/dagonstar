@@ -204,6 +204,12 @@ the request receives a portable artifact descriptor with logical reference,
 task-relative path, media type, size, SHA-256, and transport. Workflow JSON and
 CWL retain the logical reference and never embed the resolved scratch path.
 
+Every registered task type is covered by the mixed-factory interoperability
+contract. Command tasks scan their command; LLM, Native, Web, and FaaS scan
+structured fields. Any type can produce for or consume from any other type when
+the configured stager bridges their backends. See
+[Task-type interoperability](tasktype_interoperability.md).
+
 This permits mixed chains such as Batch → FaaS → Native. Invalid producer names,
 path traversal, missing files, and dependency cycles retain the normal workflow
 errors. The local mock and fixture HTTP providers use `local-file`; a remote

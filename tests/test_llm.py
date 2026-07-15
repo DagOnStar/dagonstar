@@ -9,6 +9,15 @@ from tests.helpers import make_workflow, minimal_config
 
 
 class LLMTaskTests(unittest.TestCase):
+    def test_successful_checkpoint_is_reused_without_provider_request(self):
+        with tempfile.TemporaryDirectory() as completed:
+            workflow = make_workflow("llm-checkpoint")
+            task = DagonTask(TaskType.LLM, "summarize", {"messages": []}, provider="missing")
+            workflow.add_task(task)
+            workflow.checkpoints["llm-checkpoint.summarize"] = {"working_dir": completed, "code": 0}
+            task.execute()
+            self.assertTrue(task.fair_checkpoint_reused)
+            self.assertEqual(task.working_dir, completed)
     def test_factory_creates_llm_task(self):
         task = DagonTask(TaskType.LLM, "Ask", {"messages": []}, provider="test")
         self.assertEqual(type(task).__name__, "LLMTask")

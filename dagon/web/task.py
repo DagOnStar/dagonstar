@@ -105,9 +105,12 @@ class WebTask(Task):
         return slurm.generate_command(script_name)
 
     def execute(self) -> None:
+        if self.reuse_checkpoint():
+            self._release_references()
+            return
         self.create_working_dir()
-        key = self.workflow.name + "." + self.name
-        self.workflow.checkpoints[key] = {"working_dir": self.working_dir, "workflow": self.workflow.name, "name": self.name}
+        key = self.checkpoint_key()
+        self.initialize_checkpoint()
         self.workflow._fire_event("on_task_staging_in_start", self)
         try:
             self._stage_inputs()
@@ -143,3 +146,10 @@ class WebTask(Task):
                     producer.decrement_reference_count()
         finally:
             self.workflow._fire_event("on_task_staging_out_end", self)
+
+    def _release_references(self) -> None:
+        for reference in self._references():
+            workflow_name, task_name, _ = self._parse_reference(reference)
+            producer = self.workflow.find_task_by_name(workflow_name or self.workflow.name, task_name)
+            if producer:
+                producer.decrement_reference_count()
