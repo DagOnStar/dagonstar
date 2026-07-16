@@ -35,7 +35,8 @@ class IoTTaskTests(unittest.TestCase):
                 completion={"mode": "reported_state", "path": "applied", "equals": True,
                             "timeout_seconds": 2}, delivery={"idempotent": True},
                 outputs={"configuration": "outputs/configuration.json"})
-            workflow.add_task(producer); workflow.add_task(consumer)
+            workflow.add_task(producer)
+            workflow.add_task(consumer)
             workflow.make_dependencies()
             self.assertEqual(consumer.prevs, [producer])
             self.assertEqual(producer.reference_count, 1)
@@ -49,7 +50,8 @@ class IoTTaskTests(unittest.TestCase):
             workflow = self.workflow("checkpoint", directory)
             task = DagonTask(TaskType.IOT, "sensor", operation="observe", request={"events": [{"value": 1}]},
                              completion={"mode": "first_event"}, outputs={"observations": "outputs/o.json"})
-            workflow.add_task(task); workflow.run()
+            workflow.add_task(task)
+            workflow.run()
             self.assertTrue(task.reuse_checkpoint())
             Path(task.working_dir, "outputs/o.json").unlink()
             self.assertFalse(task.reuse_checkpoint())
