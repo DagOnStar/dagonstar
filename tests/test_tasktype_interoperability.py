@@ -48,6 +48,10 @@ class TaskTypeInteroperabilityTests(unittest.TestCase):
                                          "body": {"text": reference}}),
                 TaskType.FAAS: DagonTask(TaskType.FAAS, "faas", provider="mock", function="echo",
                                          inputs={"document": reference}),
+                TaskType.IOT: DagonTask(TaskType.IOT, "iot", operation="observe", provider="mock",
+                                        request={"events": [{"source": reference}]},
+                                        completion={"mode": "first_event"},
+                                        outputs={"observations": "outputs/observations.json"}),
             }
 
     @staticmethod
@@ -107,9 +111,12 @@ class TaskTypeInteroperabilityTests(unittest.TestCase):
             with self.subTest(task_type=task_type), tempfile.TemporaryDirectory() as completed:
                 workflow = make_workflow("resume-" + task_type.value)
                 workflow.add_task(task)
-                workflow.checkpoints[workflow.name + "." + task.name] = {
+                checkpoint = {
                     "working_dir": completed, "code": 0,
                 }
+                if task_type is TaskType.IOT:
+                    checkpoint.update({"task_type": "iot", "schema_version": 1, "outputs": []})
+                workflow.checkpoints[workflow.name + "." + task.name] = checkpoint
                 self.assertTrue(task.reuse_checkpoint())
                 self.assertTrue(task.fair_checkpoint_reused)
 

@@ -83,6 +83,8 @@ locally without those services.
 In the complete course notebook, Lessons 12–14 deliberately run structural
 Docker, SSH, and Slurm tests. This gives every lesson a deterministic Colab
 exercise without misrepresenting hosted Colab as external infrastructure.
+Lesson 18 runs a bounded IoT mock and focused tests without a broker, device,
+credentials, or public network endpoint.
 
 ## Persistence and architecture
 

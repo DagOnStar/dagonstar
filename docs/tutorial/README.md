@@ -32,6 +32,7 @@ Python 3, a command shell, and a repository checkout are sufficient for the loca
 | [15](lesson_15_make_a_workflow_fair_by_design.md) | FAIR metadata and provenance | Local | No | Supported | Advanced |
 | [16](lesson_16_compose_meta_workflows.md) | Workflow composition | Local | No | Limited | Advanced |
 | [17](lesson_17_export_and_validate_common_workflow_language.md) | CWL v1.2 capstone | Local | Optional validator | Supported | Advanced |
+| [18](lesson_18_compute_continuum_operations.md) | IoT and compute continuum synthesis | Local mock | No | Supported | Advanced |
 
 ### Modules and effort
 
@@ -40,13 +41,14 @@ Python 3, a command shell, and a repository checkout are sufficient for the loca
 - Module 2, execution and data movement: Lessons 05–08, about 110 minutes.
 - Module 3, structured task models: Lessons 09–11, about 90 minutes.
 - Module 4, distributed infrastructure: Lessons 12–14, about 115 minutes plus site setup.
-- Module 5, FAIR composition and interoperability: Lessons 15–17, about 115 minutes.
+- Module 5, FAIR composition and interoperability: Lessons 15–18, about 160 minutes.
 - [Optional integrations](integrations/README.md) are selected by research need and maturity.
 
 The [course notebook](DAGonStar_tutorial.ipynb) includes executable verification
-for every Lesson 00–17 in local Jupyter and Google Colab. For infrastructure
+for every Lesson 00–18 in local Jupyter and Google Colab. For infrastructure
 Lessons 12–14 it runs deterministic construction, quoting, and command-generation
 tests; live Docker, SSH, and Slurm claims still require their real backends.
+Lesson 18 uses the bounded, credential-free IoT mock and focused contract tests.
 
 [Open the complete course notebook in Google Colab](https://colab.research.google.com/github/DagOnStar/dagonstar/blob/main/docs/tutorial/DAGonStar_tutorial.ipynb).
 

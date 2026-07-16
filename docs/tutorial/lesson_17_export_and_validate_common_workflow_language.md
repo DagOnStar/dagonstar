@@ -74,4 +74,4 @@ CWL export describes the portable graph; it is not execution.
 
 ## Next lesson
 
-Next, continue with optional integrations or a new scientific workflow. Return to the [syllabus](README.md) at any time.
+Next, [operate across the compute continuum with bounded IoT tasks](lesson_18_compute_continuum_operations.md). Return to the [syllabus](README.md) at any time.

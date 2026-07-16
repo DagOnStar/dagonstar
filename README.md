@@ -147,6 +147,8 @@ The full documentation set is available in `docs/`:
 - Web tasks for structured HTTP/HTTPS requests with scratch-local response outputs.
 - Provider-neutral FaaS invocation tasks for mock, HTTP/Knative, AWS Lambda,
   Azure Functions, and Google Cloud Run functions.
+- Provider-neutral IoT observation, configuration, actuation, and edge-compute
+  tasks with deterministic mock execution and bounded completion.
 - Data staging by link, copy, SCP, Globus, and SKYCDS.
 - Checkpoint/resume support.
 - Self-contained Common Workflow Language (CWL) v1.2 command-graph export.
@@ -173,6 +175,9 @@ FaaS invocation is now a provider-neutral task type with a credential-free mock,
 lazy cloud adapters, structured artifact staging, sanitized provenance, and a
 runner-based CWL representation. Cloud deployment and automatic object-store
 artifact upload remain outside the implemented boundary.
+IoT tasks add recursively discovered structured references, output-evidence
+checkpoints, credential redaction, safe actuation retry defaults, and a
+runner-based CWL representation. Live network providers are not yet implemented.
 
 The repository has a sound baseline for changes to the core behavior:
 

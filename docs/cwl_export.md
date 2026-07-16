@@ -68,6 +68,10 @@ of backend-specific infrastructure by a generic CWL runner.
 The exported file contains task commands and container image names. Review it
 before sharing, and never place credentials in commands.
 
+IoT tools invoke `dagon-iot-runner`, embed a redacted portable specification,
+declare scratch outputs, and retain semantics in `dagon:IoTTask`. Execution
+still needs the selected provider and device access. See [IoT and CWL](iot_cwl.md).
+
 ## Runnable interoperability material
 
 The [`examples/cwl/`](../examples/cwl/README.md) directory contains the Python

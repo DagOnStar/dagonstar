@@ -62,13 +62,14 @@ Open [`docs/tutorial/DAGonStar_tutorial.ipynb`](tutorial/DAGonStar_tutorial.ipyn
 from a repository checkout. Its Lesson 00 cell discovers the checkout, installs
 it into the active kernel with the Docker client extra needed by structural
 tests, and defines subprocess helpers that always use the kernel's interpreter.
-The notebook contains an executable verification cell for every Lesson 00–17.
+The notebook contains an executable verification cell for every Lesson 00–18.
 
 Lessons 01–11 run credential-free local examples. Lessons 12–14 run mocked or
 structural verification and therefore work without Docker, SSH, or Slurm; they
 do not claim those backends executed. Lessons 15–17 run local FAIR,
-meta-workflow, and CWL checks. The web and LLM lessons bind only short-lived
-loopback mock servers.
+meta-workflow, and CWL checks. Lesson 18 runs a bounded IoT mock and its local
+contract tests. The web and LLM lessons bind only short-lived loopback mock
+servers; the IoT mock contacts no broker or device.
 
 For a notebook-native lesson, split the script into cells for configuration,
 workflow and task creation, `workflow.run()`, and output inspection. The

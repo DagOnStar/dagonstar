@@ -30,8 +30,8 @@ GENERIC = (
 
 def validate():
     errors = []
-    if len(CANONICAL) != 18:
-        errors.append("tutorial index must list exactly Lessons 00-17")
+    if len(CANONICAL) != 19:
+        errors.append("tutorial index must list exactly Lessons 00-18")
     for number, relative in enumerate(CANONICAL):
         path = TUTORIAL / relative
         if not path.is_file():
@@ -74,4 +74,4 @@ if __name__ == "__main__":
     failures = validate()
     if failures:
         print("\n".join(failures), file=sys.stderr); raise SystemExit(1)
-    print("Validated 18 canonical lessons and internal tutorial links.")
+    print("Validated 19 canonical lessons and internal tutorial links.")

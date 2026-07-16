@@ -26,6 +26,11 @@ The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) cove
 - [Web tasks](web_tasks.md)
 - [LLM tasks](llm_tasks.md)
 - [FAIR principles](fair_principles.md)
+- [IoT tasks and compute-continuum operations](iot_tasks.md)
+- [IoT providers](iot_providers.md)
+- [IoT checkpointing](iot_checkpointing.md)
+- [IoT CWL representation](iot_cwl.md)
+- [Compute continuum](compute_continuum.md)
 - [CWL export](cwl_export.md)
 - [Examples](examples/README.md)
 

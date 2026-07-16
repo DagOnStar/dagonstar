@@ -105,6 +105,13 @@ configuration validation separately from live integration behavior.
 
 ## Documentation standards
 
+## IoT maintenance
+
+- Keep the mandatory IoT path deterministic, credential-free, and network-free.
+- Route every new structured field through the shared recursive `workflow://` walker.
+- Never serialize credentials; physical actuation retries require explicit idempotency.
+- IoT changes require interoperability, JSON, checkpoint, CWL, FAIR, examples, documentation, and tutorial coverage.
+
 - Preserve the tutorial's pedagogical order: graph construction, execution and
   data movement, structured task models, distributed infrastructure, then FAIR
   composition and CWL interoperability.

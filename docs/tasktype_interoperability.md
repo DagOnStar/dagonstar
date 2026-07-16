@@ -51,6 +51,7 @@ profile supports CI, teaching, Colab, Jupyter, and portable validation.
 | `NATIVE` | Importable Python function | Runs locally. |
 | `WEB` | HTTP/HTTPS endpoint or local mock server | Local mock runs in notebooks and Colab. |
 | `FAAS` | Mock, HTTP, or configured provider adapter | Mock provider runs locally. |
+| `IOT` | Mock or configured provider adapter | Deterministic mock runs locally. |
 
 “Notebook supported” means workflow creation, validation, FAIR recording,
 checkpoint loading, and CWL export work in the Python kernel. A notebook does
@@ -85,3 +86,4 @@ Checkpoint identity is currently the workflow and task name. Changing behavior
 without renaming the task can reuse an older checkpoint; use a new task name or
 checkpoint file when changing the experiment. FaaS additionally checks a
 portable-specification digest.
+IoT additionally validates schema version, declared outputs, and SHA-256 evidence.

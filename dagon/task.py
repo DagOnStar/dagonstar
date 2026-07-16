@@ -42,6 +42,7 @@ class TaskType(Enum):
     NATIVE = "native"
     WEB = "web"
     FAAS = "faas"
+    IOT = "iot"
 
 
 # Different types os tasks and their module and class name
@@ -63,6 +64,7 @@ tasks_types: Dict[TaskType, TaskTypeSpec] = {
     TaskType.NATIVE: ("dagon.native", "NativeTask"),
     TaskType.WEB: ("dagon.web", "WebTask"),
     TaskType.FAAS: ("dagon.faas", "FaaSTask"),
+    TaskType.IOT: ("dagon.iot", "IoTTask"),
 }
 
 
@@ -96,6 +98,7 @@ class DagonTask(object):
 
 
 class Task(Thread):
+    task_type = None
     """
     **Represents a task executed by DagOn**
 
@@ -387,9 +390,10 @@ class Task(Thread):
         :rtype: dict(str, object)
         """
 
+        explicit_type = self.task_type.value if self.task_type is not None else type(self).__name__.lower()
         json_task = {"name": self.name, "status": self.status.name,
                      "working_dir": self.working_dir, "nexts": [], "prevs": [],
-                     "command": self.command, "type": type(self).__name__.lower()}
+                     "command": self.command, "type": explicit_type}
 
         for t in self.nexts:
             json_task['nexts'].append(t.name)

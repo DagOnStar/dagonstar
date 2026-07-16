@@ -515,10 +515,26 @@ class Workflow(object):
                     }},
                 })
 
+            if type(task).__name__ == "IoTTask" and not self.portable_emulation:
+                portable_spec = task._portable_spec()
+                tool.update({
+                    "baseCommand": ["dagon-iot-runner", "run"],
+                    "arguments": ["--spec", "iot-task.json", "--workdir", ".",
+                                  "--result", "outputs/result.json"],
+                    "requirements": {"InitialWorkDirRequirement": {"listing": [
+                        {"entryname": "iot-task.json", "entry": json.dumps(portable_spec, sort_keys=True)}]}},
+                    "hints": {"dagon:IoTTask": portable_spec},
+                })
+                for output_name, output_path in task.outputs.items():
+                    tool["outputs"][output_name] = {"type": "File", "outputBinding": {"glob": output_path}}
+                step_outputs = ["completed"] + list(task.outputs)
+            else:
+                step_outputs = ["completed"] + (["task_dir"] if self.portable_emulation else [])
+
             steps[task_ids[task]] = {
                 "label": str(task.name),
                 "in": step_inputs,
-                "out": ["completed"] + (["task_dir"] if self.portable_emulation else []),
+                "out": step_outputs,
                 "run": tool,
             }
 
@@ -538,7 +554,7 @@ class Workflow(object):
             "outputs": outputs,
             "steps": steps,
         }
-        if any(type(task).__name__ == "FaaSTask" for task in self.tasks):
+        if any(type(task).__name__ in {"FaaSTask", "IoTTask"} for task in self.tasks):
             document["$namespaces"] = {"dagon": "https://dagonstar.org/cwl#"}
         with open(os.fspath(filename), "w", encoding="utf-8") as stream:
             json.dump(document, stream, indent=2, sort_keys=False)
@@ -638,6 +654,16 @@ class Workflow(object):
                     if temp.get(key) is not None}
                 tk = DagonTask(TaskType.FAAS, temp['name'], specification,
                                working_dir=temp.get('working_dir'))
+            elif temp['type'].upper() == 'IOT':
+                raw = dict(temp.get('iot', {}))
+                aliases = {'endpointRef': 'endpoint_ref', 'credentialRef': 'credential_ref',
+                           'providerOptions': 'provider_options', 'schemaVersion': None}
+                specification = {}
+                for key, value in raw.items():
+                    mapped = aliases.get(key, key)
+                    if mapped is not None:
+                        specification[mapped] = value
+                tk = DagonTask(TaskType.IOT, temp['name'], **specification)
             else:
                 tk = DagonTask(TaskType[temp['type'].upper()], temp['name'], temp['command'], **options)
             self.add_task(tk)
