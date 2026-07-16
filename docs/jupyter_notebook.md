@@ -56,15 +56,19 @@ import dagon
 print("DAGonStar import OK")
 ```
 
-## Run tutorial scripts from a notebook
+## Run the complete tutorial notebook
 
-Run commands from the repository root so relative paths resolve consistently:
+Open [`docs/tutorial/DAGonStar_tutorial.ipynb`](tutorial/DAGonStar_tutorial.ipynb)
+from a repository checkout. Its Lesson 00 cell discovers the checkout, installs
+it into the active kernel with the Docker client extra needed by structural
+tests, and defines subprocess helpers that always use the kernel's interpreter.
+The notebook contains an executable verification cell for every Lesson 00–17.
 
-```python
-%cd /path/to/dagonstar
-!python examples/tutorial/lesson_10_web_tasks.py
-!python examples/tutorial/lesson_11_llm_tasks.py
-```
+Lessons 01–11 run credential-free local examples. Lessons 12–14 run mocked or
+structural verification and therefore work without Docker, SSH, or Slurm; they
+do not claim those backends executed. Lessons 15–17 run local FAIR,
+meta-workflow, and CWL checks. The web and LLM lessons bind only short-lived
+loopback mock servers.
 
 For a notebook-native lesson, split the script into cells for configuration,
 workflow and task creation, `workflow.run()`, and output inspection. The
@@ -93,8 +97,7 @@ explicit, writable directory for notebook experiments.
 
 - Install the optional package and system service required by the selected
   backend; a notebook does not provide Docker, Graphviz, Slurm, or SSH access.
-- Use `%cd` to the repository root before running an example with relative
-  paths.
+- Run Lesson 00 first; later cells depend on its discovered `ROOT` and helpers.
 - Check that the scratch directory is writable and that cleanup has not removed
   an output.
 - Configure remote credentials outside the notebook source; never embed keys.

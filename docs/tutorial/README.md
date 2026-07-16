@@ -43,7 +43,12 @@ Python 3, a command shell, and a repository checkout are sufficient for the loca
 - Module 5, FAIR composition and interoperability: Lessons 15–17, about 115 minutes.
 - [Optional integrations](integrations/README.md) are selected by research need and maturity.
 
-The notebook covers the locally runnable path only; it links to infrastructure lessons instead of simulating Docker, SSH, or Slurm claims.
+The [course notebook](DAGonStar_tutorial.ipynb) includes executable verification
+for every Lesson 00–17 in local Jupyter and Google Colab. For infrastructure
+Lessons 12–14 it runs deterministic construction, quoting, and command-generation
+tests; live Docker, SSH, and Slurm claims still require their real backends.
+
+[Open the complete course notebook in Google Colab](https://colab.research.google.com/github/DagOnStar/dagonstar/blob/main/docs/tutorial/DAGonStar_tutorial.ipynb).
 
 ## Run and verify examples
 

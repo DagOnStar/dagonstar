@@ -39,7 +39,15 @@ Or install the latest repository version:
 !pip install git+https://github.com/DagOnStar/dagonstar.git
 ```
 
-Clone the repository when an example needs files from its tree:
+For the complete course, open
+[`docs/tutorial/DAGonStar_tutorial.ipynb`](tutorial/DAGonStar_tutorial.ipynb)
+in Colab and run cells in order. Lesson 00 detects Colab, clones the repository
+into `/content/dagonstar` when necessary, installs the active checkout, and uses
+the current kernel interpreter for every subprocess. No manual `%cd` is needed.
+
+[Open the complete DAGonStar course directly in Colab](https://colab.research.google.com/github/DagOnStar/dagonstar/blob/main/docs/tutorial/DAGonStar_tutorial.ipynb).
+
+Alternatively, clone the repository explicitly when running individual examples:
 
 ```python
 !git clone https://github.com/DagOnStar/dagonstar.git
@@ -48,7 +56,7 @@ Clone the repository when an example needs files from its tree:
 !python examples/colab/hello_colab.py
 ```
 
-The ready-to-use notebooks are in
+Additional focused notebooks are in
 [`examples/colab/`](../examples/colab/README.md). The local web and mock-LLM
 tutorial scripts are also suitable for hosted Colab:
 
@@ -71,6 +79,10 @@ This proves construction and portable interoperability; it does not turn Colab
 into a Docker, Kubernetes, Nomad, Apptainer, Slurm, or cloud execution host.
 Install `.[all]` and set `portable_emulation=True` to execute every task type
 locally without those services.
+
+In the complete course notebook, Lessons 12–14 deliberately run structural
+Docker, SSH, and Slurm tests. This gives every lesson a deterministic Colab
+exercise without misrepresenting hosted Colab as external infrastructure.
 
 ## Persistence and architecture
 

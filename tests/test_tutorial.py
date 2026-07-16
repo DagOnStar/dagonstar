@@ -27,6 +27,33 @@ class TutorialValidationTests(unittest.TestCase):
         self.assertEqual(len(headings), 18)
         for number, heading in enumerate(headings):
             self.assertTrue(heading.startswith("## Lesson %02d " % number), heading)
+        lesson_cells = [
+            index
+            for index, cell in enumerate(data["cells"])
+            if cell.get("cell_type") == "markdown"
+            and "".join(cell.get("source", [])).startswith("## Lesson ")
+        ]
+        for position, start in enumerate(lesson_cells):
+            stop = (
+                lesson_cells[position + 1]
+                if position + 1 < len(lesson_cells)
+                else len(data["cells"])
+            )
+            self.assertTrue(
+                any(
+                    cell.get("cell_type") == "code"
+                    for cell in data["cells"][start + 1:stop]
+                ),
+                "Lesson %02d has no executable verification cell" % position,
+            )
+        code_text = "\n".join(
+            "".join(cell.get("source", []))
+            for cell in data["cells"]
+            if cell.get("cell_type") == "code"
+        )
+        self.assertNotIn("%run ", code_text)
+        self.assertNotIn("!python", code_text)
+        self.assertIn("sys.executable", code_text)
 
 
 if __name__ == "__main__":
