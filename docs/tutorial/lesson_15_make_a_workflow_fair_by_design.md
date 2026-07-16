@@ -10,13 +10,12 @@
 After completing this lesson, you will be able to:
 
 - record supported metadata and distinguish local export from publication;
-- explain the underlying mechanism;
+- relate each observed result to the workflow mechanism that produced it;
 - verify observed behavior and state what the evidence does not prove.
 
 ## Prerequisites
 
 - [Lesson 14](lesson_14_submit_a_task_through_slurm.md), or equivalent concepts.
-- [Lesson 00](lesson_00_set_up_dagonstar_and_understand_the_learning_model.md) setup.
 - No external service unless stated below.
 
 ## Scientific scenario
@@ -31,7 +30,7 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read the authoritative example or structural check before running it. The canonical lifecycle is add_task(), optional explicit make_dependencies() and Validate_WF() for inspection, then run(). run() constructs dependencies automatically when needed.
+Read one FAIR test that declares artifacts and one that sanitises metadata. Map each exported statement to a locally available source: workflow declaration, execution event, file property, checksum, licence, or creator profile.
 
 ## Run the example
 
@@ -55,7 +54,7 @@ They do not publish to a repository.
 
 ## What DAGonStar did
 
-DAGonStar constructed or inspected the graph, applied the selected staging and execution policy, and exposed evidence through task state, working directories, or exports. Files and exit status are observed evidence; broader portability and scientific validity require the controls stated here.
+The opt-in recorder assembled locally substantiated metadata and provenance and emitted local standard-form exports. It did not upload data, mint a persistent identifier, negotiate access, or certify repository conformance.
 
 ## Controlled experiment
 

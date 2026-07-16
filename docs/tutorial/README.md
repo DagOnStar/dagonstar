@@ -51,28 +51,18 @@ From the repository root, install as described in Lesson 00, then run `python ex
 
 Use the [glossary](resources/glossary.md), [troubleshooting guide](resources/troubleshooting.md), and [teaching notes](resources/teaching_notes.md) throughout.
 
-## Migration from the former sequence
+## Assessment model
 
-| Former lesson | New destination |
-|---|---|
-| 01 local workflow | 01 first local task |
-| 02 explicit dependencies | 02 DAG |
-| 03 data dependencies | 03 workflow data references |
-| 04 scratch | 05 execution artifacts |
-| 05 cycles | 04 validation |
-| 06 checkpoint | 07 checkpoint and resume |
-| 07 staging | 06 staging |
-| 08 Docker | 12 Docker |
-| 09 remote and Slurm | 13 SSH and 14 Slurm |
-| 10 meta-workflows | 16 composition |
-| 11 asynchronous | 08 lifecycle |
-| 12 LLM / 13 web / 14 native | 11 LLM / 10 web / 09 native |
-| 15 FAIR | 15 FAIR by design |
-| 16 DynoStore | [optional integration](integrations/dynostore.md) |
-| 17 CWL | 17 CWL capstone |
-| 18–22 FaaS and mixed tasks | optional advanced material pending integration into the case-study track |
+Each lesson asks the learner to make a prediction, run a deterministic check,
+interpret the resulting evidence, and state a limitation. A successful command
+is therefore necessary but not sufficient: assessment also requires a correct
+causal explanation. The controlled experiments may be used as formative
+exercises; a capstone submission should retain commands, versions, outputs, and
+an explicit account of which claims were and were not tested.
 
-Legacy files remain temporarily as migration sources; this syllabus and the canonical filenames above define the maintained order.
+Earlier experimental lesson numbers have been retired. Stable feature guides
+and the [optional-integration case studies](integrations/README.md) preserve
+advanced material without competing with the canonical sequence.
 
 ## Contributing
 

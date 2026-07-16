@@ -10,13 +10,12 @@
 After completing this lesson, you will be able to:
 
 - invoke an importable Python function with structured inputs and outputs;
-- explain the underlying mechanism;
+- relate each observed result to the workflow mechanism that produced it;
 - verify observed behavior and state what the evidence does not prove.
 
 ## Prerequisites
 
 - [Lesson 08](lesson_08_launch_asynchronously_and_observe_lifecycle_events.md), or equivalent concepts.
-- [Lesson 00](lesson_00_set_up_dagonstar_and_understand_the_learning_model.md) setup.
 - No external service unless stated below.
 
 ## Scientific scenario
@@ -31,7 +30,7 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read the authoritative example or structural check before running it. The canonical lifecycle is add_task(), optional explicit make_dependencies() and Validate_WF() for inspection, then run(). run() constructs dependencies automatically when needed.
+Inspect the importable `module:function` target and its structured bindings. Keep scientific calculation in the function and orchestration—staging inputs, locating outputs, and recording results—in the task specification.
 
 ## Run the example
 
@@ -55,7 +54,7 @@ The assertion checks result and import path.
 
 ## What DAGonStar did
 
-DAGonStar constructed or inspected the graph, applied the selected staging and execution policy, and exposed evidence through task state, working directories, or exports. Files and exit status are observed evidence; broader portability and scientific validity require the controls stated here.
+The native runner imported the declared top-level function in the task environment, bound structured arguments, mapped the declared output below `outputs/`, and recorded the function result as JSON metadata.
 
 ## Controlled experiment
 

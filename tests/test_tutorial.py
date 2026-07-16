@@ -18,6 +18,15 @@ class TutorialValidationTests(unittest.TestCase):
         path = Path(__file__).resolve().parents[1] / "docs/tutorial/DAGonStar_tutorial.ipynb"
         data = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(data["nbformat"], 4)
+        markdown = "\n".join(
+            "".join(cell.get("source", []))
+            for cell in data["cells"]
+            if cell.get("cell_type") == "markdown"
+        )
+        headings = [line for line in markdown.splitlines() if line.startswith("## Lesson ")]
+        self.assertEqual(len(headings), 18)
+        for number, heading in enumerate(headings):
+            self.assertTrue(heading.startswith("## Lesson %02d " % number), heading)
 
 
 if __name__ == "__main__":

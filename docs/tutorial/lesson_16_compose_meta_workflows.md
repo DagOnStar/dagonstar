@@ -10,13 +10,12 @@
 After completing this lesson, you will be able to:
 
 - explain workflow-level composition, naming, and failure boundaries;
-- explain the underlying mechanism;
+- relate each observed result to the workflow mechanism that produced it;
 - verify observed behavior and state what the evidence does not prove.
 
 ## Prerequisites
 
 - [Lesson 15](lesson_15_make_a_workflow_fair_by_design.md), or equivalent concepts.
-- [Lesson 00](lesson_00_set_up_dagonstar_and_understand_the_learning_model.md) setup.
 - No external service unless stated below.
 
 ## Scientific scenario
@@ -31,7 +30,7 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read the authoritative example or structural check before running it. The canonical lifecycle is add_task(), optional explicit make_dependencies() and Validate_WF() for inspection, then run(). run() constructs dependencies automatically when needed.
+Identify each workflow namespace before following a transversal `workflow://` reference. Composition is intelligible only when producer identity, consumer identity, artifact path, and failure boundary remain unambiguous.
 
 ## Run the example
 
@@ -55,7 +54,7 @@ It does not prove distributed recovery across independent services.
 
 ## What DAGonStar did
 
-DAGonStar constructed or inspected the graph, applied the selected staging and execution policy, and exposed evidence through task state, working directories, or exports. Files and exit status are observed evidence; broader portability and scientific validity require the controls stated here.
+DAGonStar resolved the cross-workflow producer and added the corresponding dependency in the loaded workflow set. The test establishes local discovery; it does not provide a distributed transaction across independent schedulers.
 
 ## Controlled experiment
 

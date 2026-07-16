@@ -10,13 +10,12 @@
 After completing this lesson, you will be able to:
 
 - write checkpoint state, resume completed work, and explain reuse limits;
-- explain the underlying mechanism;
+- relate each observed result to the workflow mechanism that produced it;
 - verify observed behavior and state what the evidence does not prove.
 
 ## Prerequisites
 
 - [Lesson 06](lesson_06_choose_and_verify_data_staging_modes.md), or equivalent concepts.
-- [Lesson 00](lesson_00_set_up_dagonstar_and_understand_the_learning_model.md) setup.
 - No external service unless stated below.
 
 ## Scientific scenario
@@ -31,7 +30,7 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read the authoritative example or structural check before running it. The canonical lifecycle is add_task(), optional explicit make_dependencies() and Validate_WF() for inspection, then run(). run() constructs dependencies automatically when needed.
+Identify the task key and scratch directory persisted in the checkpoint, then predict which work the second workflow can reuse. Treat the retained scratch tree as part of the experimental state.
 
 ## Run the example
 
@@ -55,7 +54,7 @@ This demonstrates reuse under unchanged local conditions, not scientific equival
 
 ## What DAGonStar did
 
-DAGonStar constructed or inspected the graph, applied the selected staging and execution policy, and exposed evidence through task state, working directories, or exports. Files and exit status are observed evidence; broader portability and scientific validity require the controls stated here.
+The first run recorded successful task state and its working location. The resumed workflow consulted that record and reused eligible completed work; it did not revalidate undeclared external inputs.
 
 ## Controlled experiment
 

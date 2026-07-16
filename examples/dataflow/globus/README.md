@@ -1,10 +1,11 @@
-# DagOnStar and Globus Transfer
+# DAGonStar and Globus Transfer
 
 
 ## Requirements
 
 
-Additional to DagOnStar requirements, the following requirements are required to run this example:
+This infrastructure-dependent example studies staged transfer through Globus.
+In addition to DAGonStar, it requires:
 
 
 * [Globus Connect Personal](https://www.globus.org/globus-connect-personal) or [Globus Connect Server](https://www.globus.org/globus-connect-server)
@@ -17,8 +18,8 @@ To run this example, at least three UUID endpoints are required.
 
 
 1. Source endpoint: The first one is the UUID of the endpoint where the data is produced.
-2. Intermediate endpoint: The second one is the UUID of an endpoint accessible through the Internet. This can be the UUID of a Globus Connect Server endpoint. For this demo, we are using the [Globus Tutorial Endpoint 1]( Globus Tutorial Endpoint 1).
-3. Sink endpoint: The third one is the UUID of the endpoint where the data is produced.
+2. Intermediate endpoint: an endpoint accessible through the Internet, such as a site-approved Globus Connect Server collection.
+3. Sink endpoint: the collection to which the consumer has access.
 
 
 The first and third endpoints can be configured using Globus Connect Personal.
@@ -47,7 +48,7 @@ Moreover, it is required to have a Globus Client ID. To get it, please follow th
 3. Click on ```Register a service account or application credential for automation```.
 4. Choose or create a new project.
 5. Enter the name of the App, and click on ```Register App```.
-6. Copy the Client UUID and save it.
+6. Copy the client UUID and store it in a local, ignored configuration file.
 
 
 ![ClientUUID.](figs/clientuuid.png)
@@ -60,8 +61,8 @@ Open the file ```dagon.ini``` and in the globus section paste your client ID and
 
 ```conf
 [globus]
-clientid=40d336cc-79eb-4495-9ea0-a639d64c5556
-intermadiate_endpoint = ddb59aef-6d04-11e5-ba46-22000b92c6ec
+clientid=<your-globus-client-id>
+intermadiate_endpoint=<your-intermediate-collection-id>
 ```
 
 
@@ -98,7 +99,9 @@ python dataflow-demo-globus.py
 ```
 
 
-During the execution, you will be requested to log in the Globus services. Click on the URL provided by the application, log in Globus, and paste the token on the console of the application. Remember, that if you are using Globus Personal Connect you must start it on your endpoint.
+During execution, follow the interactive Globus authorization flow and keep all
+tokens out of source files, notebooks, screenshots, and captured teaching
+artifacts. If you use Globus Connect Personal, start it on the relevant host.
 
 
 ![globusauth.](figs/globusauth.png)
@@ -126,6 +129,5 @@ Wait until the execution of the workflow is completed.
 
 
 You can see the results of the execution on the scratch directory.
-
 
 

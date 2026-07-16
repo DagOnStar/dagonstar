@@ -10,7 +10,7 @@
 After completing this lesson, you will be able to:
 
 - establish a reproducible environment and distinguish local lessons from optional integrations;
-- explain the underlying mechanism;
+- relate each observed result to the workflow mechanism that produced it;
 - verify observed behavior and state what the evidence does not prove.
 
 ## Prerequisites
@@ -31,7 +31,7 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read the authoritative example or structural check before running it. The canonical lifecycle is add_task(), optional explicit make_dependencies() and Validate_WF() for inspection, then run(). run() constructs dependencies automatically when needed.
+Before constructing a workflow, identify the interpreter that will run both installation and examples. The course uses one editable checkout so that prose, source, tests, and runnable examples describe the same revision.
 
 ## Run the example
 
@@ -56,7 +56,7 @@ This confirms minimal local construction, not Docker, SSH, Slurm, or cloud opera
 
 ## What DAGonStar did
 
-DAGonStar constructed or inspected the graph, applied the selected staging and execution policy, and exposed evidence through task state, working directories, or exports. Files and exit status are observed evidence; broader portability and scientific validity require the controls stated here.
+This lesson does not execute a workflow. It establishes the interpreter and imports the `Workflow` API from the selected installation; the import is evidence of availability, not of backend readiness.
 
 ## Controlled experiment
 

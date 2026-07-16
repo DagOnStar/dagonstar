@@ -10,4 +10,5 @@ These case studies sit outside the numbered curriculum so infrastructure and mat
 | Reserved or planned | An identifier exists, but automatic behavior is not implemented. |
 
 - [DynoStore case study](dynostore.md) — explicit integration; automatic `DataMover.DYNOSTORE` staging is reserved rather than implemented.
-- Legacy FaaS lessons remain available in the historical tutorial files; FaaS invokes deployed functions and is not a deployment system.
+- [FaaS task guide](../../faas_tasks.md) and [credential-free examples](../../../examples/faas/README.md) — supported invocation of already-deployed functions; deployment is outside DAGonStar's task lifecycle.
+- [All-task interoperability guide](../../tasktype_interoperability.md) — locally testable construction, traversal, FAIR, checkpoint, and CWL contracts; portable emulation is not evidence that an external backend ran.

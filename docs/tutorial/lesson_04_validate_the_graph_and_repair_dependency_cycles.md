@@ -10,13 +10,12 @@
 After completing this lesson, you will be able to:
 
 - detect a cycle, interpret the error, and redesign the graph;
-- explain the underlying mechanism;
+- relate each observed result to the workflow mechanism that produced it;
 - verify observed behavior and state what the evidence does not prove.
 
 ## Prerequisites
 
 - [Lesson 03](lesson_03_connect_tasks_with_workflow_data_references.md), or equivalent concepts.
-- [Lesson 00](lesson_00_set_up_dagonstar_and_understand_the_learning_model.md) setup.
 - No external service unless stated below.
 
 ## Scientific scenario
@@ -31,7 +30,7 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read the authoritative example or structural check before running it. The canonical lifecycle is add_task(), optional explicit make_dependencies() and Validate_WF() for inspection, then run(). run() constructs dependencies automatically when needed.
+Draw the three-task cycle created by the example and identify the edge whose causal interpretation is invalid. The repair must change the scientific model, not merely suppress validation.
 
 ## Run the example
 
@@ -55,7 +54,7 @@ The check validates graph structure without executing commands.
 
 ## What DAGonStar did
 
-DAGonStar constructed or inspected the graph, applied the selected staging and execution policy, and exposed evidence through task state, working directories, or exports. Files and exit status are observed evidence; broader portability and scientific validity require the controls stated here.
+`Validate_WF()` examined the graph and rejected a structure with no topological order. After the erroneous edge was removed, it accepted the graph without running any task command.
 
 ## Controlled experiment
 

@@ -53,15 +53,15 @@ The ready-to-use notebooks are in
 tutorial scripts are also suitable for hosted Colab:
 
 ```python
-!python examples/tutorial/lesson_11_llm_tasks.py
 !python examples/tutorial/lesson_10_web_tasks.py
+!python examples/tutorial/lesson_11_llm_tasks.py
 ```
 
 Lesson 15's FAIR workflow is also local and credential-free. Its complete
 notebook-ready source and persistence notes are in
-[the FAIR-by-design tutorial](tutorial/lesson_15_fair_by_design.md).
+[the FAIR-by-design tutorial](tutorial/lesson_15_make_a_workflow_fair_by_design.md).
 
-Lesson 22 verifies every `TaskType` together without external connections:
+The all-task interoperability test verifies every `TaskType` together without external connections:
 
 ```python
 !python3 -m unittest tests.test_tasktype_interoperability -v

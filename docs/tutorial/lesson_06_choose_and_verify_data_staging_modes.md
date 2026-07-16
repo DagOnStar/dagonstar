@@ -10,13 +10,12 @@
 After completing this lesson, you will be able to:
 
 - compare COPY and LINK policies and verify filesystem effects;
-- explain the underlying mechanism;
+- relate each observed result to the workflow mechanism that produced it;
 - verify observed behavior and state what the evidence does not prove.
 
 ## Prerequisites
 
 - [Lesson 05](lesson_05_inspect_scratch_directories_launchers_and_logs.md), or equivalent concepts.
-- [Lesson 00](lesson_00_set_up_dagonstar_and_understand_the_learning_model.md) setup.
 - No external service unless stated below.
 
 ## Scientific scenario
@@ -31,7 +30,7 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read the authoritative example or structural check before running it. The canonical lifecycle is add_task(), optional explicit make_dependencies() and Validate_WF() for inspection, then run(). run() constructs dependencies automatically when needed.
+Run the same producer-consumer relationship twice, varying only the staging policy. Hold commands and data constant so that the filesystem representation—copy or symbolic link—is the experimental variable.
 
 ## Run the example
 
@@ -55,7 +54,7 @@ Filesystem inspection distinguishes supported local modes; it does not benchmark
 
 ## What DAGonStar did
 
-DAGonStar constructed or inspected the graph, applied the selected staging and execution policy, and exposed evidence through task state, working directories, or exports. Files and exit status are observed evidence; broader portability and scientific validity require the controls stated here.
+For `COPY`, DAGonStar materialised an independent consumer-side file. For `LINK`, it created a symbolic reference to the producer artifact. Both policies preserved the logical dependency but embodied different isolation assumptions.
 
 ## Controlled experiment
 

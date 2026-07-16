@@ -192,7 +192,9 @@ The repository has a sound baseline for changes to the core behavior:
   allowing hosted notebook environments such as Google Colab to retain their
   platform dependencies;
 - documentation covers configuration, architecture, checkpoints, examples,
-  FAIR principles, CWL export semantics, and the incremental tutorial; and
+  FAIR principles, CWL export semantics, and a canonical 18-lesson academic
+  tutorial whose structure, links, metadata, and retired-name drift are checked
+  automatically; and
 - an all-factory contract test constructs a mixed workflow containing every
   `TaskType` and verifies `workflow://`, FAIR declarations, checkpoint reuse,
   portable execution, and runnable deterministic CWL export without live
@@ -402,7 +404,7 @@ Large remote artifacts require an accessible transport such as object storage;
 automatic object upload is not currently implemented. See the [task guide](docs/faas_tasks.md),
 [providers](docs/faas_providers.md), [FAIR mapping](docs/faas_fair.md),
 [CWL mapping](docs/faas_cwl.md), [examples](examples/faas/README.md), and
-[Lesson 18](docs/tutorial/lesson_18_faas_mock.md).
+[optional-integration guide](docs/tutorial/integrations/README.md).
 
 ## Development
 

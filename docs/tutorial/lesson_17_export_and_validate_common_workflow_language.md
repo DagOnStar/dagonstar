@@ -10,13 +10,12 @@
 After completing this lesson, you will be able to:
 
 - export CWL v1.2 and explain portability boundaries;
-- explain the underlying mechanism;
+- relate each observed result to the workflow mechanism that produced it;
 - verify observed behavior and state what the evidence does not prove.
 
 ## Prerequisites
 
 - [Lesson 16](lesson_16_compose_meta_workflows.md), or equivalent concepts.
-- [Lesson 00](lesson_00_set_up_dagonstar_and_understand_the_learning_model.md) setup.
 - No external service unless stated below.
 
 ## Scientific scenario
@@ -31,7 +30,7 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read the authoritative example or structural check before running it. The canonical lifecycle is add_task(), optional explicit make_dependencies() and Validate_WF() for inspection, then run(). run() constructs dependencies automatically when needed.
+Inspect `examples/cwl/export_workflow.py` and predict how tasks, edges, commands, inputs, and outputs appear in the exported document. Generate into a temporary path so the checked-in reference remains an independent comparison.
 
 ## Run the example
 
@@ -55,7 +54,7 @@ Schema validation does not prove identical runtime behavior on every runner.
 
 ## What DAGonStar did
 
-DAGonStar constructed or inspected the graph, applied the selected staging and execution policy, and exposed evidence through task state, working directories, or exports. Files and exit status are observed evidence; broader portability and scientific validity require the controls stated here.
+`saveAsCWL()` serialised the supported portable command graph deterministically as CWL v1.2 JSON. DAGonStar-specific staging, remote execution policy, and credentials remain outside that representation and must not be inferred from it.
 
 ## Controlled experiment
 

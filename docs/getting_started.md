@@ -136,4 +136,5 @@ new features.
   [Running External Scientific Software](running_external_software.md).
 - Read the [Architecture](architecture.md) document before modifying internals.
 - Run the credential-free [mock FaaS example](../examples/faas/mock_sync.py) and
-  continue with [Lesson 18](tutorial/lesson_18_faas_mock.md).
+  continue with the [FaaS task guide](faas_tasks.md) and its credential-free
+  local mock example.

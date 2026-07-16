@@ -18,3 +18,7 @@
 - **Provenance:** evidence connecting agents, activities, inputs, and outputs.
 - **FAIR metadata:** descriptions supporting findability, accessibility, interoperability, and reuse; metadata alone is not publication.
 - **Export:** generation of a representation such as CWL; export does not execute it.
+- **Observation:** a directly inspected result, such as a file, task state, exit status, or validated document.
+- **Inference:** a conclusion supported by observations and stated assumptions; it must not be reported as direct evidence.
+- **Reproducibility:** obtaining consistent results from a sufficiently specified method and environment; one successful rerun establishes only limited evidence.
+- **Portability boundary:** the point beyond which an exported description no longer represents backend-specific execution, staging, credentials, or policy.

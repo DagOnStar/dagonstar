@@ -20,4 +20,7 @@ Lessons 01–09 use local files and processes. Lessons 10 and 11 bind short-live
 
 Lessons 12–14 use repository unit tests for deterministic structural verification; optional live Docker, SSH, and Slurm checks require site infrastructure. Lesson 15 uses FAIR tests, Lesson 16 uses the transversal-dependency test, and Lesson 17 uses the CWL example test. See the [tutorial syllabus](../../docs/tutorial/README.md) for commands and limitations.
 
-The older `lesson_12_llm_tasks.py` and `lesson_13_web_tasks.py` remain as implementation sources for compatibility; canonical wrappers expose them as Lessons 11 and 10 respectively.
+The canonical Lesson 10 and 11 entry points reuse the detailed local mock
+implementations in `lesson_13_web_tasks.py` and `lesson_12_llm_tasks.py`.
+Those implementation modules retain their historical filenames for import
+compatibility; they are not additional numbered lessons.

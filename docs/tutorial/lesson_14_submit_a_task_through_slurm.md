@@ -10,13 +10,12 @@
 After completing this lesson, you will be able to:
 
 - distinguish submission, queueing, execution, and completion;
-- explain the underlying mechanism;
+- relate each observed result to the workflow mechanism that produced it;
 - verify observed behavior and state what the evidence does not prove.
 
 ## Prerequisites
 
 - [Lesson 13](lesson_13_run_a_task_on_a_remote_host_with_ssh.md), or equivalent concepts.
-- [Lesson 00](lesson_00_set_up_dagonstar_and_understand_the_learning_model.md) setup.
 - Slurm is optional for live integration; structural checks remain local.
 
 ## Scientific scenario
@@ -31,7 +30,7 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read the authoritative example or structural check before running it. The canonical lifecycle is add_task(), optional explicit make_dependencies() and Validate_WF() for inspection, then run(). run() constructs dependencies automatically when needed.
+Trace the generated batch script and submission command, distinguishing scheduler directives from the scientific command. A live extension should record partition, resources, job identifier, queue transitions, and final task evidence.
 
 ## Run the example
 
@@ -55,7 +54,7 @@ Compilation does not prove submission or completion.
 
 ## What DAGonStar did
 
-DAGonStar constructed or inspected the graph, applied the selected staging and execution policy, and exposed evidence through task state, working directories, or exports. Files and exit status are observed evidence; broader portability and scientific validity require the controls stated here.
+The local checks cover Slurm command construction and source validity. They do not submit a job; queue acceptance, allocation, execution, and accounting remain separate observations available only on a configured cluster.
 
 ## Controlled experiment
 

@@ -10,13 +10,12 @@
 After completing this lesson, you will be able to:
 
 - identify Docker prerequisites and separate structural from live verification;
-- explain the underlying mechanism;
+- relate each observed result to the workflow mechanism that produced it;
 - verify observed behavior and state what the evidence does not prove.
 
 ## Prerequisites
 
 - [Lesson 11](lesson_11_execute_an_llm_task_responsibly.md), or equivalent concepts.
-- [Lesson 00](lesson_00_set_up_dagonstar_and_understand_the_learning_model.md) setup.
 - Docker is optional for live integration; structural checks remain local.
 
 ## Scientific scenario
@@ -31,7 +30,7 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read the authoritative example or structural check before running it. The canonical lifecycle is add_task(), optional explicit make_dependencies() and Validate_WF() for inspection, then run(). run() constructs dependencies automatically when needed.
+Use the unit test as a laboratory for task construction and command generation. Trace image, command, volumes, and optional remote settings from task fields into the generated Docker invocation before considering a live run.
 
 ## Run the example
 
@@ -55,7 +54,7 @@ A live run additionally requires Docker and the selected image.
 
 ## What DAGonStar did
 
-DAGonStar constructed or inspected the graph, applied the selected staging and execution policy, and exposed evidence through task state, working directories, or exports. Files and exit status are observed evidence; broader portability and scientific validity require the controls stated here.
+The tested code constructs container execution commands and preserves workflow dependencies without opening a daemon connection. Only a separately configured live experiment can establish image availability, isolation, or runtime success.
 
 ## Controlled experiment
 
