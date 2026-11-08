@@ -582,7 +582,7 @@ class Task(Thread):
                     if task is not None:
                         break
 
-            # Check if the refernced task is consistent
+            # Check if the referenced task is consistent
             if task is not None:
                 # Add the dependency to the task
                 if workflow_name == self.workflow.name:
@@ -639,10 +639,10 @@ class Task(Thread):
 
         # Initialize the script
         header = "#! /bin/bash\n"
-        header = "export PATH=\"$HOME/.local/bin:$PATH\"\n"
-        header = header + "# This is the DagOn launcher script\n\n"
-        header = header + "code=0\n"
-        # Add and execute the howim script
+        header += "export PATH=\"$HOME/.local/bin:$PATH\"\n"
+        header += "# This is the DagOn launcher script\n\n"
+        header += "code=0\n"
+        # Add and execute the script
 
         context_script = header + "cd " + self.working_dir + "/.dagon\n"
 
