@@ -15,16 +15,17 @@ def runner_environment(extra: Optional[Mapping[str, str]] = None,
     Local runner subprocesses execute inside a task scratch directory, so a
     source checkout that has not been installed with ``pip install -e .`` would
     otherwise fail with ``ModuleNotFoundError: No module named 'dagon'``.  The
-    directory holding the parent process's ``dagon`` package is prepended to
-    ``PYTHONPATH`` so the child imports the same implementation.  Existing
-    ``PYTHONPATH`` entries and task-specific variables are preserved; task
-    variables are applied last, as before.
+    directory holding the parent process's ``dagon`` package is appended to
+    ``PYTHONPATH``.  Appending keeps the user's own ``PYTHONPATH`` entries in
+    front so they are never shadowed (for an installed DAGonStar that
+    directory is ``site-packages``).  Task-specific variables are applied
+    last, as before.
     """
     environment = dict(os.environ if base is None else base)
     current = environment.get("PYTHONPATH", "")
     entries = [entry for entry in current.split(os.pathsep) if entry]
     if PACKAGE_ROOT not in entries:
-        entries.insert(0, PACKAGE_ROOT)
+        entries.append(PACKAGE_ROOT)
     environment["PYTHONPATH"] = os.pathsep.join(entries)
     environment.update(dict(extra or {}))
     return environment

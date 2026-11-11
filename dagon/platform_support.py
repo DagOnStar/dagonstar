@@ -50,9 +50,12 @@ def _detect_bash() -> Optional[str]:
             if candidate and os.path.isfile(candidate) and not _is_wsl_launcher(candidate):
                 return candidate
         return None
-    if os.path.exists("/bin/bash"):
-        return "/bin/bash"
-    return shutil.which("bash")
+    # Prefer the first bash on PATH (as DAGonStar always did for launchers), so
+    # a newer bash such as Homebrew's on macOS keeps being used.
+    found = shutil.which("bash")
+    if found:
+        return found
+    return "/bin/bash" if os.path.exists("/bin/bash") else None
 
 
 def bash_executable() -> str:

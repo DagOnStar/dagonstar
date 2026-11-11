@@ -19,6 +19,16 @@ class PlatformSupportTests(unittest.TestCase):
             os.environ.pop("DAGON_BASH", None)
             self.assertTrue(os.path.isfile(platform_support.bash_executable()))
 
+    def test_posix_prefers_bash_on_path_over_bin_bash(self):
+        with mock.patch.object(platform_support, "IS_WINDOWS", False), \
+                mock.patch.object(platform_support.shutil, "which", return_value="/opt/homebrew/bin/bash"):
+            self.assertEqual("/opt/homebrew/bin/bash", platform_support._detect_bash())
+        platform_support._detect_bash.cache_clear()
+        with mock.patch.object(platform_support, "IS_WINDOWS", False), \
+                mock.patch.object(platform_support.shutil, "which", return_value=None), \
+                mock.patch.object(platform_support.os.path, "exists", return_value=True):
+            self.assertEqual("/bin/bash", platform_support._detect_bash())
+
     def test_missing_bash_raises_actionable_error(self):
         with mock.patch.dict(os.environ, {}, clear=False), \
                 mock.patch.object(platform_support, "_detect_bash", return_value=None):

@@ -8,7 +8,7 @@ from dagon.runtime_env import PACKAGE_ROOT, runner_environment
 
 
 class RunnerEnvironmentTests(unittest.TestCase):
-    def test_package_root_is_prepended_once_and_existing_entries_kept(self):
+    def test_package_root_is_added_once_and_existing_entries_kept(self):
         base = {"PYTHONPATH": os.pathsep.join(["/opt/site", PACKAGE_ROOT]), "KEEP": "1"}
         environment = runner_environment({"TASK_VAR": "x"}, base=base)
         entries = environment["PYTHONPATH"].split(os.pathsep)
@@ -16,6 +16,11 @@ class RunnerEnvironmentTests(unittest.TestCase):
         self.assertIn("/opt/site", entries)
         self.assertEqual(environment["KEEP"], "1")
         self.assertEqual(environment["TASK_VAR"], "x")
+
+    def test_user_pythonpath_entries_keep_precedence(self):
+        base = {"PYTHONPATH": os.pathsep.join(["/opt/override", "/opt/libs"])}
+        entries = runner_environment(base=base)["PYTHONPATH"].split(os.pathsep)
+        self.assertEqual(["/opt/override", "/opt/libs", PACKAGE_ROOT], entries)
 
     def test_package_root_is_added_when_pythonpath_is_unset(self):
         environment = runner_environment(base={})

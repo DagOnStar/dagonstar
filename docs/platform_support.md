@@ -35,8 +35,8 @@ DAGonStar launchers are POSIX `bash` scripts. The interpreter is chosen by
 `dagon.platform_support.bash_executable()`:
 
 1. the `DAGON_BASH` environment variable, if set, on every platform;
-2. on Linux, macOS, and other POSIX systems: `/bin/bash`, otherwise `bash`
-   from `PATH`;
+2. on Linux, macOS, and other POSIX systems: the first `bash` on `PATH`
+   (for example Homebrew's bash 5 on macOS), otherwise `/bin/bash`;
 3. on Windows: the `bash.exe` of Git for Windows (located from `git` on
    `PATH` or the standard install folders), then MSYS2
    (`C:\msys64\usr\bin\bash.exe`), Cygwin (`C:\cygwin64\bin\bash.exe`), and

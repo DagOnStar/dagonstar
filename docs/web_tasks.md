@@ -64,8 +64,9 @@ DagonTask(
 executor, DAGonStar invokes the configured Python interpreter as
 `python -m dagon.web.runner` in the web task directory. The local runner
 inherits the parent environment with the directory containing the running
-`dagon` package prepended to `PYTHONPATH`, so an uninstalled source checkout
-works as well as `pip install -e .`. With `"slurm"`, it
+`dagon` package appended to `PYTHONPATH`, so an uninstalled source checkout
+works as well as `pip install -e .`; entries already on your `PYTHONPATH` keep
+precedence. With `"slurm"`, it
 creates and submits a Slurm launcher; `resources` accepts the scheduler options
 used by the existing Slurm task support, such as `partition`, `ntasks`, and
 `time`. The HTTP request is therefore made from the machine on which the task

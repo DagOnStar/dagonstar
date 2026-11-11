@@ -213,8 +213,9 @@ The repository has a sound baseline for changes to the core behavior:
   for required runtime configuration; and
 - the LLM task boundary has local tests and a fully local mock-provider example.
 - native Python tasks have local staging, dependency, output, and runner tests;
-  local native and web runner subprocesses resolve the same `dagon` package as
-  the parent process, so the suite also passes from an uninstalled checkout.
+  local native and web runner subprocesses can import `dagon` from the parent
+  process's package location (appended after the user's `PYTHONPATH`), so the
+  suite also passes from an uninstalled checkout.
 - the FAIR example is self-contained (inline configuration, temporary scratch)
   and is executed by the test suite.
 - DynoStore has documented, tested task-level command examples; its
