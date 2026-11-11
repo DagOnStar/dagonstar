@@ -1,7 +1,6 @@
 """Declarative HTTP/HTTPS workflow task."""
 
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -10,6 +9,7 @@ from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
 
 import dagon
 from dagon.batch import Slurm
+from dagon.runtime_env import runner_environment
 from dagon.shell import join_command
 from dagon.task import Task
 from dagon.web.schema import references, safe_output_path, validate
@@ -134,7 +134,7 @@ class WebTask(Task):
                 self._release_references()
                 return
             command = [self.python, "-m", "dagon.web.runner", ".dagon/web_request.json"]
-            environment = dict(os.environ, **self.environment)
+            environment = runner_environment(self.environment)
             if self.executor == "local":
                 completed = subprocess.run(command, cwd=self.working_dir, env=environment, text=True, capture_output=True)
                 Path(self.working_dir, ".dagon/web_stdout.txt").write_text(completed.stdout, encoding="utf-8")

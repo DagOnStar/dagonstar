@@ -31,11 +31,12 @@ The example README documents a `[globus]` section:
 ```ini
 [globus]
 clientid=<globus_client_uuid>
-intermadiate_endpoint=<intermediate_endpoint_uuid>
+intermediate_endpoint=<intermediate_endpoint_uuid>
 ```
 
-Note the current implementation spelling: `intermadiate_endpoint`.
-Documentation preserves this spelling because the code reads that key.
+`intermediate_endpoint` is the preferred key. The historical misspelling
+`intermadiate_endpoint` is still accepted for existing configuration files; when
+both are present, `intermediate_endpoint` takes precedence.
 
 ## Execution model
 

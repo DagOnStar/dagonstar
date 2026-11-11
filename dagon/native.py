@@ -3,7 +3,6 @@
 import importlib
 import inspect
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -12,6 +11,7 @@ from typing import Any, Dict, Iterable, Mapping, Optional, Tuple, Union
 
 import dagon
 from dagon.batch import Slurm
+from dagon.runtime_env import runner_environment
 from dagon.shell import join_command
 from dagon.task import Task
 
@@ -189,7 +189,7 @@ class NativeTask(Task):
         self.workflow._fire_event("on_task_execute_start", self)
         if not self.workflow.dry:
             command = [self.python, "-m", "dagon.native_runner", ".dagon/native_spec.json"]
-            env = dict(os.environ, **self.environment)
+            env = runner_environment(self.environment)
             if self.executor == "local" or self.workflow.is_portable_emulation() is True:
                 completed = subprocess.run(command, cwd=self.working_dir, env=env, text=True, capture_output=True)
                 Path(self.working_dir, ".dagon", "native_stdout.txt").write_text(completed.stdout, encoding="utf-8")

@@ -62,8 +62,11 @@ Open the file ```dagon.ini``` and in the globus section paste your client ID and
 ```conf
 [globus]
 clientid=<your-globus-client-id>
-intermadiate_endpoint=<your-intermediate-collection-id>
+intermediate_endpoint=<your-intermediate-collection-id>
 ```
+
+Older configuration files that use the historical spelling
+`intermadiate_endpoint` continue to work.
 
 
 In this file, also replace the ```scratch_dir_base``` with any directory in your home partition. For example, ```/home/USER/DagOnStar```.

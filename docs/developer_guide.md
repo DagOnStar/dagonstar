@@ -47,8 +47,8 @@ Run the lightweight quality checks (install `mypy==1.13.0` and
 `ruff==0.6.9` first if they are not already available):
 
 ```bash
-python -m ruff check dagon/shell.py tests
-python -m mypy --follow-imports=skip dagon/shell.py
+python -m ruff check dagon/shell.py dagon/runtime_env.py tests
+python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py
 ```
 
 When packaging metadata changes:

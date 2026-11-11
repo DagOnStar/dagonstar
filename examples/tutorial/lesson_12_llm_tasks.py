@@ -1,4 +1,4 @@
-"""Runnable source for Tutorial Lesson 12; run from the repository root."""
+"""Implementation module for canonical Tutorial Lesson 11 (LLM tasks); run lesson_11_llm_tasks.py."""
 
 import json
 import tempfile

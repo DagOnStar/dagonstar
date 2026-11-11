@@ -9,7 +9,10 @@ verification strategy.
 ## Example families
 
 - [`fair_local.py`](../../examples/fair/fair_local.py): local two-task FAIR metadata,
-  checksum, RO-Crate, and provenance export without external services.
+  checksum, RO-Crate, and provenance export without external services. It uses an
+  inline configuration (no `dagon.ini`), a temporary scratch directory unless
+  `--scratch DIR` is given, and verifies that every expected metadata file exists:
+  `python3 examples/fair/fair_local.py`.
 
 - [Taskflow examples](taskflow.md): explicit dependency graphs.
 - [Asynchronous launch](../asynch_launch.md): local background execution and

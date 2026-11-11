@@ -6,6 +6,7 @@ on:
     branches:
       - master
       - main
+      - development
 
 jobs:
   unit-tests:
@@ -54,7 +55,7 @@ jobs:
         run: python -m pip install mypy==1.13.0 ruff==0.6.9
 
       - name: Run focused style checks
-        run: python -m ruff check dagon/shell.py tests
+        run: python -m ruff check dagon/shell.py dagon/runtime_env.py tests
 
       - name: Run progressive type checks
-        run: python -m mypy --follow-imports=skip dagon/shell.py
+        run: python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py

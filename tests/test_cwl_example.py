@@ -12,6 +12,14 @@ EXAMPLE = os.path.join(ROOT, "examples", "cwl", "export_workflow.py")
 COMMITTED_CWL = os.path.join(ROOT, "examples", "cwl", "interoperable-workflow.cwl")
 
 
+def source_checkout_environment():
+    """Let example subprocesses import ``dagon`` from an uninstalled checkout."""
+    environment = dict(os.environ)
+    paths = [ROOT] + [item for item in environment.get("PYTHONPATH", "").split(os.pathsep) if item]
+    environment["PYTHONPATH"] = os.pathsep.join(paths)
+    return environment
+
+
 class CWLExampleTests(unittest.TestCase):
     def test_example_regenerates_committed_interoperable_workflow(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -19,6 +27,7 @@ class CWLExampleTests(unittest.TestCase):
             subprocess.run(
                 [sys.executable, EXAMPLE, "--output", generated],
                 cwd=ROOT,
+                env=source_checkout_environment(),
                 check=True,
                 capture_output=True,
                 text=True,

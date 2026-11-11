@@ -207,7 +207,11 @@ The repository has a sound baseline for changes to the core behavior:
 - sample configuration avoids committed credentials and the SKYCDS path checks
   for required runtime configuration; and
 - the LLM task boundary has local tests and a fully local mock-provider example.
-- native Python tasks have local staging, dependency, output, and runner tests.
+- native Python tasks have local staging, dependency, output, and runner tests;
+  local native and web runner subprocesses resolve the same `dagon` package as
+  the parent process, so the suite also passes from an uninstalled checkout.
+- the FAIR example is self-contained (inline configuration, temporary scratch)
+  and is executed by the test suite.
 - DynoStore has documented, tested task-level command examples; its
   `DataMover` value remains reserved rather than an automatic stager.
 
@@ -418,8 +422,8 @@ Useful checks:
 ```bash
 python -m unittest discover -s tests -v
 python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py
-python -m ruff check dagon/shell.py tests
-python -m mypy --follow-imports=skip dagon/shell.py
+python -m ruff check dagon/shell.py dagon/runtime_env.py tests
+python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py
 python -m pip install -e .
 ```
 
@@ -475,5 +479,7 @@ ssh -i /path/to/key user@host hostname
 ### Globus or SKYCDS staging fails
 
 Confirm the integration-specific credentials and endpoint IDs are configured.
+The Globus `[globus]` section uses `clientid` and `intermediate_endpoint`; the
+historical spelling `intermadiate_endpoint` is still accepted.
 SKYCDS values must be supplied through environment variables, not committed in
 source files.

@@ -34,15 +34,23 @@ Read one FAIR test that declares artifacts and one that sanitises metadata. Map 
 
 ## Run the example
 
-From the repository root:
+From the repository root, run the self-contained two-task FAIR workflow. It uses
+an inline configuration (no `dagon.ini`) and a temporary scratch directory:
 
 ~~~bash
-python -m unittest tests.test_fair -v
+python examples/fair/fair_local.py
 ~~~
+
+To keep and inspect the bundle, choose a scratch directory explicitly, for
+example `python examples/fair/fair_local.py --scratch /tmp/dagon-fair`; the
+files are written under `<scratch>/.dagon/fair/FAIR-Demo/<run-uuid>/`.
 
 ## Expected result
 
-Tests verify profiles, records, sanitisation, and local exports.
+The script prints `FAIR metadata verified:` followed by the nine local exports:
+`checksums.sha256`, `codemeta.json`, `datacite.json`, `fairness-report.json`,
+`prov.json`, `report.html`, `report.md`, `ro-crate-metadata.json`, and
+`run.json`. It exits non-zero if any of them is missing.
 
 ## Verify
 
@@ -50,7 +58,8 @@ Tests verify profiles, records, sanitisation, and local exports.
 python -m unittest tests.test_fair -v
 ~~~
 
-They do not publish to a repository.
+The tests verify profiles, records, sanitisation, local exports, and the
+example above. They do not publish to a repository.
 
 ## What DAGonStar did
 

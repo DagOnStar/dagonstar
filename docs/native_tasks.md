@@ -261,6 +261,11 @@ user-controlled runtime configuration or a secret manager.
 For Slurm, use `executor="slurm"` and scheduler keyword arguments in
 `resources`, for example `resources={"partition": "compute", "ntasks": 2}`.
 The scheduler launches `python -m dagon.native_runner` from the task directory.
+With the local executor, the runner inherits the parent environment with the
+directory containing the running `dagon` package prepended to `PYTHONPATH`, so
+the runner imports the same DAGonStar implementation even from an uninstalled
+source checkout. This adjustment is not applied to Slurm launchers, which run
+in the compute node's own environment.
 Ensure the chosen `python`, the callable's import root, and all requirements
 are available on the compute node; DAGonStar does not stage source packages or
 install `requirements.txt` as part of submission.

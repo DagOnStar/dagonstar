@@ -96,3 +96,25 @@ class FairTests(unittest.TestCase):
             with open(os.path.join(output_dir, "run.json"), encoding="utf-8") as source:
                 run = json.load(source)
             self.assertTrue(run["tasks"]["A"]["checkpoint_reused"])
+
+
+class FairExampleTests(unittest.TestCase):
+    def test_local_example_runs_without_dagon_ini_and_writes_bundle(self):
+        import importlib.util
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        spec = importlib.util.spec_from_file_location(
+            "fair_local_example", os.path.join(root, "examples", "fair", "fair_local.py"))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as scratch, tempfile.TemporaryDirectory() as cwd:
+            previous = os.getcwd()
+            os.chdir(cwd)  # no dagon.ini here: the example must not need one
+            try:
+                bundle = module.run(scratch)
+            finally:
+                os.chdir(previous)
+            for name in module.EXPECTED_FILES:
+                self.assertTrue(bundle.joinpath(name).is_file(), name)
+            with open(bundle / "run.json", encoding="utf-8") as source:
+                run = json.load(source)
+            self.assertEqual(run["tasks"]["B"]["status"], "FINISHED")

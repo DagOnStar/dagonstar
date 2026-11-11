@@ -7,8 +7,21 @@ from dagon.batch import Batch
 from dagon.batch import Slurm
 
 from dagon.remote import RemoteTask
-from dagon.communication.data_transfer import GlobusManager
 from dagon.shell import quote, remote_target
+
+
+def globus_intermediate_endpoint(globus_cfg: Dict[str, Any]) -> str:
+    """Return the Globus intermediate endpoint from a ``[globus]`` section.
+
+    ``intermediate_endpoint`` is the preferred key.  The historical misspelling
+    ``intermadiate_endpoint`` is still accepted so existing ``dagon.ini`` files
+    keep working.
+    """
+    for key in ("intermediate_endpoint", "intermadiate_endpoint"):
+        value = globus_cfg.get(key)
+        if value:
+            return value
+    raise KeyError("Globus configuration requires 'intermediate_endpoint'")
 
 
 class DataMover(Enum):
@@ -136,7 +149,8 @@ class Stager(object):
             # data could be copy using globus sdk
             ep1 = src_task.get_endpoint()
             ep2 = dst_task.get_endpoint()
-            gm = GlobusManager(ep1, ep2, self.cfg["globus"]["clientid"], self.cfg["globus"]["intermadiate_endpoint"])
+            gm = GlobusManager(ep1, ep2, self.cfg["globus"]["clientid"],
+                               globus_intermediate_endpoint(self.cfg["globus"]))
 
             # generate tar with data
             #tar_path = src + "/data.tar"

@@ -47,6 +47,15 @@ class FailurePathTests(unittest.TestCase):
             with self.assertRaisesRegex(ImportError, r"dagonstar\[globus\]"):
                 GlobusManager("source", "destination", "client", "intermediate")
 
+    def test_globus_intermediate_endpoint_accepts_preferred_and_legacy_keys(self):
+        from dagon.stager.base import globus_intermediate_endpoint
+
+        self.assertEqual("new", globus_intermediate_endpoint({"intermediate_endpoint": "new",
+                                                              "intermadiate_endpoint": "old"}))
+        self.assertEqual("old", globus_intermediate_endpoint({"intermadiate_endpoint": "old"}))
+        with self.assertRaises(KeyError):
+            globus_intermediate_endpoint({})
+
     def test_api_server_reports_missing_optional_extra(self):
         real_import = builtins.__import__
 
