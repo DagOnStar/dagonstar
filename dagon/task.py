@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from dagon.ftp_publisher import FTP_API
 import dagon
 from dagon.shell import quote
-from dagon.platform_support import bash_executable, shell_path
+from dagon.platform_support import bash_executable, launcher_environment, shell_path
 
 
 class TaskType(Enum):
@@ -279,7 +279,8 @@ class Task(Thread):
         self.initialize_checkpoint()
         self.workflow._fire_event("on_task_execute_start", self)
         completed = subprocess.run([bash_executable(), "-c", self.portable_command()],
-                                   cwd=self.working_dir, text=True, capture_output=True)
+                                   cwd=self.working_dir, text=True, capture_output=True,
+                                   env=launcher_environment())
         self.result = {"code": completed.returncode, "message": completed.stderr,
                        "output": completed.stdout}
         self.workflow.checkpoints[key]["code"] = completed.returncode

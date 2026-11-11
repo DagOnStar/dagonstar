@@ -82,3 +82,20 @@ def shell_path(path: str) -> str:
     if IS_WINDOWS and path:
         return str(path).replace("\\", "/")
     return path
+
+
+def launcher_environment() -> Optional[dict]:
+    """Return the environment for local launcher processes.
+
+    ``None`` (inherit the parent environment) on POSIX.  On Windows, ``MSYS``
+    and ``CYGWIN`` default to ``winsymlinks:native`` so ``ln -s`` in the
+    ``LINK`` data mover creates real symbolic links when Windows allows it
+    (developer mode or an elevated process) instead of silently copying.
+    Values already set by the user are kept.
+    """
+    if not IS_WINDOWS:
+        return None
+    environment = dict(os.environ)
+    environment.setdefault("MSYS", "winsymlinks:native")
+    environment.setdefault("CYGWIN", "winsymlinks:native")
+    return environment

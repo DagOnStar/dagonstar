@@ -51,13 +51,18 @@ On Windows, DAGonStar also:
 - converts scratch and working directories to forward-slash form
   (`C:/Users/me/scratch/...`), which both Python and the bash variants above
   accept;
-- writes launcher scripts with LF line endings so bash does not see `\r`.
+- writes launcher scripts with LF line endings so bash does not see `\r`;
+- resolves `workflow://` producer paths with `/` separators.
 
 Task commands still run inside bash, so they must use POSIX shell syntax and
 tools available in that bash environment (Git Bash ships `mkdir`, `cp`, `cat`,
 `printf`, `sed`, and similar). Windows-only commands are not translated.
-The `LINK` data mover uses `ln -s`; under Git Bash this may copy instead of
-creating a symbolic link unless Windows symlink support is enabled.
+The `LINK` data mover uses `ln -s`. DAGonStar starts Windows launchers with
+`MSYS` and `CYGWIN` set to `winsymlinks:native` unless you set them yourself, so
+real symbolic links are created when Windows permits it (developer mode or an
+elevated shell); otherwise `ln -s` falls back to copying. Producer paths in
+`workflow://` references are POSIX paths relative to the producer's scratch
+directory on every platform.
 
 ### Windows quick start
 

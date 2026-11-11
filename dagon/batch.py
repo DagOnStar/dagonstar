@@ -5,7 +5,7 @@ from dagon.task import ExecutionResult, Task
 from dagon.remote import RemoteTask
 from subprocess import Popen, PIPE, STDOUT
 from dagon.shell import join_command, quote
-from dagon.platform_support import bash_executable
+from dagon.platform_support import bash_executable, launcher_environment
 
 
 class Batch(Task):
@@ -80,7 +80,8 @@ class Batch(Task):
         #         code, message = 1, result.stderr
         #
         #     return {"code": code, "message": message, "output": result.stdout}
-        p = Popen(shlex.split(command), stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, bufsize=-1, universal_newlines=True)
+        p = Popen(shlex.split(command), stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, bufsize=-1, universal_newlines=True,
+                  env=launcher_environment())
 
         out, err = p.communicate()
 

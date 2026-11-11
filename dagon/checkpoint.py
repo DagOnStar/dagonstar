@@ -7,7 +7,7 @@ import shutil
 import json
 import shlex
 from dagon.shell import join_command, quote
-from dagon.platform_support import bash_executable
+from dagon.platform_support import bash_executable, launcher_environment
 
 class Checkpoint(Task):
     """
@@ -86,7 +86,7 @@ class Checkpoint(Task):
         # ...
 
         p = Popen(shlex.split(command), stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True, bufsize=-1,
-                  universal_newlines=True)
+                  universal_newlines=True, env=launcher_environment())
         
         out, err = p.communicate()
 

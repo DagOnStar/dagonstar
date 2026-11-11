@@ -41,6 +41,16 @@ class PlatformSupportTests(unittest.TestCase):
                 mock.patch.dict(os.environ, {"SystemRoot": system_root}):
             self.assertIsNone(platform_support._detect_bash())
 
+    def test_launcher_environment_inherits_on_posix_and_enables_symlinks_on_windows(self):
+        with mock.patch.object(platform_support, "IS_WINDOWS", False):
+            self.assertIsNone(platform_support.launcher_environment())
+        with mock.patch.object(platform_support, "IS_WINDOWS", True), \
+                mock.patch.dict(os.environ, {"CYGWIN": "user-choice"}):
+            os.environ.pop("MSYS", None)
+            environment = platform_support.launcher_environment()
+        self.assertEqual("winsymlinks:native", environment["MSYS"])
+        self.assertEqual("user-choice", environment["CYGWIN"])
+
     def test_launcher_scripts_are_written_with_lf_line_endings(self):
         import tempfile
         from dagon.task import Task
