@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from dagon.ftp_publisher import FTP_API
 import dagon
 from dagon.shell import quote
+from dagon.platform_support import bash_executable, shell_path
 
 
 class TaskType(Enum):
@@ -171,7 +172,7 @@ class Task(Thread):
         self.running = False
         self.workflow = None
         self.set_status(dagon.Status.READY)
-        self.working_dir = working_dir
+        self.working_dir = shell_path(working_dir) if working_dir else working_dir
         self.command = command
         self.info: Optional[Dict[str, Any]] = None
         self.dag_tps = None
@@ -273,13 +274,12 @@ class Task(Thread):
             return
         self.remove_scratch_dir = self.workflow.get_remove_dir_op()
         if self.working_dir is None:
-            self.working_dir = os.path.join(self.workflow.get_scratch_dir_base(), self.get_scratch_name())
+            self.working_dir = shell_path(os.path.join(self.workflow.get_scratch_dir_base(), self.get_scratch_name()))
         os.makedirs(os.path.join(self.working_dir, ".dagon"), exist_ok=True)
         self.initialize_checkpoint()
         self.workflow._fire_event("on_task_execute_start", self)
-        completed = subprocess.run(self.portable_command(), cwd=self.working_dir,
-                                   shell=True, executable="/bin/bash", text=True,
-                                   capture_output=True)
+        completed = subprocess.run([bash_executable(), "-c", self.portable_command()],
+                                   cwd=self.working_dir, text=True, capture_output=True)
         self.result = {"code": completed.returncode, "message": completed.stderr,
                        "output": completed.stdout}
         self.workflow.checkpoints[key]["code"] = completed.returncode
@@ -945,7 +945,8 @@ class Task(Thread):
         # The launcher script name
         script_name = self.working_dir + "/.dagon/" + script_name
         # Create a temporary launcher script
-        file = open(script_name, "w")
+        # Launchers are bash scripts: always write LF line endings, also on Windows.
+        file = open(script_name, "w", newline="\n")
         file.write(script)
         file.flush()
         file.close()

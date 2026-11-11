@@ -5,6 +5,7 @@ from dagon.task import ExecutionResult, Task
 from dagon.remote import RemoteTask
 from subprocess import Popen, PIPE, STDOUT
 from dagon.shell import join_command, quote
+from dagon.platform_support import bash_executable
 
 
 class Batch(Task):
@@ -104,7 +105,7 @@ class Batch(Task):
         """
         # Invoke the base method
         super(Batch, self).on_execute(script, script_name)
-        return Batch.execute_command(join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
+        return Batch.execute_command(join_command((bash_executable(), self.working_dir + "/.dagon/" + script_name)))
 
     # returns public key
     def get_public_key(self) -> str:
@@ -345,7 +346,7 @@ class Slurm(Batch):
         if script_name == "context.sh":
             return Batch.execute_command(
                 join_command((
-                    "/bin/bash",
+                    bash_executable(),
                     self.working_dir + "/.dagon/" + script_name,
                 ))
             )

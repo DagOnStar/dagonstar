@@ -14,6 +14,7 @@ from time import time
 from datetime import datetime
 
 from dagon.config import read_config
+from dagon.platform_support import shell_path
 from dagon.api import API
 
 from dagon.stager.base import DataMover
@@ -246,7 +247,9 @@ class Workflow(object):
                 self._scratch_dir = os.path.join(base_dir, subdir_name)
             else:
                 self._scratch_dir = base_dir
-    
+            # Forward slashes on Windows so launcher scripts can use the path.
+            self._scratch_dir = shell_path(self._scratch_dir)
+
         return self._scratch_dir
     
     def get_remove_dir_op(self) -> bool:

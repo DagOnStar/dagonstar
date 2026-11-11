@@ -1,0 +1,199 @@
+name: CI/CD
+
+# Continuous integration on Linux (Ubuntu, Rocky Linux), macOS, Windows, and
+# 64-bit Raspberry Pi OS (Debian bookworm arm64), plus packaging and releases.
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - main
+      - development
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTHONIOENCODING: "utf-8"
+
+jobs:
+  quality:
+    name: Quality (ruff, mypy, tutorial)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install quality tools
+        run: python -m pip install mypy==1.13.0 ruff==0.6.9
+      - name: Run focused style checks
+        run: python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py tests tools/run_local_examples.py
+      - name: Run progressive type checks
+        run: python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py
+      - name: Validate tutorial structure and notebook
+        run: |
+          python tools/validate_tutorial.py
+          python -c "import json; json.load(open('docs/tutorial/DAGonStar_tutorial.ipynb', encoding='utf-8'))"
+
+  # GitHub-hosted runners: Ubuntu, macOS (Apple silicon), and Windows (x64).
+  test:
+    name: ${{ matrix.label }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: Ubuntu 24.04, os: ubuntu-24.04, python-version: "3.8" }
+          - { label: Ubuntu, os: ubuntu-latest, python-version: "3.10" }
+          - { label: Ubuntu, os: ubuntu-latest, python-version: "3.12" }
+          - { label: Ubuntu, os: ubuntu-latest, python-version: "3.13" }
+          - { label: macOS, os: macos-latest, python-version: "3.10" }
+          - { label: macOS, os: macos-latest, python-version: "3.13" }
+          - { label: Windows, os: windows-latest, python-version: "3.10" }
+          - { label: Windows, os: windows-latest, python-version: "3.13" }
+    defaults:
+      run:
+        # Git Bash on Windows; DAGonStar launchers also use it there.
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[docker,kubernetes]"
+      - name: Report platform
+        run: python -c "import platform, sys; from dagon.platform_support import bash_executable; print(platform.platform(), sys.version); print('bash:', bash_executable())"
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Compile source files
+        run: python -m compileall -q dagon
+      - name: Run local examples
+        run: python tools/run_local_examples.py
+
+  # Rocky Linux (RHEL-compatible, common on HPC clusters) in a container.
+  rocky-linux:
+    name: Rocky Linux ${{ matrix.rocky }} / Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    container: rockylinux/rockylinux:${{ matrix.rocky }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rocky: "9", python: "3.9", package: python3 }
+          - { rocky: "9", python: "3.12", package: python3.12 }
+    steps:
+      - name: Install system packages
+        run: dnf install -y --setopt=install_weak_deps=False git bash ${{ matrix.package }} ${{ matrix.package }}-pip
+      - uses: actions/checkout@v5
+      - name: Install package
+        run: |
+          python${{ matrix.python }} -m venv /opt/venv
+          /opt/venv/bin/python -m pip install --upgrade pip
+          /opt/venv/bin/python -m pip install -e ".[docker,kubernetes]"
+      - name: Run unit tests
+        run: /opt/venv/bin/python -m unittest discover -s tests -v
+      - name: Run local examples
+        run: /opt/venv/bin/python tools/run_local_examples.py
+
+  # Raspberry Pi: 64-bit Raspberry Pi OS is Debian bookworm on arm64 (aarch64).
+  raspberry-pi:
+    name: Raspberry Pi OS 64-bit (Debian bookworm arm64)
+    runs-on: ubuntu-24.04-arm
+    container: debian:bookworm
+    steps:
+      - name: Install system packages
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates bash python3 python3-venv python3-pip
+      - uses: actions/checkout@v5
+      - name: Install package
+        run: |
+          python3 -m venv /opt/venv
+          /opt/venv/bin/python -m pip install --upgrade pip
+          /opt/venv/bin/python -m pip install -e ".[docker,kubernetes]"
+      - name: Report platform
+        run: /opt/venv/bin/python -c "import platform; print(platform.machine(), platform.platform())"
+      - name: Run unit tests
+        run: /opt/venv/bin/python -m unittest discover -s tests -v
+      - name: Run local examples
+        run: /opt/venv/bin/python tools/run_local_examples.py
+
+  # Continuous delivery: build and check the distributions on every run.
+  build:
+    name: Build distributions
+    needs: [quality, test, rocky-linux, raspberry-pi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install build twine
+          python -m build
+          python -m twine check --strict dist/*
+      - name: Verify the tag matches the package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(python -c "import configparser; c = configparser.ConfigParser(); c.read('setup.cfg'); print(c['metadata']['version'])")
+          test "v${version}" = "${GITHUB_REF_NAME}" || { echo "Tag ${GITHUB_REF_NAME} does not match setup.cfg version ${version}"; exit 1; }
+      - name: Smoke-test the wheel in a clean environment
+        run: |
+          python -m venv /tmp/wheel-venv
+          /tmp/wheel-venv/bin/python -m pip install dist/*.whl
+          cd /tmp && /tmp/wheel-venv/bin/python -c "import dagon, dagon.web, dagon.fair, dagon.iot, dagon.stager, dagon.platform_support; print('wheel import ok')"
+      - uses: actions/upload-artifact@v5
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  # On a version tag (vX.Y.Z), attach the distributions to a GitHub release.
+  release:
+    name: GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: dist
+          path: dist/
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" dist/* --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --generate-notes --verify-tag
+
+  # Opt-in PyPI publishing via trusted publishing (no stored token). Enable by
+  # configuring a PyPI trusted publisher for this workflow and the "pypi"
+  # environment, then setting the repository variable PYPI_PUBLISH=true.
+  publish-pypi:
+    name: Publish to PyPI
+    if: startsWith(github.ref, 'refs/tags/v') && vars.PYPI_PUBLISH == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
