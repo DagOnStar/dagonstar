@@ -23,8 +23,8 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("docker==7.1.0", extras["docker"])
         self.assertIn("globus_sdk==3.28.0", extras["globus"])
         self.assertIn("flask==2.2.2", extras["api"])
-        self.assertIn('kubernetes==35.0.0; python_version < "3.9"', extras["kubernetes"])
-        self.assertIn('kubernetes==36.0.2; python_version >= "3.9"', extras["kubernetes"])
+        self.assertIn('kubernetes==35.0.0; python_version < "3.10"', extras["kubernetes"])
+        self.assertIn('kubernetes==36.0.2; python_version >= "3.10"', extras["kubernetes"])
 
     def test_optional_dependencies_do_not_leak_into_base_install(self):
         parser = configparser.ConfigParser()

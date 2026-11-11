@@ -75,6 +75,18 @@ python -m pip install -e .
 ```
 
 If behavior changed, run the smallest relevant example and document the command.
+`python tools/run_local_examples.py` runs every self-contained local example.
+
+## Platform portability
+
+- CI (`.github/workflows/ci.yml`) tests Ubuntu, macOS, Windows, Rocky Linux 9,
+  and Debian bookworm arm64 (64-bit Raspberry Pi OS userland); see
+  `docs/platform_support.md` and keep it accurate.
+- Run local launchers through `dagon.platform_support.bash_executable()`, never
+  a hardcoded `/bin/bash` or `bash`; remote hosts may keep `bash`.
+- Pass local paths embedded in launchers through `shell_path()` and write
+  launcher scripts with `newline="\n"`.
+- Use `tempfile` rather than `/tmp` in new tests and examples.
 
 When adding or changing features, add a unit test under `tests/` for the expected
 stable behavior. Prefer tests that do not require external services. For Docker,

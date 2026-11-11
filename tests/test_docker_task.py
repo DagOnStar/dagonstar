@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import patch, MagicMock
 from dagon.docker_task import DockerTask, DockerRemoteTask
@@ -212,7 +213,7 @@ class TestDockerRemoteTask(unittest.TestCase):
         self.assertEqual(task.devices, ["/dev/null:/dev/null:rwm"])
         self.assertFalse(task.pull)
         self.mock_ssh_manager_class.assert_called_with(
-            "user", "192.168.1.10", "/path/to/key", port=2200
+            "user", "192.168.1.10", os.path.abspath("/path/to/key"), port=2200
         )
         self.mock_docker_client_class.assert_called_with(
             base_url="ssh://user@192.168.1.10:2200", timeout=300

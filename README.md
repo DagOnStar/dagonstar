@@ -131,7 +131,8 @@ The full documentation set is available in `docs/`:
 - [Using DAGonStar from Jupyter Notebook](docs/jupyter_notebook.md)
 - [Running DAGonStar demos in Google Colab](docs/colab.md)
 - [Examples Catalog](docs/examples/README.md)
-- [Tutorials: twenty-two incremental lessons](docs/tutorial/README.md)
+- [Tutorials: nineteen incremental lessons (00–18)](docs/tutorial/README.md)
+- [Platform support and CI/CD](docs/platform_support.md)
 
 ## What DAGonStar supports
 
@@ -189,15 +190,19 @@ The repository has a sound baseline for changes to the core behavior:
   selected shell-quoting behavior, SSH host-key verification and safe remote
   launcher creation, and FAIR profiles, artifact declarations,
   recorder exports, validation, and safe environment defaults;
-- GitHub Actions runs that suite and source compilation on Python 3.8 and
-  Python 3.12, plus focused Ruff and mypy checks on Python 3.12;
+- the GitHub Actions CI/CD workflow runs that suite, source compilation, and
+  the self-contained local examples on Ubuntu (Python 3.8–3.13), macOS,
+  Windows (with Git Bash), Rocky Linux 9, and 64-bit Raspberry Pi OS userland
+  (Debian bookworm arm64), plus focused Ruff and mypy checks, a checked
+  sdist/wheel build, and tag-driven GitHub releases; local launchers use a
+  detected POSIX bash, so Windows requires Git for Windows, MSYS2, or Cygwin;
 - package extras keep Docker, cloud, Globus, and API dependencies out of the
   base installation;
 - base `requests` and `graphviz` requirements use compatible version ranges,
   allowing hosted notebook environments such as Google Colab to retain their
   platform dependencies;
 - documentation covers configuration, architecture, checkpoints, examples,
-  FAIR principles, CWL export semantics, and a canonical 18-lesson academic
+  FAIR principles, CWL export semantics, and a canonical 19-lesson (00–18) academic
   tutorial whose structure, links, metadata, and retired-name drift are checked
   automatically; and
 - an all-factory contract test constructs a mixed workflow containing every
@@ -229,7 +234,10 @@ the boundary being changed.
 
 ## Installation
 
-Use Python 3.8 or newer.
+Use Python 3.8 or newer on Linux, macOS, or Windows. Local tasks run as bash
+launchers; on Windows install Git for Windows (Git Bash), MSYS2, or Cygwin, or
+set `DAGON_BASH`. See [Platform support and CI/CD](docs/platform_support.md)
+for the tested platforms, including Rocky Linux and Raspberry Pi.
 
 ```bash
 git clone https://github.com/DagOnStar/dagonstar.git
@@ -422,8 +430,9 @@ Useful checks:
 ```bash
 python -m unittest discover -s tests -v
 python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py
-python -m ruff check dagon/shell.py dagon/runtime_env.py tests
-python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py
+python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py tests tools/run_local_examples.py
+python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py
+python tools/run_local_examples.py
 python -m pip install -e .
 ```
 
@@ -432,8 +441,11 @@ focus on behavior that should remain stable while features evolve: configuration
 loading, workflow defaults, dependency discovery, cycle validation, JSON
 serialization, and runtime-secret validation.
 
-GitHub Actions runs the unit tests and source compilation checks on pushes to
-`master`/`main` and on pull requests.
+The GitHub Actions CI/CD workflow (`.github/workflows/ci.yml`) runs the unit
+tests and local examples on Ubuntu, macOS, Windows, Rocky Linux 9, and 64-bit
+Raspberry Pi OS (Debian bookworm arm64) for pushes to `main`, `master`, and
+`development` and for pull requests; it also builds the distributions and, on
+`v*` tags, creates a GitHub release. See [Platform support and CI/CD](docs/platform_support.md).
 
 When changing workflow execution behavior, add a targeted unit test where
 possible. If the behavior depends on Docker, Slurm, SSH, Globus, or a cloud

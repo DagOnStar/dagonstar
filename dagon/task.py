@@ -263,7 +263,7 @@ class Task(Thread):
                     while end < len(command) and not command[end].isspace() and command[end] not in "'\";|)&":
                         end += 1
                     relative = command[start + len(prefix):end]
-                    command = command[:start] + os.path.join(previous.working_dir, relative) + command[end:]
+                    command = command[:start] + shell_path(os.path.join(previous.working_dir, relative)) + command[end:]
         return "test -f " + " ".join(shlex.quote(item) for item in command.split()) if checkpoint_task else command
 
     def execute_portable(self) -> None:

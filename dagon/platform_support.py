@@ -40,7 +40,7 @@ def _windows_candidates() -> List[str]:
 def _is_wsl_launcher(path: str) -> bool:
     system_root = os.environ.get("SystemRoot", r"C:\Windows")
     normalized = os.path.normcase(os.path.abspath(path))
-    return normalized.startswith(os.path.normcase(os.path.join(system_root, "")))
+    return normalized.startswith(os.path.normcase(os.path.join(os.path.abspath(system_root), "")))
 
 
 @lru_cache(maxsize=None)

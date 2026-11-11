@@ -18,6 +18,7 @@ The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) cove
 - [User guide](user_guide.md)
 - [Reference guide](reference_guide.md)
 - [Developer guide](developer_guide.md)
+- [Platform support and CI/CD](platform_support.md)
 - [Scientific workflows](introduction_to_scientific_workflow.md)
 - [Workflow schema](the_workflow_schema.md)
 - [Checkpointing](checkpoints.md)
