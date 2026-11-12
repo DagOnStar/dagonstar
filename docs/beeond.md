@@ -178,7 +178,7 @@ What DAGonStar guarantees:
   unless `persist_on_failure=False`), the volume is copied before the job ends,
   the copy is verified as configured, and a failed copy fails the task;
 - on `SIGUSR1` (from `signal_grace`) or `SIGTERM`, the task launcher stops the
-  command and its direct children, persists, and exits non-zero; the holder
+  command's process group (all its descendants), persists, and exits non-zero; the holder
   persists and exits when it receives those signals;
 - the persistence status, file lists, and checksums are written next to the
   launcher (`<working_dir>/.dagon/`) or to the holder state directory.
@@ -188,7 +188,8 @@ What it cannot guarantee:
 - `SIGKILL`, node failure, or a time limit without a sufficient
   `signal_grace` window destroys the volume before it can be copied;
 - a snapshot taken on a signal reflects whatever the stopped command had
-  written; grandchildren that detach from the command are not stopped;
+  written; processes that leave the command's process group (for example with
+  `setsid`) are not stopped;
 - `verify=list` checks presence, not content; use `verify=checksum` when
   content integrity matters and the copy time is acceptable;
 - file names that contain newlines are not handled by verification;

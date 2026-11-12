@@ -137,7 +137,8 @@ class SlurmCommandTests(unittest.TestCase):
             self.assertIn("trap dagon_beeond_on_signal USR1 TERM", prologue)
             self.assertIn("dagon_beeond_persist || code=1", task.launcher_epilogue())
             self.assertIn("wait \"$DAGON_COMMAND_PID\"", task.include_command("run"))
-            self.assertEqual(scratch + "/sim/beeond", task.beeond_persist_dir())
+            self.assertEqual(os.path.normpath(scratch + "/sim/beeond"),
+                             os.path.normpath(task.beeond_persist_dir()))
 
     def test_remote_slurm_accepts_beeond_and_ssh_ports(self):
         for port in (22, 2222):
@@ -316,6 +317,20 @@ class LauncherExecutionTests(unittest.TestCase):
         env = dict(os.environ, SLURM_JOB_USER="u", SLURM_JOB_ID="1")
         return subprocess.run([bash_executable(), "-c", script], env=env, text=True,
                               capture_output=True, **kwargs)
+
+    def test_workflow_step_reads_mount_written_after_launcher(self):
+        # Launchers are generated before the holder starts (regression test).
+        workflow = Workflow("wf", config=make_config(self.tmp.name))
+        volume = workflow.create_beeond_volume("v")
+        prologue = volume.task_prologue()
+        self.assertIsNone(volume.mount)
+        os.makedirs(volume.state_dir())
+        with open(os.path.join(volume.state_dir(), "ready"), "w") as stream:
+            stream.write("42\n" + self.mount + "\n")
+        result = self.run_bash(prologue + 'echo step > "$DAGON_BEEOND/step.txt"\n')
+        self.assertEqual(0, result.returncode, result.stderr)
+        with open(os.path.join(self.mount, "step.txt")) as stream:
+            self.assertEqual("step\n", stream.read())
 
     def test_task_volume_is_persisted_and_verified(self):
         for tool, verify in (("auto", "list"), ("cp", "checksum")):

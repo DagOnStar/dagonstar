@@ -293,7 +293,8 @@ def persist_function_script(config: BeeONDConfig, persist_dir: str, report_dir: 
             " > \"$dagon_report/beeond_source.cksum\" || dagon_rc=1\n"
             "    (cd \"$dagon_dst\" && while IFS= read -r f; do cksum \"$f\"; done < \"$dagon_src_lst\")"
             " > \"$dagon_report/beeond_persisted.cksum\" || dagon_rc=1\n"
-            "    if ! cmp -s \"$dagon_report/beeond_source.cksum\" \"$dagon_report/beeond_persisted.cksum\"; then\n"
+            "    if [ \"$(cat \"$dagon_report/beeond_source.cksum\")\" !="
+            " \"$(cat \"$dagon_report/beeond_persisted.cksum\")\" ]; then\n"
             "      echo \"DAGonStar: BeeOND persistence verification failed: checksum mismatch in $dagon_dst\" >&2\n"
             "      dagon_rc=1\n"
             "    fi\n"
@@ -354,9 +355,9 @@ def task_prologue(config: BeeONDConfig, persist_dir: str, report_dir: str) -> st
             "dagon_beeond_on_signal() {\n"
             "  echo \"DAGonStar: termination signal received, persisting BeeOND data\" >&2\n"
             "  if [ -n \"${DAGON_COMMAND_PID:-}\" ]; then\n"
-            "    # Stop the command (and its direct children) for a consistent snapshot.\n"
-            "    pkill -TERM -P \"$DAGON_COMMAND_PID\" 2>/dev/null\n"
-            "    kill -TERM \"$DAGON_COMMAND_PID\" 2>/dev/null\n"
+            "    # Stop the command's process group for a consistent snapshot.\n"
+            "    kill -TERM -- -\"$DAGON_COMMAND_PID\" 2>/dev/null"
+            " || kill -TERM \"$DAGON_COMMAND_PID\" 2>/dev/null\n"
             "    wait \"$DAGON_COMMAND_PID\" 2>/dev/null\n"
             "  fi\n"
             "  dagon_beeond_persist\n"
@@ -382,8 +383,14 @@ def task_epilogue(config: BeeONDConfig) -> str:
 
 
 def background_command(command: str) -> str:
-    """Run *command* in the background so signal traps fire while it runs."""
-    return "{ " + command.rstrip("\n") + " ; } &\nDAGON_COMMAND_PID=$!\nwait \"$DAGON_COMMAND_PID\"\n"
+    """Run *command* in the background so signal traps fire while it runs.
+
+    Job control (``set -m``) gives the command its own process group, so the
+    signal handler can stop it and all of its descendants with one ``kill``
+    and without ``pkill`` or ``ps``, which minimal images may lack.
+    """
+    return ("set -m\n{ " + command.rstrip("\n") + " ; } &\nDAGON_COMMAND_PID=$!\nset +m\n"
+            "wait \"$DAGON_COMMAND_PID\"\n")
 
 
 # ---------------------------------------------------------------------------
@@ -665,7 +672,13 @@ class BeeONDVolume:
         script = "\n# BeeOND on-demand file system (workflow scope, volume %s)\n" % self.name
         script += "export DAGON_BEEOND_SCOPE=workflow\n"
         script += "export DAGON_BEEOND_VOLUME=" + quote(self.name) + "\n"
-        script += "DAGON_BEEOND=" + quote(self.mount or "") + "\nexport DAGON_BEEOND\n"
+        # The launcher may be written before the holder starts, so the mount is
+        # read from the holder's ready file (second line) when the step runs.
+        script += "DAGON_BEEOND=" + quote(self.mount or "") + "\n"
+        script += ("if [ -f " + quote(self._file("ready")) + " ]; then\n"
+                   "  { read -r dagon_beeond_job; read -r DAGON_BEEOND; } < " + quote(self._file("ready")) + "\n"
+                   "fi\n"
+                   "export DAGON_BEEOND\n")
         script += ("if [ ! -d \"$DAGON_BEEOND\" ]; then\n"
                    "  echo \"DAGonStar: BeeOND mount $DAGON_BEEOND is not visible on $(hostname)\" >&2\n"
                    "  exit 1\nfi\n")

@@ -53,15 +53,17 @@ def site_config(scratch: str, partition: Optional[str]) -> Dict[str, Dict[str, s
     }
 
 
-def read(*parts: str) -> Optional[str]:
-    filepath = os.path.join(*parts)
+def read(*parts: Optional[str]) -> Optional[str]:
+    if any(part is None for part in parts):
+        return None  # the task never got a working directory
+    filepath = os.path.join(*[str(part) for part in parts])
     if not os.path.isfile(filepath):
         return None
     with open(filepath, encoding="utf-8") as stream:
         return stream.read()
 
 
-def status_code(*parts: str) -> Optional[str]:
+def status_code(*parts: Optional[str]) -> Optional[str]:
     content = read(*parts) or ""
     for line in content.splitlines():
         if line.startswith("persist_code="):
@@ -92,8 +94,8 @@ def scenario_task(scratch: str, partition: Optional[str]) -> List[Check]:
     workflow.add_task(show)
     workflow.make_dependencies()
     error = run_workflow(workflow)
-    persisted = os.path.join(nodes.working_dir, "beeond")
-    names = sorted(os.listdir(persisted)) if os.path.isdir(persisted) else []
+    persisted = os.path.join(nodes.working_dir or "", "beeond")
+    names = sorted(os.listdir(persisted)) if nodes.working_dir and os.path.isdir(persisted) else []
     out = read(show.working_dir, "out") or ""
     return [
         ("task: workflow ran", error is None, repr(error)),
