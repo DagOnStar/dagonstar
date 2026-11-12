@@ -3,7 +3,7 @@ from typing import Any, List, Optional
 from dagon.batch import Batch
 from dagon.remote import RemoteTask
 from dagon.task import ExecutionResult, Task
-from dagon.shell import join_command
+from dagon.shell import join_command, quote
 
 try:
     import docker
@@ -99,9 +99,13 @@ class DockerTask(Batch):
         :rtype: string
         """
 
-        body = super(DockerTask, self).include_command(body)
-        body = join_command(("cd", self.working_dir)) + ";" + body
-        return join_command(("docker", "exec", "-t", self.container.id, "sh", "-c", body.strip())) + "\n"
+        # ``sh`` has no PIPESTATUS: record the command's status in a file so
+        # ``docker exec`` exits with it instead of the status of ``tee``.
+        status = quote(self.working_dir + "/.dagon/command_status")
+        body = (join_command(("cd", self.working_dir)) + "; { " + body.strip()
+                + "\necho $? > " + status + "; } | tee " + quote(self.stdout_path())
+                + "; exit \"$(cat " + status + " 2>/dev/null || echo 1)\"")
+        return join_command(("docker", "exec", "-t", self.container.id, "sh", "-c", body)) + "\n"
 
     def pre_process_command(self, command: str) -> str:
         """

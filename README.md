@@ -197,6 +197,8 @@ The repository has a sound baseline for changes to the core behavior:
   command generation, Docker and remote-container construction, SSH-port
   forwarding, packaging extras, optional integration boundaries,
   BeeOND command generation, launcher persistence, and holder lifecycle,
+  command exit-status propagation through the launcher's output capture
+  (local batch, Slurm, and Docker command paths),
   selected shell-quoting behavior, SSH host-key verification and safe remote
   launcher creation, and FAIR profiles, artifact declarations,
   recorder exports, validation, and safe environment defaults;

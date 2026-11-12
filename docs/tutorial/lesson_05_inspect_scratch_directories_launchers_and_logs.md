@@ -24,7 +24,7 @@ After graph validation, reproducibility depends on knowing where commands ran an
 
 ## Conceptual model
 
-Each task receives a working directory below scratch. Scientific outputs sit beside a .dagon internal directory containing the generated launcher and captured streams. Exact names depend on task type; inspect rather than edit them.
+Each task receives a working directory below scratch. Scientific outputs sit beside a .dagon internal directory containing the generated launcher and captured streams. Exact names depend on task type; inspect rather than edit them. The launcher pipes the command into `.dagon/stdout.txt` but keeps the command's own exit status, so a failing command fails the task.
 
 New terms are collected in the [glossary](resources/glossary.md).
 

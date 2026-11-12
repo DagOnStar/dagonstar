@@ -928,7 +928,14 @@ class Task(Thread):
         :param body: Script body
         :return: Script body with the command
         """
-        return body + " | tee " + quote(self.working_dir + "/.dagon/stdout.txt") + "\n"
+        # A pipeline's status is the status of ``tee``: restore the status of the
+        # command itself so the launcher's ``$?`` check sees command failures.
+        return (body + " | tee " + quote(self.stdout_path()) + "\n"
+                + "(exit \"${PIPESTATUS[0]}\")\n")
+
+    def stdout_path(self) -> str:
+        """Return the file that captures the command's standard output."""
+        return self.working_dir + "/.dagon/stdout.txt"
 
     # Post process the command
     def post_process_command(self, command):

@@ -277,7 +277,12 @@ Record:
 ## Error behavior
 
 DAGonStar marks a task failed when the executed command returns an error code or
-when the launcher script raises an exception. Wrapper scripts should return
+when the launcher script raises an exception. The status that counts is the one
+of the last command on the task's command line (`a; b` reports `b`), not the
+status of the output capture; join steps with `&&` when each must succeed.
+Batch, Slurm, remote, and checkpoint launchers read it with Bash `PIPESTATUS`;
+Docker tasks, which run the command with `sh -c` in the container, record it in
+`.dagon/command_status`. Wrapper scripts should return
 non-zero exit codes when scientific validation fails, even if the external
 program exits with zero.
 
