@@ -164,7 +164,7 @@ jobs:
           sudo cat /var/log/slurm/beeond-ci.log || true
           sudo tail -n 100 /var/log/slurm/slurmctld.log /var/log/slurm/slurmd.log || true
           find "$RUNNER_TEMP/beeond-scratch" -maxdepth 6 \( -name '*.out' -o -name '*.err' -o -name 'beeond_persist.status' -o -name 'holder-*.out' \) -print -exec tail -n 40 {} \; || true
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: beeond-slurm-scratch
@@ -196,7 +196,7 @@ jobs:
           python -m venv /tmp/wheel-venv
           /tmp/wheel-venv/bin/python -m pip install dist/*.whl
           cd /tmp && /tmp/wheel-venv/bin/python -c "import dagon, dagon.web, dagon.fair, dagon.iot, dagon.stager, dagon.platform_support; print('wheel import ok')"
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
@@ -211,7 +211,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: dist
           path: dist/
@@ -232,7 +232,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: dist
           path: dist/
