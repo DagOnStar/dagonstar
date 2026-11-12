@@ -148,6 +148,12 @@ DagonTask(
 The implementation generates an `sbatch` command. Confirm that `sbatch` is
 available and that the partition/resource values are valid on the target system.
 
+On sites that provide BeeOND (BeeGFS On Demand) scratch volumes, pass
+`beeond="task"` for a volume per task or `beeond="workflow"` for a volume shared
+by the workflow. The command finds the volume through `$DAGON_BEEOND`, and
+DAGonStar copies the volume to persistent storage before it is destroyed. See
+[BeeOND on-demand file systems](beeond.md).
+
 ## Docker tasks
 
 Docker tasks run commands inside a container:

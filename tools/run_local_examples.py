@@ -35,6 +35,7 @@ EXAMPLES = [
     "examples/faas/local_http.py",
     "examples/iot/observe_mock.py",
     "examples/llm/local_mock_llm.py",
+    "examples/dataflow/slurm/beeond_local_emulation.py",
 ]
 
 

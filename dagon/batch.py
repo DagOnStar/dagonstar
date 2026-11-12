@@ -1,5 +1,6 @@
+import os
 import shlex
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from dagon.task import ExecutionResult, Task
 from dagon.remote import RemoteTask
@@ -217,6 +218,16 @@ class Slurm(Batch):
     :ivar ntasks_per_node: number of tasks per node
     :vartype ntasks_per_node: int
 
+    :ivar nodelist: explicit Slurm node list (``--nodelist``)
+    :vartype nodelist: str
+
+    :ivar sbatch_options: additional ``sbatch`` options, each passed as one argument
+    :vartype sbatch_options: list[str]
+
+    :ivar beeond: optional BeeOND volume specification (see :mod:`dagon.beeond`)
+    :vartype beeond: bool, str, dict, :class:`dagon.beeond.BeeONDConfig` or
+        :class:`dagon.beeond.BeeONDVolume`
+
     """
 
     def __init__(
@@ -231,7 +242,10 @@ class Slurm(Batch):
             nodes: Optional[int] = None,
             ntasks_per_node: Optional[int] = None,
             working_dir: Optional[str] = None,
-            globusendpoint: Optional[str] = None) -> None:
+            globusendpoint: Optional[str] = None,
+            nodelist: Optional[str] = None,
+            sbatch_options: Optional[List[str]] = None,
+            beeond: Any = None) -> None:
         """
         :param name: name of the task
         :type name: str
@@ -265,6 +279,17 @@ class Slurm(Batch):
 
         :param globusendpoint: Globus endpoint ID
         :type globusendpoint: str
+
+        :param nodelist: explicit node list passed as ``--nodelist``
+        :type nodelist: str
+
+        :param sbatch_options: extra ``sbatch`` options, each passed as one argument
+        :type sbatch_options: list[str]
+
+        :param beeond: BeeOND volume: ``True``/``"task"`` for a per-task volume,
+            ``"workflow"``/``"workflow:<name>"`` for a per-workflow volume, a
+            dict of :class:`dagon.beeond.BeeONDConfig` options, a config, or a
+            :class:`dagon.beeond.BeeONDVolume`. ``None`` disables BeeOND.
         """
 
         Batch.__init__(self, name, command, working_dir, globusendpoint=globusendpoint)
@@ -275,6 +300,11 @@ class Slurm(Batch):
         self.time = time
         self.nodes = nodes
         self.ntasks_per_node = ntasks_per_node
+        self.nodelist = nodelist
+        self.sbatch_options = list(sbatch_options or [])
+        self.beeond = beeond
+        self._beeond_resolved: Any = None
+        self._beeond_is_resolved = False
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         """Create a Slurm task local or remote
@@ -309,9 +339,14 @@ class Slurm(Batch):
         """
 
         options = []
+        comments: List[str] = []
         if self.comment is not None:
-            comments = [self.comment] if isinstance(self.comment, str) else self.comment
-            options.extend("--comment=" + comment.strip() for comment in comments)
+            comments = [self.comment] if isinstance(self.comment, str) else list(self.comment)
+            comments = [comment.strip() for comment in comments]
+        beeond_config = self.beeond_task_config()
+        if beeond_config is not None and beeond_config.comment.strip() not in comments:
+            comments.append(beeond_config.comment.strip())
+        options.extend("--comment=" + comment for comment in comments)
         if self.partition is not None:
             options.append("--partition=" + self.partition)
         if self.ntasks is not None:
@@ -324,6 +359,11 @@ class Slurm(Batch):
             options.append("--nodes=" + str(self.nodes))
         if self.ntasks_per_node is not None:
             options.append("--ntasks-per-node=" + str(self.ntasks_per_node))
+        if self.nodelist is not None:
+            options.append("--nodelist=" + self.nodelist)
+        if beeond_config is not None and beeond_config.persist and beeond_config.signal_grace:
+            options.append("--signal=B:USR1@" + str(beeond_config.signal_grace))
+        options.extend(self.sbatch_options)
         return join_command(["sbatch", *options, "-J", self.name, "-D", self.working_dir,
                              "-W", self.working_dir + "/.dagon/" + script_name])
 
@@ -351,11 +391,162 @@ class Slurm(Batch):
                     self.working_dir + "/.dagon/" + script_name,
                 ))
             )
+        volume = self.beeond_volume()
+        if volume is not None:
+            from dagon.beeond import LocalHost
+            volume.ensure_started(LocalHost())
+            return Batch.execute_command(join_command(volume.step_argv(
+                self.name, self.working_dir, self.working_dir + "/.dagon/" + script_name, bash_executable())))
         command = self.generate_command(script_name)
 
         # Execute the bash command
         result = Batch.execute_command(command)
         return result
+
+
+    # -- BeeOND support -------------------------------------------------
+
+    def resolve_beeond(self) -> Any:
+        """Resolve :attr:`beeond` against the workflow (cached).
+
+        :return: ``None``, a task-scope :class:`dagon.beeond.BeeONDConfig`, or a
+            workflow-scope :class:`dagon.beeond.BeeONDVolume`
+        """
+        if self.beeond is None or self.beeond is False:
+            return None
+        if not self._beeond_is_resolved:
+            if self.workflow is None:
+                raise RuntimeError("Task %s must belong to a workflow to resolve BeeOND" % self.name)
+            from dagon.beeond import resolve
+            self._beeond_resolved = resolve(self.beeond, self.workflow)
+            self._beeond_is_resolved = True
+        return self._beeond_resolved
+
+    def beeond_task_config(self) -> Any:
+        """Return the task-scope BeeOND configuration, if any."""
+        from dagon.beeond import BeeONDConfig
+        if self.beeond is None or self.beeond is False:
+            return None
+        if self.workflow is None:
+            # Command generation without a workflow (for example in tests)
+            # still honours explicit task-scope requests.
+            if self.beeond is True or self.beeond == "task":
+                return BeeONDConfig()
+            if isinstance(self.beeond, BeeONDConfig) and self.beeond.scope == "task":
+                return self.beeond
+            if isinstance(self.beeond, dict) and self.beeond.get("scope", "task") == "task":
+                return BeeONDConfig.from_mapping(self.beeond)
+            return None
+        resolved = self.resolve_beeond()
+        return resolved if isinstance(resolved, BeeONDConfig) else None
+
+    def beeond_volume(self) -> Any:
+        """Return the workflow-scope BeeOND volume, if any."""
+        from dagon.beeond import BeeONDVolume
+        if self.beeond is None or self.beeond is False:
+            return None
+        resolved = self.resolve_beeond()
+        return resolved if isinstance(resolved, BeeONDVolume) else None
+
+    def beeond_persist_dir(self) -> Optional[str]:
+        """Return the persistent directory of the task-scope volume."""
+        config = self.beeond_task_config()
+        if config is None or not config.persist or self.working_dir is None:
+            return None
+        target = config.persist_dir or "beeond"
+        if os.path.isabs(target) or target.startswith("/"):
+            return target
+        return self.working_dir.rstrip("/") + "/" + target
+
+    def launcher_prologue(self) -> str:
+        from dagon.beeond import task_prologue
+        volume = self.beeond_volume()
+        if volume is not None:
+            return volume.task_prologue()
+        config = self.beeond_task_config()
+        if config is None:
+            return ""
+        persist_dir = self.beeond_persist_dir() or ""
+        return task_prologue(config, persist_dir, self.working_dir + "/.dagon")
+
+    def launcher_epilogue(self) -> str:
+        from dagon.beeond import task_epilogue
+        volume = self.beeond_volume()
+        if volume is not None:
+            return volume.task_epilogue()
+        config = self.beeond_task_config()
+        return task_epilogue(config) if config is not None else ""
+
+    def include_command(self, body: str) -> str:
+        from dagon.beeond import background_command
+        command = super().include_command(body)
+        config = self.beeond_task_config()
+        if config is not None and config.persist:
+            # Run in the background so the persistence trap fires on signals.
+            return background_command(command)
+        return command
+
+    def beeond_metadata(self) -> Optional[Dict[str, Any]]:
+        """Return credential-free BeeOND provenance for this task."""
+        volume = self.beeond_volume()
+        if volume is not None:
+            return volume.metadata()
+        config = self.beeond_task_config()
+        if config is None:
+            return None
+        return {"scope": "task", "comment": config.comment, "persist": config.persist,
+                "persist_dir": self.beeond_persist_dir(), "verify": config.verify}
+
+    def initialize_checkpoint(self) -> Dict[str, Any]:
+        checkpoint = super().initialize_checkpoint()
+        metadata = self.beeond_metadata()
+        if metadata is not None:
+            checkpoint["beeond"] = {key: metadata[key] for key in ("scope", "persist_dir")}
+            if metadata["scope"] == "workflow":
+                checkpoint["beeond"]["volume"] = metadata["volume"]
+        return checkpoint
+
+    def get_execution_metadata(self) -> Dict[str, Any]:
+        metadata = dict(super().get_execution_metadata())
+        try:
+            beeond = self.beeond_metadata()
+        except (RuntimeError, ValueError, TypeError):
+            beeond = None
+        if beeond is not None:
+            metadata["beeond"] = beeond
+        return metadata
+
+    def portable_environment(self) -> Dict[str, str]:
+        """Emulate the BeeOND mount with its persistent directory locally."""
+        volume = self.beeond_volume()
+        if volume is not None:
+            mount = volume.persist_dir()
+            os.makedirs(mount, exist_ok=True)
+            return {"DAGON_BEEOND": mount, "DAGON_BEEOND_SCOPE": "workflow",
+                    "DAGON_BEEOND_VOLUME": volume.name, "DAGON_BEEOND_PERSIST_DIR": mount}
+        config = self.beeond_task_config()
+        if config is None:
+            return {}
+        mount = self.beeond_persist_dir() or self.working_dir.rstrip("/") + "/.dagon/beeond-emulated"
+        os.makedirs(mount, exist_ok=True)
+        environment = {"DAGON_BEEOND": mount, "DAGON_BEEOND_SCOPE": "task"}
+        if config.persist:
+            environment["DAGON_BEEOND_PERSIST_DIR"] = mount
+        return environment
+
+    def as_json(self) -> Dict[str, Any]:
+        json_task = super().as_json()
+        if self.beeond is not None and self.beeond is not False:
+            from dagon.beeond import BeeONDConfig, BeeONDVolume
+            spec = self.beeond
+            if isinstance(spec, BeeONDVolume):
+                spec = "workflow:" + spec.name
+            elif isinstance(spec, BeeONDConfig):
+                spec = spec.as_dict()
+            elif isinstance(spec, dict):
+                spec = dict(spec)
+            json_task["beeond"] = spec
+        return json_task
 
 
 class RemoteSlurm(RemoteTask, Slurm):
@@ -374,7 +565,15 @@ class RemoteSlurm(RemoteTask, Slurm):
             ssh_username: Optional[str] = None,
             keypath: Optional[str] = None,
             ip: Optional[str] = None,
-            globusendpoint: Optional[str] = None) -> None:
+            globusendpoint: Optional[str] = None,
+            comment: Optional[Union[str, List[str]]] = None,
+            time: Optional[str] = None,
+            nodes: Optional[int] = None,
+            ntasks_per_node: Optional[int] = None,
+            nodelist: Optional[str] = None,
+            sbatch_options: Optional[List[str]] = None,
+            beeond: Any = None,
+            ssh_port: int = 22) -> None:
         """
         :param name: name of the task
         :type name: str
@@ -403,9 +602,17 @@ class RemoteSlurm(RemoteTask, Slurm):
         :param ip: IP address to connect to the remote machine
         :type ip: str
 
+        :param comment, time, nodes, ntasks_per_node, nodelist, sbatch_options, beeond:
+            same meaning as in :class:`Slurm`
+
+        :param ssh_port: SSH port of the remote login node (default: 22)
+        :type ssh_port: int
+
         """
-        Slurm.__init__(self, name, command, working_dir=working_dir, partition=partition, ntasks=ntasks, memory=memory,
-                       globusendpoint=globusendpoint)
+        Slurm.__init__(self, name, command, comment=comment, working_dir=working_dir, partition=partition,
+                       ntasks=ntasks, memory=memory, time=time, nodes=nodes, ntasks_per_node=ntasks_per_node,
+                       globusendpoint=globusendpoint, nodelist=nodelist, sbatch_options=sbatch_options,
+                       beeond=beeond)
         RemoteTask.__init__(
             self,
             name,
@@ -413,6 +620,7 @@ class RemoteSlurm(RemoteTask, Slurm):
             ssh_username=ssh_username,
             keypath=keypath,
             ip=ip,
+            ssh_port=ssh_port,
             working_dir=working_dir,
             globusendpoint=globusendpoint,
         )
@@ -435,6 +643,13 @@ class RemoteSlurm(RemoteTask, Slurm):
         if script_name == "context.sh":
             return self.ssh_connection.execute_command(
                 join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
+
+        volume = self.beeond_volume()
+        if volume is not None:
+            from dagon.beeond import SSHHost
+            volume.ensure_started(SSHHost(self.ssh_connection))
+            return self.ssh_connection.execute_command(join_command(volume.step_argv(
+                self.name, self.working_dir, self.working_dir + "/.dagon/" + script_name, "bash")))
 
         command = self.generate_command(script_name)
         # Execute the bash command

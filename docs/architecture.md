@@ -23,6 +23,7 @@ dagon/
   faas_providers.py           Lazy mock, HTTP, AWS, Azure, and GCP adapters
   faas_models.py              Dependency-free invocation/provider contracts
   batch.py                    Batch, RemoteBatch, Slurm, RemoteSlurm
+  beeond.py                   BeeOND volume configuration, launcher fragments, holder job
   remote.py                   RemoteTask, CloudTask
   docker_task.py              DockerTask, DockerRemoteTask
   checkpoint.py               Checkpoint tasks
@@ -174,7 +175,15 @@ When a batch task is constructed with `ip=...`, `Batch.__new__` returns
 ### Slurm
 
 `Slurm` generates an `sbatch` command using optional parameters such as
-partition, task count, memory, wall time, nodes, and tasks per node.
+partition, task count, memory, wall time, nodes, tasks per node, node list, and
+extra `sbatch` options.
+
+With `beeond=...`, Slurm tasks use BeeOND volumes through the `Task` launcher
+hooks `launcher_prologue()` and `launcher_epilogue()`. A task-scope volume adds
+the site comment to `sbatch` and persists the volume from inside the job. A
+workflow-scope `BeeONDVolume` submits one holder job and runs each task launcher
+as an `srun --jobid=<holder>` step. `Workflow.run()` asks the holder to persist
+the volume and release the allocation. See [BeeOND](beeond.md).
 
 ### Docker
 

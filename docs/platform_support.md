@@ -25,7 +25,7 @@ Raspberry Pi hardware, and does not cover 32-bit (armhf) Raspberry Pi OS.
 Rocky Linux runs as root in a container on an Ubuntu kernel.
 
 Not covered by CI on any platform: live Docker, Apptainer, Kubernetes, Nomad,
-SSH, Slurm, Globus, SKYCDS, DynoStore, or cloud services. Those paths are
+SSH, Slurm, BeeOND, Globus, SKYCDS, DynoStore, or cloud services. Those paths are
 tested through command generation and mocks only (see the
 [developer guide](developer_guide.md)).
 

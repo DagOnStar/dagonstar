@@ -24,6 +24,18 @@ threads=1
 [slurm]
 partition=
 
+; Optional BeeOND (BeeGFS On Demand) volumes for Slurm tasks; see docs/beeond.md.
+; [beeond]
+; comment=beeond-fs
+; mount_template=/mnt/beeond_${SLURM_JOB_USER}-jobid_${SLURM_JOB_ID}
+; persist=True
+; verify=list
+; signal_grace=300
+; partition=
+; nodelist=
+; ntasks_per_node=1
+; time=
+
 ; Define any number of OpenAI-compatible LLM providers as [llm.<name>].
 ; Keep real keys in an ignored local dagon.ini or environment variable.
 ; [llm.example]

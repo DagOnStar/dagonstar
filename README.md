@@ -126,6 +126,7 @@ The full documentation set is available in `docs/`:
 - [The `workflow://` Schema](docs/the_workflow_schema.md)
 - [Task-type interoperability](docs/tasktype_interoperability.md)
 - [Checkpoints](docs/checkpoints.md)
+- [BeeOND on-demand file systems](docs/beeond.md)
 - [Exporting workflows to CWL](docs/cwl_export.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
 - [Using DAGonStar from Jupyter Notebook](docs/jupyter_notebook.md)
@@ -140,7 +141,8 @@ The full documentation set is available in `docs/`:
 - Explicit task graphs and data-driven dependency discovery.
 - Local batch tasks.
 - Remote SSH tasks.
-- Slurm tasks.
+- Slurm tasks, optionally on BeeOND (BeeGFS On Demand) volumes created per task
+  or per workflow, with verified copies to persistent storage.
 - Docker tasks, locally or over SSH.
 - Cloud-backed tasks through Apache Libcloud providers.
 - OpenAI-compatible LLM tasks with JSON prompts and `workflow://` text inputs.
@@ -179,6 +181,10 @@ artifact upload remain outside the implemented boundary.
 IoT tasks add recursively discovered structured references, output-evidence
 checkpoints, credential redaction, safe actuation retry defaults, and a
 runner-based CWL representation. Live network providers are not yet implemented.
+Slurm tasks can use BeeOND volumes per task or per workflow (through a holder
+job), with persistence verified before the volume is destroyed. Launcher
+fragments and the holder lifecycle are tested locally against a stand-in mount
+and a simulated scheduler; live BeeOND sites are not exercised by CI.
 
 The repository has a sound baseline for changes to the core behavior:
 
@@ -187,6 +193,7 @@ The repository has a sound baseline for changes to the core behavior:
   example regeneration, checkpoint reuse, staging
   command generation, Docker and remote-container construction, SSH-port
   forwarding, packaging extras, optional integration boundaries,
+  BeeOND command generation, launcher persistence, and holder lifecycle,
   selected shell-quoting behavior, SSH host-key verification and safe remote
   launcher creation, and FAIR profiles, artifact declarations,
   recorder exports, validation, and safe environment defaults;
@@ -310,6 +317,8 @@ Important sections:
 - `[batch]`: local scratch directory and staging thread settings.
 - `[dagon_service]`: optional DAGon service registration.
 - `[slurm]`: default Slurm partition for Slurm staging or tasks.
+- `[beeond]`: optional BeeOND volume defaults (Slurm comment, mount template,
+  persistence and holder allocation); see [docs/beeond.md](docs/beeond.md).
 - `[ec2]`, `[digitalocean]`, `[gce]`: optional cloud credentials.
 - `[llm.<name>]`: optional OpenAI-compatible LLM provider configuration.
 

@@ -82,6 +82,11 @@ the invocation action to a deployed-function service entity without claiming
 that DAGonStar deployed or published it. Provider credentials, authorization
 headers, signed query values, and raw SDK objects remain excluded.
 
+Slurm tasks that use BeeOND add `execution.beeond` with the volume scope, Slurm
+comment, persistence settings, and, for workflow volumes, the holder job id and
+mount point. The volume contents are not recorded as artifacts unless they are
+declared outputs.
+
 This is local export only. It does not yet validate a full Workflow Run RO-Crate
 profile, emit PROV-O Turtle, package/copy data, publish to repositories, provide
 a FAIR CLI, or calculate remote/container checksums.
