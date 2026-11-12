@@ -165,3 +165,7 @@ Add `--ip <login-node> --ssh-user <user>` to submit through SSH with
 `<working_dir of nodes>/beeond/`. For `--scope workflow`, it is in
 `<scratch_dir_base>/BeeOND-Slurm-workflow-beeond-default/`. These commands have
 not been run against a live cluster as part of the automated checks.
+The `beeond-slurm` CI job runs the equivalent checks in
+`tools/ci_beeond_slurm.py` on a single-node Slurm cluster with an emulated
+BeeOND site; you can run that script on your own cluster with
+`--partition <partition> --scratch <shared-dir>`.

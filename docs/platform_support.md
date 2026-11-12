@@ -25,9 +25,36 @@ Raspberry Pi hardware, and does not cover 32-bit (armhf) Raspberry Pi OS.
 Rocky Linux runs as root in a container on an Ubuntu kernel.
 
 Not covered by CI on any platform: live Docker, Apptainer, Kubernetes, Nomad,
-SSH, Slurm, BeeOND, Globus, SKYCDS, DynoStore, or cloud services. Those paths are
-tested through command generation and mocks only (see the
-[developer guide](developer_guide.md)).
+SSH, multi-node Slurm, real BeeGFS/BeeOND, Globus, SKYCDS, DynoStore, or cloud
+services. Those paths are tested through command generation and mocks only (see
+the [developer guide](developer_guide.md)). The one exception is the
+`beeond-slurm` job described below, which runs single-node Slurm with an
+emulated BeeOND site.
+
+### BeeOND on Slurm (emulated site)
+
+The `beeond-slurm` job installs Ubuntu's `slurm-wlm` and `munge` on an
+`ubuntu-24.04` runner and configures a single-node cluster with
+`tools/ci/slurm/setup-slurm-beeond.sh`. Its Slurm Prolog
+(`tools/ci/slurm/beeond-prolog.sh`) creates a job-owned directory at
+`/mnt/beeond_${SLURM_JOB_USER}-jobid_${SLURM_JOB_ID}` for jobs whose comment
+contains `beeond-fs`, and its Epilog (`beeond-epilog.sh`) deletes it when the job
+ends, as a BeeOND site does. `tools/ci_beeond_slurm.py` then checks, with real
+`sbatch`, `srun --jobid` steps, and `--signal`:
+
+- a per-task volume is persisted and read downstream through `workflow://`;
+- a failing command's volume is still persisted;
+- a per-workflow holder volume is shared by two steps and persisted at the end;
+- the `signal_grace` warning stops a long command and persists its volume;
+- every volume the site created was destroyed at job end.
+
+The emulated mount is an ordinary local directory: BeeGFS performance, striping,
+and multi-node sharing are not tested. The setup scripts are for CI runners only.
+To run the checks on a cluster you control:
+
+```bash
+python tools/ci_beeond_slurm.py --partition <partition> --scratch <shared-dir>
+```
 
 ## Local execution on each platform
 
@@ -107,10 +134,11 @@ requests, on `v*` tags, and on manual dispatch.
 
 | Job | Purpose |
 | --- | --- |
-| `quality` | Ruff and mypy on the typed helper modules, tutorial validation, notebook JSON check. |
+| `quality` | Ruff and mypy on the typed helper modules, tutorial validation, notebook JSON check, `bash -n` on the CI shell scripts. |
 | `test` | Unit tests, `compileall`, and local examples on Ubuntu, macOS, and Windows. |
 | `rocky-linux` | Unit tests and local examples on Rocky Linux 9. |
 | `raspberry-pi` | Unit tests and local examples on Debian bookworm arm64. |
+| `beeond-slurm` | BeeOND unit tests and live per-task, per-workflow, failure, and signal persistence checks on single-node Slurm with an emulated BeeOND site. |
 | `build` | Builds sdist and wheel, runs `twine check --strict`, imports the wheel in a clean virtual environment, and uploads `dist/` as an artifact. On a tag, it checks that the tag equals `v` + the `setup.cfg` version. |
 | `release` | On a `v*` tag only: creates a GitHub release with generated notes and attaches the distributions. |
 | `publish-pypi` | On a `v*` tag only, and only when the repository variable `PYPI_PUBLISH` is `true`: publishes to PyPI with trusted publishing (no stored token). |

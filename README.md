@@ -184,7 +184,10 @@ runner-based CWL representation. Live network providers are not yet implemented.
 Slurm tasks can use BeeOND volumes per task or per workflow (through a holder
 job), with persistence verified before the volume is destroyed. Launcher
 fragments and the holder lifecycle are tested locally against a stand-in mount
-and a simulated scheduler; live BeeOND sites are not exercised by CI.
+and a simulated scheduler. The `beeond-slurm` CI job also runs both scopes,
+failure persistence, and the time-limit signal against a real single-node Slurm
+cluster whose Prolog and Epilog emulate a BeeOND site; real BeeGFS and
+multi-node sites are not exercised by CI.
 
 The repository has a sound baseline for changes to the core behavior:
 
@@ -454,7 +457,8 @@ serialization, and runtime-secret validation.
 The GitHub Actions CI/CD workflow (`.github/workflows/ci.yml`) runs the unit
 tests and local examples on Ubuntu, macOS, Windows, Rocky Linux 9, and 64-bit
 Raspberry Pi OS (Debian bookworm arm64) for pushes to `main`, `master`, and
-`development` and for pull requests; it also builds the distributions and, on
+`development` and for pull requests, and runs BeeOND workflows on a single-node
+Slurm cluster with an emulated BeeOND site; it also builds the distributions and, on
 `v*` tags, creates a GitHub release. See [Platform support and CI/CD](docs/platform_support.md).
 
 When changing workflow execution behavior, add a targeted unit test where

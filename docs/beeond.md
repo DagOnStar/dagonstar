@@ -1,8 +1,10 @@
 # BeeOND on-demand file systems
 
 **Status:** infrastructure-dependent. Command generation, launcher fragments,
-the holder lifecycle, and portable emulation are tested locally. A live run
-needs a Slurm site that provisions BeeOND (BeeGFS On Demand) volumes for jobs.
+the holder lifecycle, and portable emulation are tested locally. CI also runs
+both scopes on a real single-node Slurm cluster with an emulated BeeOND site
+(see [below](#continuous-integration)). A production run needs a Slurm site that
+provisions BeeOND (BeeGFS On Demand) volumes for jobs.
 
 ## What BeeOND is in Slurm terms
 
@@ -224,6 +226,21 @@ and the holder job are not emulated.
 is the self-contained demonstration, and `tests/test_beeond.py` runs the
 generated bash fragments against a temporary directory that stands in for the
 mount.
+
+## Continuous integration
+
+The `beeond-slurm` job of `.github/workflows/ci.yml` starts a single-node Slurm
+cluster with `tools/ci/slurm/setup-slurm-beeond.sh`. A Prolog creates the
+default mount point for every job whose comment contains `beeond-fs`, and an
+Epilog deletes it when the job ends, so data survives only if DAGonStar
+persisted it in time. `tools/ci_beeond_slurm.py` runs these checks with
+`verify=checksum`: per-task persistence and a downstream `workflow://` read,
+persistence after a failing command, a per-workflow holder volume shared by two
+`srun --jobid` steps, the `signal_grace` time-limit warning, and the teardown of
+every created volume. The emulated volume is a local directory, so BeeGFS
+behavior and multi-node sharing are not tested. On a cluster you control, run
+the same checks with
+`python tools/ci_beeond_slurm.py --partition <partition> --scratch <shared-dir>`.
 
 ## Troubleshooting
 
