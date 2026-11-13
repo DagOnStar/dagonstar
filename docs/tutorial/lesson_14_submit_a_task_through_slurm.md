@@ -48,7 +48,7 @@ The BeeOND example uses portable emulation, so `$DAGON_BEEOND` is the persistent
 
 ## Expected result
 
-Local checks cover command construction. The BeeOND tests run the generated persistence fragments against a temporary directory that stands in for the mount, and the example ends with `Verification: ok`. Live evidence requires sbatch, an authorised cluster and, for BeeOND, a site that provisions the volume. The `beeond-slurm` CI job supplies intermediate evidence: it runs `tools/ci_beeond_slurm.py` on a single-node Slurm cluster whose Prolog and Epilog create and destroy the mount, which shows that persistence happens before teardown but says nothing about BeeGFS itself.
+Local checks cover command construction. The BeeOND tests run the generated persistence fragments against a temporary directory that stands in for the mount, and the example ends with `Verification: ok`. Live evidence requires sbatch, an authorised cluster and, for BeeOND, a site that provisions the volume. The `beeond-slurm` CI job supplies intermediate evidence: it runs `tools/ci_beeond_slurm.py` on a single-node Slurm cluster whose Prolog and Epilog create and destroy the mount, which shows that persistence happens before teardown but says nothing about BeeGFS itself. A one-time manual run of the same script with `--nodes 4` on a production BeeOND site passed all checks; that is observed evidence for one site and Slurm release, not a general guarantee. Parallel work across the volume's nodes uses the launcher helper `dagon_beeond_srun`, because a plain nested `srun` cannot leave a workflow-scope task's one-node step.
 
 ## Verify
 

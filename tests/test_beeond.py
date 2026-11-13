@@ -60,7 +60,7 @@ class FakeHost:
 
     def read_file(self, filepath):
         if filepath.endswith("/ready") and self.ready:
-            return "4242\n/mnt/beeond_user-jobid_4242\n"
+            return "4242\n/mnt/beeond_user-jobid_4242\n4\nwn[01-04]\n"
         if filepath.endswith("/done") and "stop" in "".join(self.files):
             return self.done
         return self.files.get(filepath)
@@ -213,6 +213,9 @@ class WorkflowVolumeLifecycleTests(unittest.TestCase):
         self.assertIn("dagon_beeond_persist", host.files[volume.state_dir() + "/holder.sh"])
         self.assertEqual("4242", volume.job_id)
         self.assertEqual("/mnt/beeond_user-jobid_4242", volume.mount)
+        self.assertEqual(4, volume.nodes)
+        self.assertEqual("wn[01-04]", volume.nodelist)
+        self.assertEqual(4, volume.metadata()["nodes"])
         self.assertEqual(["srun", "--jobid=4242", "--overlap", "--nodes=1", "--ntasks=1", "-J", "T",
                           "-D", "/w", "bash", "/w/.dagon/launcher.sh"],
                          volume.step_argv("T", "/w", "/w/.dagon/launcher.sh"))
@@ -332,6 +335,45 @@ class LauncherExecutionTests(unittest.TestCase):
         with open(os.path.join(self.mount, "step.txt")) as stream:
             self.assertEqual("step\n", stream.read())
 
+    def fake_srun(self):
+        """Put an ``srun`` on PATH that reports its arguments and step variables."""
+        bindir = os.path.join(self.tmp.name, "bin")
+        os.makedirs(bindir, exist_ok=True)
+        with open(os.path.join(bindir, "srun"), "w", newline="\n") as stream:
+            stream.write('#!/bin/sh\necho "srun $* step=${SLURM_STEP_ID:-none}"\n')
+        os.chmod(os.path.join(bindir, "srun"), 0o755)
+        return bindir
+
+    def test_workflow_step_helper_starts_steps_on_all_holder_nodes(self):
+        workflow = Workflow("wf", config=make_config(self.tmp.name))
+        volume = workflow.create_beeond_volume("v")
+        prologue = volume.task_prologue()
+        os.makedirs(volume.state_dir())
+        with open(os.path.join(volume.state_dir(), "ready"), "w") as stream:
+            stream.write("42\n" + self.mount + "\n4\nwn[01-04]\n")
+        script = (prologue + 'echo "nodes=$DAGON_BEEOND_NODES list=$DAGON_BEEOND_NODELIST job=$DAGON_BEEOND_JOB_ID"\n'
+                  + 'dagon_beeond_srun --nodes="$DAGON_BEEOND_NODES" --ntasks-per-node=1 hostname\n')
+        env_path = self.fake_srun() + os.pathsep + os.environ["PATH"]
+        result = subprocess.run([bash_executable(), "-c", script], text=True, capture_output=True,
+                                env=dict(os.environ, PATH=env_path, SLURM_JOB_ID="42", SLURM_STEP_ID="0",
+                                         SLURM_NNODES="1", SLURM_STEP_NUM_NODES="1"))
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("nodes=4 list=wn[01-04] job=42", result.stdout)
+        # The step's SLURM_* variables are cleared so the new step may use every node.
+        self.assertIn("srun --jobid=42 --overlap --nodes=4 --ntasks-per-node=1 hostname step=none",
+                      result.stdout)
+
+    def test_task_scope_helper_is_plain_srun(self):
+        script = (task_prologue(self.config(), self.persist, self.report)
+                  + 'echo "nodes=$DAGON_BEEOND_NODES"\ndagon_beeond_srun --ntasks=2 hostname\n')
+        env_path = self.fake_srun() + os.pathsep + os.environ["PATH"]
+        result = subprocess.run([bash_executable(), "-c", script], text=True, capture_output=True,
+                                env=dict(os.environ, PATH=env_path, SLURM_JOB_USER="u", SLURM_JOB_ID="1",
+                                         SLURM_JOB_NUM_NODES="3"))
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("nodes=3", result.stdout)
+        self.assertIn("srun --ntasks=2 hostname step=none", result.stdout)
+
     def test_task_volume_is_persisted_and_verified(self):
         for tool, verify in (("auto", "list"), ("cp", "checksum")):
             result = self.run_bash(self.launcher(
@@ -405,7 +447,7 @@ class LauncherExecutionTests(unittest.TestCase):
             while not os.path.exists(ready) and time.time() < deadline:
                 time.sleep(0.1)
             with open(ready) as stream:
-                self.assertEqual(["1", self.mount], stream.read().split())
+                self.assertEqual(["1", self.mount, "1", ""], stream.read().split("\n")[:4])
             self.assertTrue(os.path.isfile(os.path.join(self.mount, "old.txt")))
             with open(os.path.join(self.mount, "new.txt"), "w") as stream:
                 stream.write("this run\n")
@@ -421,7 +463,9 @@ class PortableEmulationTests(unittest.TestCase):
     def test_task_and_workflow_volumes_are_emulated_with_persistent_directories(self):
         with tempfile.TemporaryDirectory() as scratch:
             workflow = Workflow("wf", config=make_config(scratch), portable_emulation=True)
-            producer = DagonTask(TaskType.SLURM, "Producer", 'echo hi > "$DAGON_BEEOND/a.txt"', beeond="task")
+            producer = DagonTask(TaskType.SLURM, "Producer",
+                                 'dagon_beeond_srun --nodes="$DAGON_BEEOND_NODES" --ntasks-per-node=1 -- '
+                                 'sh -c \'echo hi > "$DAGON_BEEOND/a.txt"\'', beeond="task")
             shared = DagonTask(TaskType.SLURM, "Shared",
                                'cat workflow:///Producer/beeond/a.txt > "$DAGON_BEEOND/s.txt"',
                                beeond="workflow")

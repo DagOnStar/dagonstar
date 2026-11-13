@@ -187,7 +187,9 @@ fragments and the holder lifecycle are tested locally against a stand-in mount
 and a simulated scheduler. The `beeond-slurm` CI job also runs both scopes,
 failure persistence, and the time-limit signal against a real single-node Slurm
 cluster whose Prolog and Epilog emulate a BeeOND site; real BeeGFS and
-multi-node sites are not exercised by CI.
+multi-node sites are not exercised by CI. A manual run on a four-node production
+BeeOND site (Slurm 23.11.3) passed the same checks and the live example in both
+scopes.
 
 The repository has a sound baseline for changes to the core behavior:
 

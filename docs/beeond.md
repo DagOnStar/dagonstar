@@ -3,8 +3,12 @@
 **Status:** infrastructure-dependent. Command generation, launcher fragments,
 the holder lifecycle, and portable emulation are tested locally. CI also runs
 both scopes on a real single-node Slurm cluster with an emulated BeeOND site
-(see [below](#continuous-integration)). A production run needs a Slurm site that
-provisions BeeOND (BeeGFS On Demand) volumes for jobs.
+(see [below](#continuous-integration)). A production run needs a Slurm site
+that provisions BeeOND (BeeGFS On Demand) volumes for jobs. Both scopes have
+also been run on real BeeOND: on 2026-11-13,
+`tools/ci_beeond_slurm.py --nodes 4` passed all 18 checks on a production BeeOND site (Rocky Linux 8.10, Slurm
+23.11.3, four nodes), and `examples/dataflow/slurm/beeond_slurm.py` completed
+in both scopes there.
 
 ## What BeeOND is in Slurm terms
 
@@ -36,7 +40,30 @@ DAGonStar automates that pattern for Slurm tasks.
 In both scopes the command finds the volume through `$DAGON_BEEOND`.
 `$DAGON_BEEOND_SCOPE` is `task` or `workflow`; `$DAGON_BEEOND_PERSIST_DIR` is
 the persistent destination when persistence is enabled; workflow-scope steps
-also see `$DAGON_BEEOND_VOLUME`.
+also see `$DAGON_BEEOND_VOLUME`. `$DAGON_BEEOND_JOB_ID`, `$DAGON_BEEOND_NODES`,
+and `$DAGON_BEEOND_NODELIST` describe the Slurm job that owns the volume: the
+task's own job in task scope, the holder job in workflow scope.
+
+### Parallel steps: `dagon_beeond_srun`
+
+Every BeeOND launcher defines the bash function `dagon_beeond_srun`, which
+starts a parallel step on the nodes of the job that owns the volume. Use it
+instead of `srun` so the same command works in both scopes:
+
+```bash
+dagon_beeond_srun --nodes="$DAGON_BEEOND_NODES" --ntasks-per-node=1 \
+  bash -c 'hostname > "$DAGON_BEEOND/node_$(hostname).txt"'
+```
+
+In task scope it is plain `srun`, because the launcher is the batch script of
+the BeeOND job. In workflow scope the launcher is itself a one-node step of the
+holder, and a nested `srun` is confined to that step (Slurm reports
+`Only allocated 1 nodes asked for 4`, and `$SLURM_JOB_NUM_NODES` is unset).
+The helper therefore clears the step's `SLURM_*` variables and runs
+`srun --jobid=$DAGON_BEEOND_JOB_ID --overlap ...`, a new step of the holder
+allocation that can use every holder node. Under portable emulation the helper
+runs the program once locally and skips leading options, so write options as
+`--option=value` or end them with `--`.
 
 ### Per-task volume
 
@@ -47,9 +74,10 @@ from dagon.task import DagonTask, TaskType
 workflow = Workflow("beeond-demo")
 simulate = DagonTask(
     TaskType.SLURM, "simulate",
-    'srun --ntasks-per-node=1 bash -c \'hostname > "$DAGON_BEEOND/node_$(hostname).txt"\'; '
+    'dagon_beeond_srun --nodes="$DAGON_BEEOND_NODES" --ntasks-per-node=1 '
+    'bash -c \'hostname > "$DAGON_BEEOND/node_$(hostname).txt"\' && '
     'cat "$DAGON_BEEOND"/node_*.txt > "$DAGON_BEEOND/all_nodes.txt"',
-    partition="xxcpu", nodelist="wn[01-04]", ntasks_per_node=1,
+    partition="xxcpu", nodes=4, nodelist="wn[01-04]", ntasks_per_node=1,
     beeond="task",
 )
 combine = DagonTask(TaskType.SLURM, "combine",
@@ -105,8 +133,9 @@ configuration. The first task that runs:
 Every task attached to the volume then runs its launcher as a job step,
 `srun --jobid=<holder> --overlap --nodes=1 --ntasks=1 -J <task> -D <working_dir> bash launcher.sh`.
 The task's own `partition`, `nodes`, and similar `sbatch` options do not apply
-inside the existing allocation. A command may start parallel steps itself, for
-example `srun --overlap --nodes=4 ...`; `SLURM_JOB_ID` refers to the holder.
+inside the existing allocation. Size the holder with the volume's `nodes` or
+`nodelist`, and start parallel work across it with `dagon_beeond_srun` (see
+above); a plain nested `srun` cannot leave the task's one-node step.
 
 When `Workflow.run()` ends, including after task failures, DAGonStar writes the
 `stop` file. The holder copies the volume to the persistent directory
@@ -241,7 +270,16 @@ persistence after a failing command, a per-workflow holder volume shared by two
 every created volume. The emulated volume is a local directory, so BeeGFS
 behavior and multi-node sharing are not tested. On a cluster you control, run
 the same checks with
-`python tools/ci_beeond_slurm.py --partition <partition> --scratch <shared-dir>`.
+`python tools/ci_beeond_slurm.py --partition <partition> --nodes <n> --scratch <shared-dir>`;
+`--nodes` sets the number of nodes of every BeeOND job and holder.
+
+### Live site verification
+
+On 2026-11-13, `tools/ci_beeond_slurm.py --nodes 4` passed all 18 checks on a
+production BeeOND site (Rocky Linux 8.10, Slurm 23.11.3, four nodes), and
+`examples/dataflow/slurm/beeond_slurm.py` completed in both scopes there. This is a
+one-time manual run, not part of CI; repeat it on your site after upgrading
+DAGonStar or Slurm.
 
 ## Troubleshooting
 
@@ -249,6 +287,12 @@ the same checks with
   Check the comment value, the partition, and whether the site requires
   exclusive nodes (`sbatch_options=["--exclusive"]`). Compare
   `mount_template` with the path the site documents.
+- *"BeeOND mount ... is not available" although the path exists*: the mount
+  must be a writable directory. Some sites provision BeeOND only for
+  multi-node jobs and give single-node jobs a node-local substitute; at one
+  site that substitute was a root-owned `/scratch/jobid-<id>` with mode
+  `drwx------`, which the job cannot write. Request at least two nodes
+  (`nodes=2` or a `nodelist`) or ask the site to fix the ownership.
 - *Holder never becomes ready*: read `holder-<jobid>.out` in the state
   directory, and check `squeue` for pending reasons; raise `start_timeout`
   for busy queues.

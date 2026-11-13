@@ -2,7 +2,7 @@
 
 Usage (from the repository root, on a host where ``sbatch`` works)::
 
-    python tools/ci_beeond_slurm.py [--scratch DIR] [--partition NAME] [--skip-signal]
+    python tools/ci_beeond_slurm.py [--scratch DIR] [--partition NAME] [--nodes N] [--skip-signal]
 
 The CI job ``beeond-slurm`` runs it on a single-node Slurm cluster configured by
 ``tools/ci/slurm/setup-slurm-beeond.sh``.  That cluster emulates a BeeOND site:
@@ -37,6 +37,9 @@ from dagon import Workflow  # noqa: E402
 from dagon.task import DagonTask, TaskType  # noqa: E402
 
 Check = Tuple[str, bool, str]
+
+# Nodes per BeeOND job (``--nodes``); the CI site has a single node.
+NODES = 1
 
 
 def site_config(scratch: str, partition: Optional[str]) -> Dict[str, Dict[str, str]]:
@@ -83,11 +86,11 @@ def scenario_task(scratch: str, partition: Optional[str]) -> List[Check]:
     workflow = Workflow("ci-beeond-task", config=site_config(scratch, partition))
     nodes = DagonTask(
         TaskType.SLURM, "nodes",
-        "srun --ntasks=$SLURM_JOB_NUM_NODES --ntasks-per-node=1 bash -c "
+        "dagon_beeond_srun --nodes=$DAGON_BEEOND_NODES --ntasks-per-node=1 bash -c "
         "'echo \"node $(hostname)\" > \"$DAGON_BEEOND/node_$(hostname).txt\"'; "
         "for i in 1 2 3; do echo \"part $i\" > \"$DAGON_BEEOND/part_$i.txt\"; done; "
         "cat \"$DAGON_BEEOND\"/*.txt > \"$DAGON_BEEOND/out\"",
-        partition=partition, ntasks_per_node=1, beeond="task")
+        partition=partition, nodes=NODES, ntasks_per_node=1, beeond="task")
     show = DagonTask(TaskType.SLURM, "show", "cp workflow:///nodes/beeond/out out",
                      partition=partition, ntasks=1)
     workflow.add_task(nodes)
@@ -105,6 +108,8 @@ def scenario_task(scratch: str, partition: Optional[str]) -> List[Check]:
         ("task: persistence verified", status_code(nodes.working_dir, ".dagon", "beeond_persist.status") == "0",
          str(read(nodes.working_dir, ".dagon", "beeond_persist.status"))),
         ("task: downstream read persisted data", "part 3" in out and "node " in out, out),
+        ("task: every node wrote into the volume",
+         len([name for name in names if name.startswith("node_")]) == NODES, str(names)),
     ]
 
 
@@ -112,7 +117,7 @@ def scenario_failure(scratch: str, partition: Optional[str]) -> List[Check]:
     workflow = Workflow("ci-beeond-failure", config=site_config(scratch, partition))
     task = DagonTask(TaskType.SLURM, "fails",
                      "echo partial > \"$DAGON_BEEOND/partial.txt\"; exit 3",
-                     partition=partition, ntasks=1, beeond="task")
+                     partition=partition, nodes=NODES, ntasks_per_node=1, beeond="task")
     workflow.add_task(task)
     run_workflow(workflow)
     return [
@@ -128,9 +133,10 @@ def scenario_failure(scratch: str, partition: Optional[str]) -> List[Check]:
 
 def scenario_workflow(scratch: str, partition: Optional[str]) -> List[Check]:
     workflow = Workflow("ci-beeond-workflow", config=site_config(scratch, partition))
-    volume = workflow.create_beeond_volume("shared", ntasks_per_node=1, time="00:20:00")
+    volume = workflow.create_beeond_volume("shared", nodes=NODES, ntasks_per_node=1, time="00:20:00")
     stage = DagonTask(TaskType.SLURM, "stage",
-                      "srun --overlap --ntasks=1 bash -c 'hostname > \"$DAGON_BEEOND/host.txt\"'; "
+                      "dagon_beeond_srun --nodes=$DAGON_BEEOND_NODES --ntasks-per-node=1 "
+                      "bash -c 'hostname > \"$DAGON_BEEOND/host_$(hostname).txt\"' && "
                       "seq 1 5 > \"$DAGON_BEEOND/input.txt\"",
                       beeond="workflow:shared")
     analyse = DagonTask(TaskType.SLURM, "analyse",
@@ -152,7 +158,10 @@ def scenario_workflow(scratch: str, partition: Optional[str]) -> List[Check]:
         ("workflow: holder confirmed persistence", volume.persist_code == 0 and volume.job_id is not None,
          "code=%s job=%s" % (volume.persist_code, volume.job_id)),
         ("workflow: steps shared the volume", lines == "5", lines),
-        ("workflow: volume persisted", names == ["host.txt", "input.txt", "lines.txt"], str(names)),
+        ("workflow: volume persisted",
+         [name for name in names if not name.startswith("host_")] == ["input.txt", "lines.txt"], str(names)),
+        ("workflow: every node of the holder wrote into the volume",
+         len([name for name in names if name.startswith("host_")]) == NODES, str(names)),
     ]
 
 
@@ -160,7 +169,7 @@ def scenario_signal(scratch: str, partition: Optional[str]) -> List[Check]:
     workflow = Workflow("ci-beeond-signal", config=site_config(scratch, partition))
     task = DagonTask(TaskType.SLURM, "long",
                      "echo before > \"$DAGON_BEEOND/before.txt\"; sleep 900",
-                     partition=partition, ntasks=1, time="00:03:00",
+                     partition=partition, nodes=NODES, ntasks_per_node=1, time="00:03:00",
                      beeond={"scope": "task", "signal_grace": 100})
     workflow.add_task(task)
     started = time.monotonic()
@@ -202,9 +211,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--scratch", help="shared scratch directory (default: temporary)")
     parser.add_argument("--partition", default=None)
+    parser.add_argument("--nodes", type=int, default=1, help="nodes per BeeOND job (default: 1)")
     parser.add_argument("--skip-signal", action="store_true", help="skip the two-minute signal check")
     parser.add_argument("--site-log", default="/var/log/slurm/beeond-ci.log")
     args = parser.parse_args()
+    global NODES
+    NODES = args.nodes
 
     with tempfile.TemporaryDirectory(prefix="dagon-beeond-ci-") as temporary:
         scratch = os.path.abspath(args.scratch or temporary)

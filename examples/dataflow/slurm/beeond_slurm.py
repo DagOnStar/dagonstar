@@ -23,7 +23,9 @@ import argparse
 from dagon import Workflow
 from dagon.task import DagonTask, TaskType
 
-NODE_COMMAND = ("srun --ntasks=$SLURM_JOB_NUM_NODES --ntasks-per-node=1 {overlap}bash -c "
+# dagon_beeond_srun starts a parallel step on every node of the BeeOND job (task
+# scope) or of the holder allocation (workflow scope); see docs/beeond.md.
+NODE_COMMAND = ("dagon_beeond_srun --nodes=$DAGON_BEEOND_NODES --ntasks-per-node=1 bash -c "
                 "'echo \"This is node $(hostname) writing its own output.\" > \"$DAGON_BEEOND/node_$(hostname).txt\"'")
 
 
@@ -32,6 +34,7 @@ def main() -> None:
     parser.add_argument("--scope", choices=("task", "workflow"), default="task")
     parser.add_argument("--partition", default="xxcpu")
     parser.add_argument("--nodelist", default="wn[01-04]")
+    parser.add_argument("--nodes", type=int, default=4)
     parser.add_argument("--comment", default="beeond-fs")
     parser.add_argument("--mount-template", default="/mnt/beeond_${SLURM_JOB_USER}-jobid_${SLURM_JOB_ID}")
     parser.add_argument("--time", default=None, help="holder wall time for --scope workflow")
@@ -55,9 +58,9 @@ def main() -> None:
     if args.scope == "task":
         beeond = dict(site, scope="task")
         nodes = DagonTask(TaskType.SLURM, "nodes",
-                          NODE_COMMAND.format(overlap="") + "; "
+                          NODE_COMMAND + " && "
                           "cat \"$DAGON_BEEOND\"/node_*.txt > \"$DAGON_BEEOND/out\"",
-                          partition=args.partition, nodelist=args.nodelist, ntasks_per_node=1,
+                          partition=args.partition, nodelist=args.nodelist, nodes=args.nodes, ntasks_per_node=1,
                           beeond=beeond, **remote)
         # Reads the persisted copy of the task volume from persistent storage.
         show = DagonTask(TaskType.SLURM, "show", "cat workflow:///nodes/beeond/out > out",
@@ -67,11 +70,11 @@ def main() -> None:
         workflow.make_dependencies()
     else:
         workflow.create_beeond_volume("default", partition=args.partition, nodelist=args.nodelist,
-                                      ntasks_per_node=1, time=args.time, **site)
-        nodes = DagonTask(TaskType.SLURM, "nodes", NODE_COMMAND.format(overlap="--overlap "),
+                                      nodes=args.nodes, ntasks_per_node=1, time=args.time, **site)
+        nodes = DagonTask(TaskType.SLURM, "nodes", NODE_COMMAND,
                           beeond="workflow", **remote)
         combine = DagonTask(TaskType.SLURM, "combine",
-                            "cat \"$DAGON_BEEOND\"/node_*.txt > \"$DAGON_BEEOND/out\"; "
+                            "cat \"$DAGON_BEEOND\"/node_*.txt > \"$DAGON_BEEOND/out\" && "
                             "cp \"$DAGON_BEEOND/out\" out",
                             beeond="workflow", **remote)
         workflow.add_task(nodes)

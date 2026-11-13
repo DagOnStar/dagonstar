@@ -516,6 +516,14 @@ class Slurm(Batch):
             metadata["beeond"] = beeond
         return metadata
 
+    def portable_command(self) -> str:
+        """Define the emulated ``dagon_beeond_srun`` helper for BeeOND tasks."""
+        command = super().portable_command()
+        if self.beeond is None or self.beeond is False:
+            return command
+        from dagon.beeond import srun_emulation_script
+        return srun_emulation_script() + command
+
     def portable_environment(self) -> Dict[str, str]:
         """Emulate the BeeOND mount with its persistent directory locally."""
         volume = self.beeond_volume()
@@ -523,13 +531,14 @@ class Slurm(Batch):
             mount = volume.persist_dir()
             os.makedirs(mount, exist_ok=True)
             return {"DAGON_BEEOND": mount, "DAGON_BEEOND_SCOPE": "workflow",
-                    "DAGON_BEEOND_VOLUME": volume.name, "DAGON_BEEOND_PERSIST_DIR": mount}
+                    "DAGON_BEEOND_VOLUME": volume.name, "DAGON_BEEOND_PERSIST_DIR": mount,
+                    "DAGON_BEEOND_NODES": "1"}
         config = self.beeond_task_config()
         if config is None:
             return {}
         mount = self.beeond_persist_dir() or self.working_dir.rstrip("/") + "/.dagon/beeond-emulated"
         os.makedirs(mount, exist_ok=True)
-        environment = {"DAGON_BEEOND": mount, "DAGON_BEEOND_SCOPE": "task"}
+        environment = {"DAGON_BEEOND": mount, "DAGON_BEEOND_SCOPE": "task", "DAGON_BEEOND_NODES": "1"}
         if config.persist:
             environment["DAGON_BEEOND_PERSIST_DIR"] = mount
         return environment

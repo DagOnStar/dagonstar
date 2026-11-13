@@ -15,7 +15,6 @@ from types import SimpleNamespace
 
 from dagon import Workflow
 from dagon.batch import Batch, Slurm
-from dagon.docker_task import DockerTask
 from dagon.platform_support import bash_executable
 from dagon.task import DagonTask, TaskType
 
@@ -91,6 +90,10 @@ class LauncherFragmentExitStatusTests(unittest.TestCase):
 
     @unittest.skipIf(os.name == "nt" or shutil.which("sh") is None, "POSIX sh is required")
     def test_docker_exec_body_reports_command_status(self):
+        try:
+            from dagon.docker_task import DockerTask
+        except ImportError:
+            self.skipTest("the optional docker extra is not installed")
         task = object.__new__(DockerTask)
         task.working_dir = self.tmp.name
         task.container = SimpleNamespace(id="abc123")

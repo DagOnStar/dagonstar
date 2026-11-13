@@ -342,11 +342,57 @@ def restore_script(persist_dir: str) -> str:
     )
 
 
+def srun_helper_script(job_id: str = "") -> str:
+    """Return bash defining ``dagon_beeond_srun``, a parallel step on the volume's nodes.
+
+    In task scope the launcher is the batch script of the BeeOND job, so the
+    helper is plain ``srun``.  In workflow scope the launcher is a one-node step
+    of the holder job: a nested ``srun`` would be confined to that step, so the
+    helper clears the step's ``SLURM_*`` variables and starts a new
+    ``--overlap`` step of the holder allocation (*job_id*), which can use every
+    holder node.
+    """
+    if not job_id:
+        return ("# Start a parallel step on the nodes of this BeeOND job\n"
+                "dagon_beeond_srun() { srun \"$@\"; }\n")
+    return (
+        "# Start a parallel step on the nodes of the holder allocation\n"
+        "dagon_beeond_srun() {\n"
+        "  (\n"
+        "    for dagon_var in $(compgen -e); do\n"
+        "      case \"$dagon_var\" in SLURM_*) unset \"$dagon_var\" ;; esac\n"
+        "    done\n"
+        "    exec srun --jobid=\"$DAGON_BEEOND_JOB_ID\" --overlap \"$@\"\n"
+        "  )\n"
+        "}\n"
+    )
+
+
+def srun_emulation_script() -> str:
+    """Return the portable-emulation ``dagon_beeond_srun``: run the program once.
+
+    Leading ``srun`` options are skipped, so options must use the
+    ``--option=value`` form (or end with ``--``) to be emulated.
+    """
+    return (
+        "dagon_beeond_srun() {\n"
+        "  while [ $# -gt 0 ]; do\n"
+        "    case \"$1\" in --) shift; break ;; -*) shift ;; *) break ;; esac\n"
+        "  done\n"
+        "  \"$@\"\n"
+        "}\n"
+    )
+
+
 def task_prologue(config: BeeONDConfig, persist_dir: str, report_dir: str) -> str:
     """Launcher prologue of a task-scope volume (runs inside the BeeOND job)."""
     script = "\n# BeeOND on-demand file system (task scope)\n"
     script += "export DAGON_BEEOND_SCOPE=task\n"
     script += mount_script(config)
+    script += ("export DAGON_BEEOND_JOB_ID=\"${SLURM_JOB_ID:-}\"\n"
+               "export DAGON_BEEOND_NODES=\"${SLURM_JOB_NUM_NODES:-1}\"\n"
+               "export DAGON_BEEOND_NODELIST=\"${SLURM_JOB_NODELIST:-}\"\n")
+    script += srun_helper_script()
     if config.persist:
         script += "export DAGON_BEEOND_PERSIST_DIR=" + quote(persist_dir) + "\n"
         script += persist_function_script(config, persist_dir, report_dir)
@@ -472,6 +518,8 @@ class BeeONDVolume:
         self.name = config.volume
         self.job_id: Optional[str] = None
         self.mount: Optional[str] = None
+        self.nodes: Optional[int] = None
+        self.nodelist: Optional[str] = None
         self.host: Any = None
         self.state = "created"
         self.persist_code: Optional[int] = None
@@ -518,7 +566,8 @@ class BeeONDVolume:
             if config.restore:
                 script += restore_script(self.persist_dir())
         script += (
-            "printf '%s\\n%s\\n' \"$SLURM_JOB_ID\" \"$DAGON_BEEOND\" > \"$DAGON_BEEOND_STATE/ready.tmp\"\n"
+            "printf '%s\\n%s\\n%s\\n%s\\n' \"$SLURM_JOB_ID\" \"$DAGON_BEEOND\" \"${SLURM_JOB_NUM_NODES:-1}\""
+            " \"${SLURM_JOB_NODELIST:-}\" > \"$DAGON_BEEOND_STATE/ready.tmp\"\n"
             "mv \"$DAGON_BEEOND_STATE/ready.tmp\" " + ready + "\n"
             "dagon_beeond_stop=\n"
             "trap 'dagon_beeond_stop=signal' USR1 TERM\n"
@@ -590,6 +639,10 @@ class BeeONDVolume:
                     lines = [line.strip() for line in ready.splitlines() if line.strip()]
                     if len(lines) >= 2:
                         self.mount = lines[1]
+                        if len(lines) >= 3 and lines[2].isdigit():
+                            self.nodes = int(lines[2])
+                        if len(lines) >= 4:
+                            self.nodelist = lines[3]
                         self.state = "running"
                         self._log("info", "BeeOND volume %s mounted at %s (job %s)",
                                   self.name, self.mount, self.job_id)
@@ -675,10 +728,16 @@ class BeeONDVolume:
         # The launcher may be written before the holder starts, so the mount is
         # read from the holder's ready file (second line) when the step runs.
         script += "DAGON_BEEOND=" + quote(self.mount or "") + "\n"
+        script += "DAGON_BEEOND_JOB_ID=" + quote(self.job_id or "") + "\n"
+        script += "DAGON_BEEOND_NODES=" + quote(str(self.nodes or 1)) + "\n"
+        script += "DAGON_BEEOND_NODELIST=" + quote(self.nodelist or "") + "\n"
         script += ("if [ -f " + quote(self._file("ready")) + " ]; then\n"
-                   "  { read -r dagon_beeond_job; read -r DAGON_BEEOND; } < " + quote(self._file("ready")) + "\n"
+                   "  { read -r DAGON_BEEOND_JOB_ID; read -r DAGON_BEEOND; read -r DAGON_BEEOND_NODES;"
+                   " read -r DAGON_BEEOND_NODELIST; } < " + quote(self._file("ready")) + "\n"
                    "fi\n"
-                   "export DAGON_BEEOND\n")
+                   "DAGON_BEEOND_NODES=\"${DAGON_BEEOND_NODES:-1}\"\n"
+                   "export DAGON_BEEOND DAGON_BEEOND_JOB_ID DAGON_BEEOND_NODES DAGON_BEEOND_NODELIST\n")
+        script += srun_helper_script("holder")
         script += ("if [ ! -d \"$DAGON_BEEOND\" ]; then\n"
                    "  echo \"DAGonStar: BeeOND mount $DAGON_BEEOND is not visible on $(hostname)\" >&2\n"
                    "  exit 1\nfi\n")
@@ -698,7 +757,8 @@ class BeeONDVolume:
         """Return credential-free provenance metadata."""
         return {"scope": "workflow", "volume": self.name, "comment": self.config.comment,
                 "persist": self.config.persist, "persist_dir": self.persist_dir() if self.config.persist else None,
-                "verify": self.config.verify, "job_id": self.job_id, "mount": self.mount}
+                "verify": self.config.verify, "job_id": self.job_id, "mount": self.mount,
+                "nodes": self.nodes, "nodelist": self.nodelist}
 
     def _log(self, level: str, message: str, *args: Any) -> None:
         logger = getattr(self.workflow, "logger", None)

@@ -163,9 +163,10 @@ python beeond_slurm.py --scope workflow --time 00:30:00
 Add `--ip <login-node> --ssh-user <user>` to submit through SSH with
 `RemoteSlurm`. For `--scope task`, the persisted volume is in
 `<working_dir of nodes>/beeond/`. For `--scope workflow`, it is in
-`<scratch_dir_base>/BeeOND-Slurm-workflow-beeond-default/`. These commands have
-not been run against a live cluster as part of the automated checks.
+`<scratch_dir_base>/BeeOND-Slurm-workflow-beeond-default/`. Both commands were
+run manually on a four-node BeeOND site (Slurm 23.11.3) on 2026-11-13; they are
+not part of the automated checks.
 The `beeond-slurm` CI job runs the equivalent checks in
 `tools/ci_beeond_slurm.py` on a single-node Slurm cluster with an emulated
 BeeOND site; you can run that script on your own cluster with
-`--partition <partition> --scratch <shared-dir>`.
+`--partition <partition> --nodes <n> --scratch <shared-dir>`.

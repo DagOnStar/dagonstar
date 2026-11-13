@@ -53,7 +53,7 @@ and multi-node sharing are not tested. The setup scripts are for CI runners only
 To run the checks on a cluster you control:
 
 ```bash
-python tools/ci_beeond_slurm.py --partition <partition> --scratch <shared-dir>
+python tools/ci_beeond_slurm.py --partition <partition> --nodes <n> --scratch <shared-dir>
 ```
 
 ## Local execution on each platform
