@@ -85,6 +85,13 @@ cannot recover those task outputs.
 For long-running scientific workflows, put scratch directories on storage with a
 retention policy appropriate to the experiment.
 
+Slurm tasks that use BeeOND volumes add a `beeond` entry (`scope`,
+`persist_dir`, and for workflow volumes `volume`) to their checkpoint record.
+Task-scope volumes are persisted below the working directory, so checkpoint
+reuse sees their data. Workflow volumes are new for each run. Set
+`restore=True` to copy the previous persistent directory into the new volume
+when resuming. See [BeeOND](beeond.md).
+
 ## Checkpointing and dataflow
 
 For dataflow workflows, checkpointing is most useful when upstream tasks produce

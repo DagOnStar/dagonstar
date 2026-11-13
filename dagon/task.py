@@ -100,6 +100,9 @@ class DagonTask(object):
 
 class Task(Thread):
     task_type = None
+    # Optional BeeOND volume specification (see dagon.beeond); only the
+    # Slurm task family currently accepts one.
+    beeond: Any = None
     """
     **Represents a task executed by DagOn**
 
@@ -278,9 +281,14 @@ class Task(Thread):
         os.makedirs(os.path.join(self.working_dir, ".dagon"), exist_ok=True)
         self.initialize_checkpoint()
         self.workflow._fire_event("on_task_execute_start", self)
+        environment = launcher_environment()
+        extra_environment = self.portable_environment()
+        if extra_environment:
+            environment = dict(environment if environment is not None else os.environ)
+            environment.update(extra_environment)
         completed = subprocess.run([bash_executable(), "-c", self.portable_command()],
                                    cwd=self.working_dir, text=True, capture_output=True,
-                                   env=launcher_environment())
+                                   env=environment)
         self.result = {"code": completed.returncode, "message": completed.stderr,
                        "output": completed.stdout}
         self.workflow.checkpoints[key]["code"] = completed.returncode
@@ -703,6 +711,7 @@ class Task(Thread):
         header = header + "# Change the current directory to the working directory\n"
         header = header + "cd " + self.working_dir + "\n"
         header = header + "if [ $? -ne 0 ]; then code=1; fi \n\n"
+        header = header + self.launcher_prologue()
         header = header + "# Start staging in\n\n"
 
         # Create the body
@@ -896,6 +905,22 @@ class Task(Thread):
         header = header + "if [ $? -ne 0 ]; then code=1; fi"
         return header
 
+    def launcher_prologue(self) -> str:
+        """Return launcher lines run after ``cd`` into the working directory.
+
+        Backends override this to prepare execution-time resources (for
+        example a BeeOND volume) before staging and the command run.
+        """
+        return ""
+
+    def launcher_epilogue(self) -> str:
+        """Return launcher lines run after the command and before post-processing."""
+        return ""
+
+    def portable_environment(self) -> Dict[str, str]:
+        """Return extra environment variables for portable local emulation."""
+        return {}
+
     # process the command to execute
     def include_command(self, body):
         """
@@ -903,7 +928,14 @@ class Task(Thread):
         :param body: Script body
         :return: Script body with the command
         """
-        return body + " | tee " + quote(self.working_dir + "/.dagon/stdout.txt") + "\n"
+        # A pipeline's status is the status of ``tee``: restore the status of the
+        # command itself so the launcher's ``$?`` check sees command failures.
+        return (body + " | tee " + quote(self.stdout_path()) + "\n"
+                + "(exit \"${PIPESTATUS[0]}\")\n")
+
+    def stdout_path(self) -> str:
+        """Return the file that captures the command's standard output."""
+        return self.working_dir + "/.dagon/stdout.txt"
 
     # Post process the command
     def post_process_command(self, command):
@@ -912,7 +944,8 @@ class Task(Thread):
         :param command: Command to be executed
         :return: Command post-processed
         """
-        footer = command + "\n\n"
+        footer = command + "\n"
+        footer = footer + self.launcher_epilogue() + "\n"
         footer = footer + "# Perform post process\n"
 
         # if dynostore, push the data to dynostore

@@ -200,10 +200,21 @@ Supported constructor options include:
 - `time`
 - `nodes`
 - `ntasks_per_node`
+- `nodelist`
+- `sbatch_options` (extra `sbatch` arguments, each passed as one quoted argument)
+- `beeond` (`None`, `True`/`"task"`, `"workflow"`/`"workflow:<name>"`, a dict of
+  options, a `dagon.beeond.BeeONDConfig`, or a `dagon.beeond.BeeONDVolume`)
 - `working_dir`
 - `globusendpoint`
 
-Remote Slurm is selected by passing `ip`.
+Remote Slurm is selected by passing `ip`; it accepts the same options plus
+`ssh_username`, `keypath`, and `ssh_port`.
+
+Workflow-scope BeeOND volumes are managed with
+`Workflow.create_beeond_volume(name="default", **options)`,
+`Workflow.get_beeond_volume(name="default")`, and
+`Workflow.stop_beeond_volumes(raise_errors=True)`. `Workflow.run()` stops
+started volumes automatically. See [BeeOND on-demand file systems](beeond.md).
 
 ## Docker tasks
 

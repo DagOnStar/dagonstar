@@ -80,7 +80,9 @@ If behavior changed, run the smallest relevant example and document the command.
 ## Platform portability
 
 - CI (`.github/workflows/ci.yml`) tests Ubuntu, macOS, Windows, Rocky Linux 9,
-  and Debian bookworm arm64 (64-bit Raspberry Pi OS userland); see
+  and Debian bookworm arm64 (64-bit Raspberry Pi OS userland), and runs BeeOND
+  workflows on single-node Slurm with an emulated BeeOND site
+  (`tools/ci/slurm/`, `tools/ci_beeond_slurm.py`); see
   `docs/platform_support.md` and keep it accurate.
 - Run local launchers through `dagon.platform_support.bash_executable()`, never
   a hardcoded `/bin/bash` or `bash`; remote hosts may keep `bash`.

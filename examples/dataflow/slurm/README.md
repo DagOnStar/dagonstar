@@ -124,3 +124,49 @@ Execute the file ```dataflow-demo-slurm-remote.py``` as follows:
 ```bash
 python dataflow-demo-slurm-remote.py
 ```
+## BeeOND on-demand file systems
+
+DAGonStar can run Slurm tasks on BeeOND (BeeGFS On Demand) volumes that a site
+creates for jobs submitted with a comment such as `--comment=beeond-fs`.
+Volumes can be created per task or per workflow, and DAGonStar copies their
+contents to persistent storage before the volume is destroyed. The full guide
+is [docs/beeond.md](../../../docs/beeond.md).
+
+### Demo 3 - Local emulation (self-contained)
+
+`beeond_local_emulation.py` needs no Slurm, no `dagon.ini`, and no network. It
+uses `portable_emulation=True`, so `$DAGON_BEEOND` points directly at the
+persistent directory. It runs a per-task volume, a `workflow://` reference into
+the persisted copy, and a shared per-workflow volume, then verifies the
+results:
+
+```bash
+python examples/dataflow/slurm/beeond_local_emulation.py
+python examples/dataflow/slurm/beeond_local_emulation.py --scratch /path/to/keep
+```
+
+Expected output ends with `Verification: ok`. The example also runs as part of
+`python tools/run_local_examples.py`.
+
+### Demo 4 - Live BeeOND cluster (infrastructure-dependent)
+
+`beeond_slurm.py` mirrors a site batch script in which every node writes a file
+into `/mnt/beeond_${SLURM_JOB_USER}-jobid_${SLURM_JOB_ID}` and one step combines
+the files. Run it on the login node with a `dagon.ini` whose
+`scratch_dir_base` is on a file system shared with the compute nodes:
+
+```bash
+python beeond_slurm.py --scope task --partition xxcpu --nodelist 'wn[01-04]'
+python beeond_slurm.py --scope workflow --time 00:30:00
+```
+
+Add `--ip <login-node> --ssh-user <user>` to submit through SSH with
+`RemoteSlurm`. For `--scope task`, the persisted volume is in
+`<working_dir of nodes>/beeond/`. For `--scope workflow`, it is in
+`<scratch_dir_base>/BeeOND-Slurm-workflow-beeond-default/`. Both commands were
+run manually on a four-node BeeOND site (Slurm 23.11.3) on 2026-11-13; they are
+not part of the automated checks.
+The `beeond-slurm` CI job runs the equivalent checks in
+`tools/ci_beeond_slurm.py` on a single-node Slurm cluster with an emulated
+BeeOND site; you can run that script on your own cluster with
+`--partition <partition> --nodes <n> --scratch <shared-dir>`.

@@ -51,7 +51,9 @@ The export describes commands and graph ordering; it is not a lossless
 translation of every DAGonStar executor. CWL runs exported commands in its own
 working directories. DAGonStar scratch management, checkpointing, remote SSH,
 Slurm, cloud, Kubernetes, Nomad, service registration, and specialized staging
-are not reproduced.
+are not reproduced. BeeOND volumes (see [BeeOND](beeond.md)) are DAGonStar
+execution behavior and are not exported. A command that refers to
+`$DAGON_BEEOND` needs that variable from the CWL runner's environment.
 
 In particular, `workflow://` text in a command is retained verbatim. It creates
 the correct step dependency in the exported graph, but a generic CWL runner

@@ -99,7 +99,11 @@ DagonTask(TaskType.BATCH, "hostname", "hostname > host.txt")
 ```
 
 The command is included in a generated Bash launcher script. Standard output is
-also piped into `.dagon/stdout.txt`.
+also piped into `.dagon/stdout.txt`. The task fails when the command exits
+non-zero: the launcher keeps the command's own exit status, not that of the
+`tee` that captures its output. For a command line such as `a; b`, only `b` is
+piped and only its status counts, so chain steps with `&&` (or end the command
+with an explicit check) when every step must succeed.
 
 ## Remote tasks
 
@@ -147,6 +151,12 @@ DagonTask(
 
 The implementation generates an `sbatch` command. Confirm that `sbatch` is
 available and that the partition/resource values are valid on the target system.
+
+On sites that provide BeeOND (BeeGFS On Demand) scratch volumes, pass
+`beeond="task"` for a volume per task or `beeond="workflow"` for a volume shared
+by the workflow. The command finds the volume through `$DAGON_BEEOND`, and
+DAGonStar copies the volume to persistent storage before it is destroyed. See
+[BeeOND on-demand file systems](beeond.md).
 
 ## Docker tasks
 

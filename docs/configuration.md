@@ -151,6 +151,27 @@ task = DagonTask(
 )
 ```
 
+## `[beeond]`
+
+Optional defaults for BeeOND (BeeGFS On Demand) volumes used by Slurm tasks.
+Every key is optional, and unknown keys raise `ValueError`. Task arguments and
+`Workflow.create_beeond_volume(...)` override these values.
+
+```ini
+[beeond]
+comment=beeond-fs
+mount_template=/mnt/beeond_${SLURM_JOB_USER}-jobid_${SLURM_JOB_ID}
+persist=True
+verify=list
+signal_grace=300
+partition=xxcpu
+nodelist=wn[01-04]
+ntasks_per_node=1
+```
+
+The complete option table, scopes, and persistence guarantees are in
+[BeeOND on-demand file systems](beeond.md).
+
 ## Cloud provider sections
 
 ## LLM provider sections

@@ -148,3 +148,7 @@ tests/case_study_pollution/cloud/*.png
 tests/case_study_pollution/cloud/*.csv
 tests/benchmarks/dynostore/dagonresults/*
 tests/out.txt
+
+# Editor and operating-system files
+.DS_Store
+.idea/

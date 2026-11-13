@@ -32,17 +32,23 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 Trace the generated batch script and submission command, distinguishing scheduler directives from the scientific command. A live extension should record partition, resources, job identifier, queue transitions, and final task evidence.
 
+Some sites attach a temporary BeeOND (BeeGFS On Demand) file system to a job submitted with a comment such as `--comment=beeond-fs`. The file system is destroyed when the job ends. A Slurm task constructed with `beeond="task"` receives the mount point in `$DAGON_BEEOND`. Its launcher copies the volume to `<working_dir>/beeond` before the job ends, so a later task can read `workflow:///<task>/beeond/<file>`. With `beeond="workflow"`, one holder job keeps a volume for the whole workflow, and tasks run as `srun` steps inside it. The [BeeOND guide](../beeond.md) defines both scopes and their persistence limits.
+
 ## Run the example
 
 From the repository root:
 
 ~~~bash
 python -m unittest tests.test_shell_commands -v
+python -m unittest tests.test_beeond -v
+python examples/dataflow/slurm/beeond_local_emulation.py
 ~~~
+
+The BeeOND example uses portable emulation, so `$DAGON_BEEOND` is the persistent directory itself and no job is submitted.
 
 ## Expected result
 
-Local checks cover command construction. Live evidence requires sbatch and an authorised cluster.
+Local checks cover command construction. The BeeOND tests run the generated persistence fragments against a temporary directory that stands in for the mount, and the example ends with `Verification: ok`. Live evidence requires sbatch, an authorised cluster and, for BeeOND, a site that provisions the volume. The `beeond-slurm` CI job supplies intermediate evidence: it runs `tools/ci_beeond_slurm.py` on a single-node Slurm cluster whose Prolog and Epilog create and destroy the mount, which shows that persistence happens before teardown but says nothing about BeeGFS itself. A one-time manual run of the same script with `--nodes 4` on a production BeeOND site passed all checks; that is observed evidence for one site and Slurm release, not a general guarantee. Parallel work across the volume's nodes uses the launcher helper `dagon_beeond_srun`, because a plain nested `srun` cannot leave a workflow-scope task's one-node step.
 
 ## Verify
 
@@ -58,15 +64,15 @@ The local checks cover Slurm command construction and source validity. They do n
 
 ## Controlled experiment
 
-Vary CPU or time in a local constructor and predict the directive.
+Vary CPU or time in a local constructor and predict the directive. Then construct `Slurm("t", "true", working_dir="/scratch/t", comment="other", beeond="task")` and predict how many `--comment` options `generate_command("launcher.sh")` emits before you check; repeat with `comment="beeond-fs"`.
 
 ## Common problems and diagnosis
 
-Separate rejected submission, queued state, runtime failure, and missing logs. See [troubleshooting](resources/troubleshooting.md).
+Separate rejected submission, queued state, runtime failure, and missing logs. For BeeOND, a missing mount and a failed copy produce distinct messages; read `.dagon/beeond_persist.status`. See [troubleshooting](resources/troubleshooting.md).
 
 ## Scientific practice
 
-Record requested and observed resources; queue time is not compute time.
+Record requested and observed resources; queue time is not compute time. Treat job-local storage as volatile. Record where its contents were persisted and check the persistence status, because the file system on which the data was produced no longer exists afterwards.
 
 ## Summary
 

@@ -6,6 +6,8 @@ Source directory: [`examples/dataflow/slurm`](../../examples/dataflow/slurm)
 
 - `dataflow-demo-slurm.py`
 - `dataflow-demo-slurm-remote.py`
+- `beeond_local_emulation.py` (self-contained, portable emulation)
+- `beeond_slurm.py` (live BeeOND site, per task or per workflow)
 - `README.md`
 
 ## Purpose
@@ -67,6 +69,20 @@ Then verify Slurm on the remote host:
 ```bash
 ssh -i /path/to/key user@cluster-front-end 'which sbatch && sinfo'
 ```
+
+## BeeOND workflows
+
+`beeond_local_emulation.py` runs locally without Slurm. It shows a per-task
+volume persisted to `<working_dir>/beeond`, a `workflow://` reference into that
+copy, and a shared per-workflow volume:
+
+```bash
+python examples/dataflow/slurm/beeond_local_emulation.py
+```
+
+`beeond_slurm.py --scope task|workflow` targets a site that creates BeeOND
+volumes for jobs submitted with `--comment=beeond-fs`. It is
+infrastructure-dependent. See [BeeOND on-demand file systems](../beeond.md).
 
 ## Verification
 

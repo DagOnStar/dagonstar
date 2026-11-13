@@ -167,6 +167,9 @@ class Workflow(object):
         self._dependencies_made = False
         self._execution_thread: Optional[threading.Thread] = None
         self._execution_lock = threading.RLock()
+        # Workflow-scope BeeOND volumes, created on demand (see dagon.beeond).
+        self.beeond_volumes: Dict[str, Any] = {}
+        self._beeond_lock = threading.Lock()
         self._event_hooks = {
             name: EventHook(self, name) for name in (
                 "on_workflow_start", "on_workflow_end", "on_task_start",
@@ -360,6 +363,63 @@ class Workflow(object):
         self.fair_profile = profile
         self.fair_recorder = recorder
         return recorder
+
+    def create_beeond_volume(self, name: str = "default", **options: Any) -> Any:
+        """Create a workflow-scope BeeOND volume shared by Slurm tasks.
+
+        *options* override the ``[beeond]`` section of the configuration; see
+        :class:`dagon.beeond.BeeONDConfig`.  The volume is started by the first
+        task that uses it and persisted and released when :meth:`run` ends.
+        """
+        from dagon.beeond import BeeONDVolume, workflow_defaults
+        options = dict(options, scope="workflow", volume=name)
+        config = workflow_defaults(self).with_options(**options)
+        with self._beeond_lock:
+            if name in self.beeond_volumes:
+                raise ValueError("BeeOND volume %r already exists" % name)
+            volume = BeeONDVolume(self, config)
+            self.beeond_volumes[name] = volume
+            return volume
+
+    def add_beeond_volume(self, volume: Any) -> Any:
+        """Register an existing :class:`dagon.beeond.BeeONDVolume` and return it."""
+        with self._beeond_lock:
+            existing = self.beeond_volumes.get(volume.name)
+            if existing is not None and existing is not volume:
+                raise ValueError("BeeOND volume %r already exists" % volume.name)
+            self.beeond_volumes[volume.name] = volume
+            return volume
+
+    def get_beeond_volume(self, name: str = "default") -> Any:
+        """Return the named workflow-scope BeeOND volume, creating it from defaults."""
+        with self._beeond_lock:
+            volume = self.beeond_volumes.get(name)
+        if volume is not None:
+            return volume
+        try:
+            return self.create_beeond_volume(name)
+        except ValueError:
+            # Another task thread created it concurrently.
+            return self.beeond_volumes[name]
+
+    def stop_beeond_volumes(self, raise_errors: bool = True) -> Dict[str, Optional[int]]:
+        """Persist and release every started workflow-scope BeeOND volume.
+
+        :return: persistence code per volume (``None`` when never started)
+        :raises RuntimeError: when *raise_errors* and a volume failed to persist
+        """
+        results: Dict[str, Optional[int]] = {}
+        errors = []
+        for name, volume in list(self.beeond_volumes.items()):
+            try:
+                results[name] = volume.stop()
+            except Exception as exc:  # keep stopping the remaining volumes
+                results[name] = getattr(volume, "persist_code", None)
+                errors.append(str(exc))
+                self.logger.error("%s", exc)
+        if errors and raise_errors:
+            raise RuntimeError("; ".join(errors))
+        return results
 
     def add_listener(self, event_name: str, listener: Callable[[Any], None]) -> None:
         """Register *listener* for a named workflow event."""
@@ -593,6 +653,13 @@ class Workflow(object):
                 except RuntimeError:
                     self.logger.debug("Task %s could not be joined before start", task.name)
 
+            # Persist and release workflow-scope BeeOND volumes before reporting.
+            beeond_error = None
+            try:
+                self.stop_beeond_volumes()
+            except RuntimeError as exc:
+                beeond_error = exc
+
             completed_in = (time() - start_time)
             self.logger.info("Workflow '" + self.name + "' completed in %s seconds ---" % completed_in)
 
@@ -600,7 +667,12 @@ class Workflow(object):
                 self.checkpoints['_scratch_dir'] = self.get_scratch_dir_base()
                 with open(self.checkpoint_file, 'w') as fp:
                     fp.write(json.dumps(self.checkpoints, sort_keys=True, indent=4))
+            if beeond_error is not None:
+                raise beeond_error
         finally:
+            # Idempotent: only volumes still running (for example after an
+            # interruption) are persisted and released here.
+            self.stop_beeond_volumes(raise_errors=False)
             self._fire_event("on_workflow_end", self)
 
     def launch(self, resume_checkpoint_file=None) -> threading.Thread:
@@ -638,6 +710,8 @@ class Workflow(object):
                 options['params'] = temp.get('params')
                 options['input_files'] = temp.get('input_files')
                 options['output_file'] = temp.get('output_file', 'response.json')
+            if temp['type'].upper() == 'SLURM' and temp.get('beeond') is not None:
+                options['beeond'] = temp['beeond']
             if temp['type'].upper() == 'NATIVE':
                 tk = DagonTask(TaskType.NATIVE, temp['name'], temp['function'],
                                inputs=temp.get('inputs'), outputs=temp.get('outputs'),
