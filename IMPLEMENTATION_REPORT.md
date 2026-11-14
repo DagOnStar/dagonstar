@@ -2,7 +2,7 @@
 
 - **Branch:** `feature/scheduler-aware-prestaging`, based on `development` at `d8da197`. Pushed to `origin` at `14b8698` with the user's approval; the second-repeat-audit commits listed in [section 12](#12-commit-history) are local only. Not merged, no PR.
 - **Inputs:** `DAGonStar_Claude_Code_Implementation_Plan.md` (the plan) and `AGENTS.md`. There is no `CLAUDE.md` in the repository. Prepared for review against `DAGonStar_Codex_Independent_Audit_Plan.md`.
-- **Audit remediation:** the first independent audit (verdict FAIL at `2d0d69a`) reported six findings, F-001 to F-006, addressed in [section 2](#2-audit-remediation). The repeat audit (`AUDIT_REPORT_SCHEDULER_PRESTAGING.md`, verdict FAIL) confirmed F-001 to F-005 resolved and F-006 substantially resolved, and reported three new findings, R-001 to R-003, addressed in [section 3](#3-repeat-audit-remediation). The second repeat audit (verdict NEEDS-EVIDENCE at `14b8698`) confirmed R-001 to R-003 resolved and left one medium finding, M-001, and one failed CI job (Windows / Python 3.10). Both are addressed in [section 3](#second-repeat-audit-m-001-and-ci).
+- **Audit remediation:** the first independent audit (verdict FAIL at `2d0d69a`) reported six findings, F-001 to F-006, addressed in [section 2](#2-audit-remediation). The repeat audit (`AUDIT_REPORT_SCHEDULER_PRESTAGING.md`, verdict FAIL) confirmed F-001 to F-005 resolved and F-006 substantially resolved, and reported three new findings, R-001 to R-003, addressed in [section 3](#3-repeat-audit-remediation). The second repeat audit (verdict NEEDS-EVIDENCE at `14b8698`) confirmed R-001 to R-003 resolved and left one medium finding, M-001, and one failed CI job (Windows / Python 3.10). Both are addressed in [section 3](#second-repeat-audit-m-001-and-ci). The third repeat audit (verdict NEEDS-EVIDENCE at `75856b3`) confirmed M-001 resolved and the Windows diagnosis consistent, and reported one low finding, L-001 (this report's file inventory still listed 41 harness checks), now corrected. Its remaining condition is a green CI run on the pushed commit.
 - **Environment:** macOS 26.6.2 (arm64), Python 3.12.10, GNU bash 3.2.57, ruff 0.17.3, mypy 2.4.1.
 - **Real-cluster validation: one manual run on one production cluster.** At the user's request, the final code was run on a production Slurm 23.11.3 cluster (RHEL 8 family, login node plus CPU compute nodes, `/home` on NFS shared by all nodes, partition `norm-wn`, Python 3.11 in a dedicated virtual environment). After the M-001 fix, the 44-check harness `tools/ci_prestage_slurm.py`, `pre_stage_local.py` in both lifecycles, and `pre_stage_remote.py` over real SSH from this workstation all passed again, and the 86 pre-staging unit tests passed on the cluster's Linux login node (details in [section 7](#7-test-results)). That is evidence for one site and Slurm release, with small inputs on a nearly idle partition, not a general guarantee. In CI run 43549373340 (commit `14b8698`), the emulated-Slurm job passed; the fixes since then have not been through CI yet, because they are not pushed.
 
@@ -81,14 +81,14 @@ Real-cluster observations relevant to these fixes:
 |---|---|
 | `dagon/prestage.py` | Policy validation, `PreparedTask`, `StageInput` (with integrity level), stage-in script and compute launcher renderers, content-comparison and identity helpers, reference validation, marker document, `TaskPhase`, error hierarchy, core-hour estimate |
 | `docs/scheduler_prestaging.md` | Dedicated guide (motivation, 200-core example, lifecycles, inheritance table, eligibility, filesystem requirements, recipes, generated files, verification and integrity, failure table, retries/checkpoints, dry run, events/metrics, CWL, security, evidence, FAQ/migration) |
-| `examples/dataflow/slurm/mock_scheduler.py` | Deterministic `sbatch -W` stand-in that logs submission-time observations and honours `--parsable` |
+| `examples/dataflow/slurm/mock_scheduler.py` | Deterministic `sbatch -W` stand-in that logs submission-time observations (one atomically written file per record, safe for concurrent submissions) and honours `--parsable` |
 | `examples/dataflow/slurm/pre_stage_mock.py` | Scheduler-free coastal-forecast workflow, legacy vs pre-staged, with assertions (`Verification: ok`) |
 | `examples/dataflow/slurm/pre_stage_local.py` | Same workflow on a real local Slurm installation, with ordering evidence |
 | `examples/dataflow/slurm/pre_stage_remote.py` | Same workflow on RemoteSlurm over SSH; no embedded hosts or credentials |
-| `tests/test_scheduler_prestaging.py` | 69 local tests (configuration, generation, lifecycle order, strict stager, content identity, mock-`sbatch` integration, checkpoints, dry run, queue-time changes, locking, examples) |
-| `tests/test_remote_scheduler_prestaging.py` | 15 RemoteSlurm tests with a loopback SSH double |
+| `tests/test_scheduler_prestaging.py` | 70 local tests (configuration, generation, lifecycle order, strict stager, content identity, mock-`sbatch` integration, checkpoints, dry run, queue-time changes, locking including a failed owner write, examples) |
+| `tests/test_remote_scheduler_prestaging.py` | 16 RemoteSlurm tests with a loopback SSH double |
 | `tests/fixtures/legacy_slurm_launcher.sh` | Legacy launcher captured from the unmodified `development` code |
-| `tools/ci_prestage_slurm.py` | Live-Slurm harness (scenarios order, legacy, gate, beeond, stager, checkpoint, traversal, dry, mutation, lock; 41 checks) |
+| `tools/ci_prestage_slurm.py` | Live-Slurm harness (11 scenarios: order, legacy, gate, beeond, stager, checkpoint, traversal, dry, mutation, lock, owner; 44 checks, or 41 when run as root, which skips `owner`) |
 | `IMPLEMENTATION_REPORT.md` | This report |
 
 ### Modified
@@ -182,6 +182,8 @@ On the production cluster (Slurm 23.11.3, partition `norm-wn`, scratch under the
 
 All cluster rows above were run on the code as committed for the second repeat audit, synced from this working tree; the remote example recorded job identifier 18931.
 
+For the third repeat audit (no code change; only this report changed), the harness and unit tests were rerun on the cluster against the audited commit `75856b3`: **44 passed, 0 failed**, and 86 unit tests OK. Job-output census of that harness run: 19 task directories, 15 `slurm-*.out` files (exactly one per submitted task), no output in the four refused tasks (`gate`, `traversal`, `lock`, `owner`), and no `stagein` copy job.
+
 Expected skips on other platforms: `tests/test_remote_scheduler_prestaging.py` (the loopback SSH host is POSIX) and the metacharacter-path test are skipped on Windows, and the symbolic-link part of `test_copy_link_and_corruption` is skipped there. All other new tests are cross-platform.
 
 ### Coverage against the requested scenarios and the audit's T01–T18
@@ -241,7 +243,7 @@ The guide is `docs/scheduler_prestaging.md`, linked from `README.md`, `docs/READ
 
 ## 11. Remaining HPC-cluster validation
 
-- Push the second-repeat-audit commits and confirm a fully green CI run, in particular `Windows / Python 3.10` (mock-log race fix) and the `beeond-slurm` job with all eleven harness scenarios.
+- Push the commits after `14b8698` and confirm a fully green CI run on the exact pushed commit (the third repeat audit's only merge-blocking item), in particular `Windows / Python 3.10` (mock-log race fix) and the `beeond-slurm` job with all eleven harness scenarios.
 - Done once, on one production cluster: the harness, `pre_stage_local.py` in both lifecycles, and `pre_stage_remote.py` over real SSH (default port). Still open: representative input sizes, a busy partition with a real queue wait, a site with Slurm accounting enabled (to confirm with `sacct` that no job other than the compute job ran), a non-default SSH port, checkpoint re-verification over real SSH, and multi-node jobs.
 - Confirm the shared, persistent scratch assumption for each site's file systems. Test a deliberately node-local path to observe the compute-side failure message.
 - Measure the cost of content verification for representative input sizes on the login node, and exercise the SCP and GridFTP movers (existence-only) in pre-staged mode where they are used.
@@ -249,7 +251,8 @@ The guide is `docs/scheduler_prestaging.md`, linked from `README.md`, `docs/READ
 ## 12. Commit history
 
 ```text
-(this commit) Update the implementation report for the second repeat audit
+(this commit) Correct the report inventory for the third repeat audit (L-001)
+75856b3 Update the implementation report for the second repeat audit
 d78d9a8 Make taking the stage-in lock fail-atomic (M-001)
 674590b Make the mock sbatch log safe for concurrent writers
 14b8698 Record the repeat-audit commits in the implementation report
