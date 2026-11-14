@@ -253,7 +253,12 @@ class Stager(object):
         With *strict*, the loop expands *src* with ``IFS`` set to a newline (so
         scratch paths with spaces stay one word while globs still expand),
         records every failed transfer, and leaves a non-zero ``$?`` when any
-        transfer failed.  Without it the legacy text is produced unchanged.
+        transfer failed.  The transfer template is also assigned in single
+        quotes, so ``eval`` expands ``$file`` and ``$dst`` as quoted variables
+        instead of re-parsing their values: shell syntax in a scratch path is
+        never executed.  ``file`` and ``dst`` are exported for
+        :attr:`StagerMover.SLURM` copy jobs.  Without *strict* the legacy text
+        is produced unchanged.
         """
         if strict:
             strict_start = ("dagon_stage_status=0\n"
@@ -262,8 +267,10 @@ class Stager(object):
             strict_fail = " || dagon_stage_status=1"
             strict_restore = "IFS=\"$dagon_saved_ifs\"\n"
             strict_end = "(exit \"$dagon_stage_status\")\n"
+            cmd_line = "export file dst\ncmd=" + quote(cmd)
         else:
             strict_start = strict_fail = strict_restore = strict_end = ""
+            cmd_line = 'cmd="' + cmd.replace('"', '\\"') + '"'
         batch_cfg = self.cfg.get("batch", {})
         slurm_cfg = self.cfg.get("slurm", {})
         jobs = batch_cfg.get("threads", "1")
@@ -281,7 +288,7 @@ job_ids=()
 
 {strict_start}for file in $src
 do
-cmd="{cmd}"
+{cmd_line}
 case $mode in
     1)
     # Run in parallel using local queue
@@ -319,7 +326,7 @@ fi
             mode=int(mode),
             jobs=quote(jobs),
             partition=quote(partition),
-            cmd=cmd.replace('"', '\\"'),
+            cmd_line=cmd_line,
             strict_start=strict_start,
             strict_fail=strict_fail,
             strict_restore=strict_restore,

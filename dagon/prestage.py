@@ -208,11 +208,30 @@ class PreparedTask:
                 + "".join(self.stage_blocks) + self.invoke)
 
     def compute_launcher(self) -> str:
-        """Return the allocation-only launcher used when inputs are pre-staged."""
-        marker = self.working_dir + "/.dagon/" + ALLOCATION_STARTED_NAME
+        """Return the allocation-only launcher used when inputs are pre-staged.
+
+        It contains no transfers.  Before the prologue and the command, it checks
+        that the stage-in marker and every staged input are visible on the
+        compute node, so a non-shared scratch directory fails the job at once
+        instead of computing on missing data.
+        """
+        stamp = self.working_dir + "/.dagon/" + ALLOCATION_STARTED_NAME
+        marker = self.working_dir + "/.dagon/" + MARKER_NAME
+        guard = ("# Confirm that the pre-staged inputs are visible inside the allocation: a\n"
+                 "# scratch directory that is not shared with the submission host fails here.\n"
+                 "if [ ! -f " + quote(marker) + " ]; then\n"
+                 "  echo \"DAGonStar: stage-in marker is not visible on $(hostname); the scratch directory "
+                 "must be shared with the submission host\" >&2\n"
+                 "  exit 1\n"
+                 "fi\n")
+        if self.inputs:
+            guard += _VERIFY_FUNCTION
+            for item in self.inputs:
+                guard += "dagon_verify_staged " + quote(item.destination) + " || exit 1\n"
         return (self.header + self._cd(True)
                 + "# Record when the allocation started running this launcher\n"
-                + "date +%s > " + quote(marker) + " 2>/dev/null || true\n\n"
+                + "date +%s > " + quote(stamp) + " 2>/dev/null || true\n\n"
+                + guard + "\n"
                 + self.prologue
                 + "# Inputs were staged before scheduler submission (pre_stage=True),\n"
                 + "# see .dagon/" + STAGE_SCRIPT_NAME + " and .dagon/" + MARKER_NAME + "\n\n"

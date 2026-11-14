@@ -874,7 +874,9 @@ class Task(Thread):
         header += "code=0\n"
         # Add and execute the script
 
-        context_script = header + "cd " + self.working_dir + "/.dagon\n"
+        # Quoted: shell syntax or spaces in a scratch path must never be executed
+        # or split while the context is discovered (this script runs in every mode).
+        context_script = header + "cd " + quote(self.working_dir + "/.dagon") + "\n"
 
         if "dynostore" in self.workflow.cfg:
 

@@ -228,7 +228,7 @@ class LauncherGenerationTests(unittest.TestCase):
         self.assertNotIn("cp -r", compute)
         self.assertNotIn("# Start staging in", compute)
         self.assertIn(prepared.resolved_command, compute)
-        self.assertEqual(2, stage.count('cmd="cp -r'))
+        self.assertEqual(2, stage.count("cmd='cp -r"))  # single-quoted template in strict mode
         self.assertNotIn(prepared.resolved_command, stage)  # never runs the user command
         self.assertIn("dagon_verify_staged /scratch/C/.dagon/inputs/wf/A//a.txt", stage)
         self.assertIn("rm -f /scratch/C/.dagon/" + MARKER_NAME, stage)
@@ -562,6 +562,75 @@ class LocalMockSchedulerTests(unittest.TestCase):
         self.assertEqual(0, result["code"], result)
         staged = Path(consumer.working_dir, ".dagon", "inputs", "wf", "A")
         self.assertEqual(["a 1.txt", "a2.txt"], sorted(os.listdir(str(staged))))
+
+    def test_failure_of_a_later_input_stops_staging_and_submission(self):
+        workflow, first, second, consumer = three_task_workflow(
+            self.scratch, workflow_pre_stage=True, command="cat workflow:///A/a.txt workflow:///B/missing.txt")
+        self.run_workflow(workflow, fails=True)
+        self.assertEqual("staging", consumer.failure_phase)
+        self.assertIsNone(mock_scheduler.submission_for(self.log, "C"))
+        self.assertTrue(Path(consumer.working_dir, ".dagon", "inputs", "wf", "A", "a.txt").exists())
+        self.assertFalse(Path(consumer.working_dir, ".dagon", MARKER_NAME).exists())
+
+    def test_repeated_references_and_concurrent_consumers(self):
+        workflow = Workflow("wf", config=scratch_config(self.scratch), pre_stage=True)
+        producer = Slurm("A", "seq 1 3 > a.txt")
+        twice = Slurm("twice", "cat workflow:///A/a.txt workflow:///A/a.txt > out.txt")
+        other = Slurm("other", "wc -l < workflow:///A/a.txt > out.txt")
+        for task in (producer, twice, other):
+            workflow.add_task(task)
+        self.run_workflow(workflow)
+        self.assertEqual("1\n2\n3\n1\n2\n3\n", Path(twice.working_dir, "out.txt").read_text(encoding="utf-8"))
+        self.assertEqual("3", Path(other.working_dir, "out.txt").read_text(encoding="utf-8").strip())
+        self.assertNotEqual(twice.working_dir, other.working_dir)  # each consumer stages privately
+        for name in ("twice", "other"):
+            self.assertTrue(mock_scheduler.submission_for(self.log, name)["inputs_populated"])
+        self.assertEqual(1, len([item for item in mock_scheduler.read_log(self.log) if item["job_name"] == "twice"]))
+
+    def test_job_fails_clearly_when_staged_data_is_not_visible_in_the_allocation(self):
+        # Emulate a non-shared scratch: the marker and inputs exist on the
+        # submission host but are gone when the job starts.
+        workflow, _first, _second, consumer = three_task_workflow(self.scratch, workflow_pre_stage=True)
+        original = Slurm.on_execute
+
+        def hide_staged_data(task, script, script_name):
+            if script_name == "launcher.sh" and task.name == "C":
+                os.remove(os.path.join(task.working_dir, ".dagon", MARKER_NAME))
+            return original(task, script, script_name)
+
+        with mock.patch.object(Slurm, "on_execute", hide_staged_data):
+            self.run_workflow(workflow, fails=True)
+        self.assertEqual("execution", consumer.failure_phase)
+        self.assertFalse(Path(consumer.working_dir, "c.txt").exists())  # the command never ran
+        self.assertIn("must be shared", str(consumer.result.get("message")))
+
+    @unittest.skipIf(os.name == "nt", "shell metacharacters are not valid in Windows paths")
+    def test_shell_metacharacters_in_scratch_paths_are_never_executed(self):
+        scratch = os.path.join(self.tmp.name, "evil $(touch INJECTED) `touch TICK` ;dir")
+        workflow = Workflow("wf", config=scratch_config(scratch), pre_stage=True)
+        producer = Slurm("A", "true", working_dir=os.path.join(scratch, "producer"))
+        consumer = Slurm("C", "cat workflow:///A/a.txt", working_dir=os.path.join(scratch, "consumer"))
+        workflow.add_task(producer)
+        workflow.add_task(consumer)
+        workflow.make_dependencies()
+        os.makedirs(os.path.join(producer.working_dir, ".dagon"))
+        Path(producer.working_dir, "a.txt").write_text("payload", encoding="utf-8")
+        producer.info = dict(CANNED_CONTEXT_INFO)
+        consumer.create_working_dir()
+        cwd = os.getcwd()
+        os.chdir(self.tmp.name)  # an executed payload would land here
+        try:
+            with no_network_context():
+                prepared = consumer.prepare_task(consumer.command, strict_staging=True)  # runs context.sh
+            result = consumer.run_stage_in(prepared.stage_in_script())
+        finally:
+            os.chdir(cwd)
+        self.assertEqual(0, result["code"], result)
+        self.assertEqual("payload", Path(consumer.working_dir, ".dagon", "inputs", "wf", "A", "a.txt")
+                         .read_text(encoding="utf-8"))
+        for directory in (self.tmp.name, consumer.working_dir, os.path.join(consumer.working_dir, ".dagon")):
+            self.assertFalse(os.path.exists(os.path.join(directory, "INJECTED")), directory)
+            self.assertFalse(os.path.exists(os.path.join(directory, "TICK")), directory)
 
     def test_other_task_types_are_unchanged_under_workflow_default(self):
         workflow = Workflow("wf", config=scratch_config(self.scratch), pre_stage=True)
