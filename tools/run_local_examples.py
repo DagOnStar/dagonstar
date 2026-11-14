@@ -6,7 +6,8 @@ Usage (from the repository root)::
 
 Every listed example uses only local processes, temporary scratch directories,
 and loopback mock services; none needs ``dagon.ini``, credentials, Docker, SSH,
-Slurm, or network access beyond ``127.0.0.1``.  The script exits non-zero when
+Slurm, or network access beyond ``127.0.0.1`` (``pre_stage_mock.py`` replaces
+``sbatch`` with a local mock scheduler).  The script exits non-zero when
 any example fails and prints the tail of its output.
 """
 import os
@@ -36,6 +37,7 @@ EXAMPLES = [
     "examples/iot/observe_mock.py",
     "examples/llm/local_mock_llm.py",
     "examples/dataflow/slurm/beeond_local_emulation.py",
+    "examples/dataflow/slurm/pre_stage_mock.py",
 ]
 
 
