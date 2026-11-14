@@ -1,0 +1,102 @@
+"""A deterministic, scheduler-free stand-in for ``sbatch -W`` (demonstrations and tests).
+
+This module is *not* a Slurm emulator.  It replaces only the submission
+command that :meth:`dagon.batch.Slurm.generate_command` builds: the job script
+runs immediately with the local bash, in the ``-D`` directory, and the process
+exits with the script's status, which is what ``sbatch -W`` reports.  There is
+no queue, no allocation, and no resource accounting.
+
+Every submission is appended to a JSON-lines log with a wall-clock timestamp
+and two observations taken *at submission time*: whether the task's stage-in
+completion marker already existed and whether ``.dagon/inputs`` was already
+populated.  That is how the pre-staging examples and tests show that staging
+finished before resources were requested.
+
+Usage::
+
+    with mock_sbatch(log_path):
+        workflow.run()
+    submissions = read_log(log_path)
+
+Run as a script, it behaves as the fake ``sbatch`` itself::
+
+    python mock_scheduler.py LOG [--reject] [sbatch options] -D DIR -W SCRIPT
+"""
+import contextlib
+import json
+import os
+import subprocess
+import sys
+import time
+from typing import Any, Dict, Iterator, List, Optional
+from unittest import mock
+
+MARKER = os.path.join(".dagon", "stage-in-complete.json")
+
+
+def _inputs_populated(directory: str) -> bool:
+    inputs = os.path.join(directory, ".dagon", "inputs")
+    for _root, _dirs, files in os.walk(inputs):
+        if files:
+            return True
+    return False
+
+
+def main(argv: List[str]) -> int:
+    log_path, arguments = argv[0], argv[1:]
+    reject = "--reject" in arguments
+    arguments = [item for item in arguments if item != "--reject"]
+    directory = arguments[arguments.index("-D") + 1]
+    script = arguments[arguments.index("-W") + 1]
+    name = arguments[arguments.index("-J") + 1] if "-J" in arguments else os.path.basename(directory)
+    record: Dict[str, Any] = {
+        "event": "sbatch", "time": time.time(), "job_name": name, "script": os.path.basename(script),
+        "marker_present": os.path.isfile(os.path.join(directory, MARKER)),
+        "inputs_populated": _inputs_populated(directory), "rejected": reject,
+    }
+    with open(log_path, "a", encoding="utf-8") as stream:
+        stream.write(json.dumps(record) + "\n")
+    if reject:
+        sys.stderr.write("sbatch: error: Batch job submission failed: Invalid partition name specified\n")
+        return 1
+    sys.stdout.write("Submitted batch job 4242\n")
+    sys.stdout.flush()
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+    from dagon.platform_support import bash_executable
+    completed = subprocess.run([bash_executable(), script], cwd=directory)
+    return completed.returncode
+
+
+@contextlib.contextmanager
+def mock_sbatch(log_path: str, reject: bool = False) -> Iterator[None]:
+    """Replace ``sbatch`` in generated Slurm submissions with this module."""
+    from dagon.batch import Slurm
+    from dagon.shell import join_command
+    original = Slurm.generate_command
+
+    def generate_command(self: Any, script_name: str) -> str:
+        command = original(self, script_name)
+        assert command.startswith("sbatch ")
+        prefix = [sys.executable, os.path.abspath(__file__), log_path] + (["--reject"] if reject else [])
+        return join_command(prefix) + command[len("sbatch"):]
+
+    with mock.patch.object(Slurm, "generate_command", generate_command):
+        yield
+
+
+def read_log(log_path: str) -> List[Dict[str, Any]]:
+    """Return the recorded submissions in order."""
+    if not os.path.isfile(log_path):
+        return []
+    with open(log_path, encoding="utf-8") as stream:
+        return [json.loads(line) for line in stream if line.strip()]
+
+
+def submission_for(log_path: str, job_name: str) -> Optional[Dict[str, Any]]:
+    """Return the last recorded submission of *job_name*, if any."""
+    matches = [item for item in read_log(log_path) if item["job_name"] == job_name]
+    return matches[-1] if matches else None
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
