@@ -57,6 +57,13 @@ profile supports CI, teaching, Colab, Jupyter, and portable validation.
 checkpoint loading, and CWL export work in the Python kernel. A notebook does
 not emulate an unavailable scheduler, container runtime, cluster, or cloud.
 
+Scheduler-aware pre-staging (`Workflow(pre_stage=True)` or a task's
+`pre_stage=True`) is supported only by `SLURM` tasks (`Slurm` and
+`RemoteSlurm`) that do not use BeeOND or parallel mode. Every other type keeps
+its lifecycle when it inherits the workflow default, and rejects an explicit
+`pre_stage=True` with `PreStageConfigurationError`. Portable emulation ignores
+the setting. See [Scheduler-aware pre-staging](scheduler_prestaging.md).
+
 ## Mixed workflow example
 
 ```python
@@ -85,5 +92,7 @@ connection. If storage has disappeared, the task runs normally.
 Checkpoint identity is currently the workflow and task name. Changing behavior
 without renaming the task can reuse an older checkpoint; use a new task name or
 checkpoint file when changing the experiment. FaaS additionally checks a
-portable-specification digest.
+portable-specification digest. Pre-staged Slurm tasks follow the same rule. A
+failed task, including a staging or submission failure, is staged again and
+resubmitted on resume. The stage-in completion marker is never a skip token.
 IoT additionally validates schema version, declared outputs, and SHA-256 evidence.

@@ -158,6 +158,28 @@ by the workflow. The command finds the volume through `$DAGON_BEEOND`, and
 DAGonStar copies the volume to persistent storage before it is destroyed. See
 [BeeOND on-demand file systems](beeond.md).
 
+### Stage inputs before requesting resources
+
+By default, a Slurm job copies its `workflow://` inputs after the scheduler
+has allocated its cores, so the allocation is idle while data moves. To copy
+the inputs on the submission host first and submit only when they are in
+place, enable scheduler-aware pre-staging:
+
+```python
+workflow = Workflow("forecast", pre_stage=True)          # default for Slurm tasks
+simulate = DagonTask(TaskType.SLURM, "simulate", "./model workflow:///prepare/input.nc", ntasks=200)
+summary = DagonTask(TaskType.SLURM, "summary", "./summarise workflow:///simulate/out.nc",
+                    pre_stage=False)                       # keep the legacy lifecycle
+```
+
+The scratch directory must be on a file system that the submission host and
+the compute nodes share at the same path, and that persists while the job is
+queued. If stage-in fails, the job is never submitted, and the task fails with
+`failure_phase == "staging"`. BeeOND tasks are not eligible. Other task types
+ignore the workflow default. See [Scheduler-aware pre-staging](scheduler_prestaging.md)
+for eligibility, filesystem requirements, failure handling, and metrics, and
+`examples/dataflow/slurm/pre_stage_mock.py` for a run without Slurm.
+
 ## Docker tasks
 
 Docker tasks run commands inside a container:
@@ -237,7 +259,9 @@ workflow.set_dry(True)
 ```
 
 Dry mode prevents task execution after launcher generation. It is useful when
-inspecting dependency resolution and generated scripts.
+inspecting dependency resolution and generated scripts. A pre-staged Slurm task
+in dry mode also skips stage-in and logs its planned order (stage-in, verify,
+marker, submit).
 
 ## Function-as-a-Service tasks
 

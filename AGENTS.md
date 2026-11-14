@@ -53,6 +53,8 @@ local, remote, Slurm, Docker, cloud, and data-staging environments.
 - `dagon/task.py`: base task model, dependency discovery, staging integration.
 - `dagon/__init__.py`: `Workflow`, stager logic, shared enums.
 - `dagon/batch.py`: local batch and Slurm tasks.
+- `dagon/prestage.py`: scheduler-aware pre-staging policy, `PreparedTask`,
+  stage-in script, marker, phases, and typed errors.
 - `dagon/remote.py`: SSH and cloud-backed tasks.
 - `dagon/docker_task.py`: local and remote Docker tasks.
 - `dagon/communication/`: SSH/SCP/Globus/SKYCDS transfer helpers.
@@ -81,8 +83,9 @@ If behavior changed, run the smallest relevant example and document the command.
 
 - CI (`.github/workflows/ci.yml`) tests Ubuntu, macOS, Windows, Rocky Linux 9,
   and Debian bookworm arm64 (64-bit Raspberry Pi OS userland), and runs BeeOND
-  workflows on single-node Slurm with an emulated BeeOND site
-  (`tools/ci/slurm/`, `tools/ci_beeond_slurm.py`); see
+  workflows and the scheduler-aware pre-staging checks on single-node Slurm
+  with an emulated BeeOND site (`tools/ci/slurm/`, `tools/ci_beeond_slurm.py`,
+  `tools/ci_prestage_slurm.py`); see
   `docs/platform_support.md` and keep it accurate.
 - Run local launchers through `dagon.platform_support.bash_executable()`, never
   a hardcoded `/bin/bash` or `bash`; remote hosts may keep `bash`.
@@ -102,6 +105,27 @@ configuration validation separately from live integration behavior.
 - Never add token-looking defaults to Python modules or sample config.
 - Be careful with shell command construction. Existing code builds many commands
   from strings; quote new path/user inputs defensively.
+
+## Scheduler-aware pre-staging maintenance
+
+- `pre_stage` defaults to `False` and must stay opt-in. The legacy launcher is
+  guarded byte for byte by `tests/fixtures/legacy_slurm_launcher.sh`. Do not
+  change the legacy text unless that is intended and documented.
+- Generate scripts from `Task.prepare_task()` / `PreparedTask`. Never split or
+  parse generated launcher text to separate staging from computation.
+- `sbatch` (or any scheduler submission) must never run when stage-in failed or
+  its success cannot be confirmed. Keep staging, submission, and execution
+  failures distinguishable (`failure_phase`, typed `PreStageError`s).
+- Grant eligibility through backend capability (`pre_stage_capable`,
+  `pre_stage_unsupported_reason()`), never through the task type name.
+  Allocation-dependent storage such as BeeOND stays ineligible until a
+  dedicated design exists.
+- Stage-in markers and metadata must never contain credentials, and
+  `execution.pre_stage` must stay path-free. A marker is never a skip token.
+- Changes require the local and remote pre-staging tests,
+  `tools/ci_prestage_slurm.py`, the `examples/dataflow/slurm/pre_stage_*.py`
+  examples, `docs/scheduler_prestaging.md`, and the Lesson 14 tutorial section
+  to stay consistent.
 
 ## FaaS maintenance
 

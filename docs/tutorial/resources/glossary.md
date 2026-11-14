@@ -14,6 +14,7 @@
 - **Synchronous / asynchronous execution:** caller-blocking run / background-thread launch.
 - **Backend:** execution environment such as local batch, Docker, SSH, or Slurm.
 - **Executor:** mechanism used by structured tasks to run locally or through Slurm.
+- **Scheduler-aware pre-staging:** opt-in mode (`pre_stage=True`) in which a Slurm task stages and verifies its `workflow://` inputs on the submission host before requesting resources, instead of inside the allocation.
 - **Declared artifact:** an intentional input or output described for provenance.
 - **Provenance:** evidence connecting agents, activities, inputs, and outputs.
 - **FAIR metadata:** descriptions supporting findability, accessibility, interoperability, and reuse; metadata alone is not publication.

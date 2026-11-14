@@ -127,6 +127,7 @@ The full documentation set is available in `docs/`:
 - [Task-type interoperability](docs/tasktype_interoperability.md)
 - [Checkpoints](docs/checkpoints.md)
 - [BeeOND on-demand file systems](docs/beeond.md)
+- [Scheduler-aware pre-staging](docs/scheduler_prestaging.md)
 - [Exporting workflows to CWL](docs/cwl_export.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
 - [Using DAGonStar from Jupyter Notebook](docs/jupyter_notebook.md)
@@ -143,6 +144,11 @@ The full documentation set is available in `docs/`:
 - Remote SSH tasks.
 - Slurm tasks, optionally on BeeOND (BeeGFS On Demand) volumes created per task
   or per workflow, with verified copies to persistent storage.
+- Opt-in scheduler-aware pre-staging (`Workflow(pre_stage=True)` or
+  `pre_stage=True` per Slurm task). Slurm and RemoteSlurm tasks stage and verify
+  their `workflow://` inputs on the submission host before `sbatch`, so
+  allocated cores do not sit idle during transfers. A failed stage-in never
+  submits the job. BeeOND tasks are not eligible.
 - Docker tasks, locally or over SSH.
 - Cloud-backed tasks through Apache Libcloud providers.
 - OpenAI-compatible LLM tasks with JSON prompts and `workflow://` text inputs.
@@ -190,6 +196,16 @@ cluster whose Prolog and Epilog emulate a BeeOND site; real BeeGFS and
 multi-node sites are not exercised by CI. A manual run on a four-node production
 BeeOND site (Slurm 23.11.3) passed the same checks and the live example in both
 scopes.
+Scheduler-aware pre-staging is opt-in and leaves the default lifecycle
+unchanged: the legacy launcher is guarded by a byte-for-byte fixture. Its
+ordering, `sbatch` gate, typed failure phases, retries, checkpoint resume,
+dry run, and RemoteSlurm path are tested with a mock `sbatch` and a loopback
+SSH double. The `beeond-slurm` CI job also checks ordering, the gate, and the
+BeeOND rejection with real `sbatch` on its single-node cluster. Pre-staging has
+not been validated on a production multi-node cluster. Shared-scratch
+visibility cannot always be detected automatically. Rewritten `workflow://`
+arguments in user commands remain unquoted, as before, so scratch paths with
+spaces are supported by stage-in but not by those arguments.
 
 The repository has a sound baseline for changes to the core behavior:
 
@@ -199,6 +215,8 @@ The repository has a sound baseline for changes to the core behavior:
   command generation, Docker and remote-container construction, SSH-port
   forwarding, packaging extras, optional integration boundaries,
   BeeOND command generation, launcher persistence, and holder lifecycle,
+  scheduler-aware pre-staging (configuration, ordering, failure gating,
+  retries, checkpoints, and local and remote Slurm paths),
   command exit-status propagation through the launcher's output capture
   (local batch, Slurm, and Docker command paths),
   selected shell-quoting behavior, SSH host-key verification and safe remote
@@ -380,7 +398,8 @@ Example groups:
 
 - `examples/taskflow`: explicit task dependencies.
 - `examples/dataflow/batch`: local data-driven workflows and checkpointing.
-- `examples/dataflow/slurm`: Slurm and remote Slurm workflows.
+- `examples/dataflow/slurm`: Slurm and remote Slurm workflows, BeeOND, and
+  scheduler-aware pre-staging (`pre_stage_mock.py` runs without Slurm).
 - `examples/dataflow/docker`: Docker-backed workflows.
 - `examples/dataflow/cloud`: cloud-backed task examples.
 - `examples/transversal`: meta-workflow and transversal processing examples.
@@ -505,6 +524,16 @@ Verify key-based SSH manually first:
 ```bash
 ssh -i /path/to/key user@host hostname
 ```
+
+### A pre-staged Slurm task fails before submission
+
+`task.failure_phase == "staging"` means `stage_in.sh` failed or could not be
+confirmed, and no job was submitted. Read the logged error and
+`<working_dir>/.dagon/stage_in.sh`; a missing producer output is the usual
+cause. `"submission"` means `sbatch` rejected the job after a successful
+stage-in. `PreStageConfigurationError` means `pre_stage=True` was set on a task
+that cannot pre-stage, for example a BeeOND task or a non-Slurm task. See
+[Scheduler-aware pre-staging](docs/scheduler_prestaging.md#failure-handling).
 
 ### Globus or SKYCDS staging fails
 

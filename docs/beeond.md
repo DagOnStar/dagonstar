@@ -244,6 +244,18 @@ What it cannot guarantee:
   is not exported. A command that uses `$DAGON_BEEOND` needs that variable from
   the CWL runner's environment to run there.
 
+## Scheduler-aware pre-staging
+
+[Scheduler-aware pre-staging](scheduler_prestaging.md) is not supported for
+BeeOND tasks. A task-scope volume exists only inside its own allocation, and a
+workflow-scope task runs as a step of a holder job that already holds its
+allocation. A Slurm task with `beeond=...` and an explicit `pre_stage=True`
+raises `PreStageConfigurationError` when it is added to the workflow. When it
+only inherits `Workflow(pre_stage=True)`, it keeps the legacy lifecycle and a
+warning is logged. BeeOND tasks are never staged into a mount that does not
+exist yet. Supporting this combination would need a dedicated design, and is
+future work.
+
 ## Portable emulation and local testing
 
 With `Workflow(..., portable_emulation=True)` no scheduler is contacted.

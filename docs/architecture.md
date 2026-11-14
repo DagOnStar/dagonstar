@@ -103,6 +103,19 @@ A typical dataflow run follows this sequence:
 14. Status and checkpoint metadata are updated.
 15. Dependent tasks proceed.
 
+Command tasks build their scripts through `Task.prepare_task()`. It returns a
+`dagon.prestage.PreparedTask` with four separate parts: the discovered context
+(`context.sh`), the resolved `workflow://` input manifest, the per-input stage-in
+blocks, and the command invocation. The legacy launcher
+(`PreparedTask.legacy_launcher()`, also returned by `pre_process_command()`)
+stages inputs and then runs the command in one script, so for Slurm tasks the
+staging in step 12 happens inside the allocation. When scheduler-aware
+pre-staging is effective (`Workflow(pre_stage=True)` or `Slurm(...,
+pre_stage=True)`), steps 12 and 13 split. `stage_in.sh` runs on the submission
+host and is verified, `.dagon/stage-in-complete.json` is written, and only then
+is a compute-only launcher submitted. A failed stage-in never reaches the
+scheduler. See [Scheduler-aware pre-staging](scheduler_prestaging.md).
+
 ## Status model
 
 `dagon.Status` has these values:
@@ -184,6 +197,13 @@ the site comment to `sbatch` and persists the volume from inside the job. A
 workflow-scope `BeeONDVolume` submits one holder job and runs each task launcher
 as an `srun --jobid=<holder>` step. `Workflow.run()` asks the holder to persist
 the volume and release the allocation. See [BeeOND](beeond.md).
+
+`Slurm` and `RemoteSlurm` are the only backends with
+`pre_stage_capable = True`. They run `context.sh` and `stage_in.sh` on the
+submission host: locally for `Slurm`, over SSH on the login node for
+`RemoteSlurm`. They write the stage-in marker atomically and submit the
+compute-only launcher through the unchanged `generate_command()`. BeeOND and
+parallel-mode tasks are not eligible.
 
 ### Docker
 

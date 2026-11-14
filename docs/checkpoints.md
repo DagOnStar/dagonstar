@@ -92,6 +92,17 @@ reuse sees their data. Workflow volumes are new for each run. Set
 `restore=True` to copy the previous persistent directory into the new volume
 when resuming. See [BeeOND](beeond.md).
 
+Pre-staged Slurm tasks (see [Scheduler-aware pre-staging](scheduler_prestaging.md))
+add `"pre_stage": {"effective": true, "staged": ..., "stage_in_code": ...,
+"marker": ".dagon/stage-in-complete.json"}`. The restart rules are unchanged.
+A task with `code == 0` and an accessible working directory is reused, so it is
+neither restaged nor resubmitted. Any other task runs its whole lifecycle again.
+A stage-in completion marker is never treated as permission to skip stage-in.
+`stage_in.sh` deletes an existing marker before it transfers anything, so an
+interrupted or partial stage-in cannot be reported as complete. A failed
+`sbatch` after a successful stage-in leaves the staged inputs and marker in
+place as evidence. They are staged again on the rerun.
+
 ## Checkpointing and dataflow
 
 For dataflow workflows, checkpointing is most useful when upstream tasks produce

@@ -8,6 +8,10 @@ Source directory: [`examples/dataflow/slurm`](../../examples/dataflow/slurm)
 - `dataflow-demo-slurm-remote.py`
 - `beeond_local_emulation.py` (self-contained, portable emulation)
 - `beeond_slurm.py` (live BeeOND site, per task or per workflow)
+- `pre_stage_mock.py` (self-contained: legacy vs scheduler-aware pre-staging with a mock `sbatch`)
+- `pre_stage_local.py` (pre-staging on a local Slurm installation)
+- `pre_stage_remote.py` (pre-staging on a remote Slurm cluster through SSH)
+- `mock_scheduler.py` (deterministic `sbatch -W` stand-in used by the mock demo and tests)
 - `README.md`
 
 ## Purpose
@@ -22,6 +26,8 @@ batch scheduler.
 - Slurm partition/resource parameters
 - local and remote Slurm access
 - dataflow dependencies through `workflow://`
+- scheduler-aware pre-staging (`pre_stage`): stage-in on the submission host
+  before `sbatch`; see [Scheduler-aware pre-staging](../scheduler_prestaging.md)
 
 ## Prerequisites
 

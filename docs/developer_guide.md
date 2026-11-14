@@ -143,6 +143,32 @@ New staging or command-generation code should avoid raw string concatenation for
 paths or user-controlled values. Prefer explicit quoting helpers and tests that
 cover spaces, special characters, missing files, directories, and glob patterns.
 
+### Staging extension points (scheduler-aware pre-staging)
+
+`Task.prepare_task(command, strict_staging)` is the single source of every
+command-task script. It calls `discover_context()` (`context.sh`),
+`launcher_prologue()`, and `build_stage_plan()` (reference resolution, mover
+selection, one stage-in block per reference, and the `StageInput` manifest),
+then renders the invocation through `include_command()`. Do not parse or split
+generated shell text. Add information to `PreparedTask` instead.
+
+- `PreparedTask.legacy_launcher()` must stay byte-for-byte equal to the
+  historical launcher. `tests/fixtures/legacy_slurm_launcher.sh` guards it, so
+  update that fixture only for an intended, documented change.
+- `Stager.stage_in(..., strict=True)` and `generate_command(..., strict=True)`
+  produce the failure-propagating, space-safe loop used by `stage_in.sh`. The
+  non-strict text is the legacy one.
+- To make another backend pre-stage-capable, set `pre_stage_capable = True` and
+  implement `run_stage_in()` (run the script outside any allocation),
+  `write_stage_marker()` (atomic), `read_scratch_file()`, and optionally
+  `requested_cores()`. Extend `pre_stage_unsupported_reason()` for per-task
+  restrictions, as `Slurm` does for BeeOND. Scheduler-only setup belongs in
+  `launcher_prologue()`, which only the compute launcher contains.
+- Classify scheduler failures as staging, submission, or execution failures.
+  `sbatch` must never run when stage-in failed or cannot be confirmed.
+- Test with `examples/dataflow/slurm/mock_scheduler.py` (a mock `sbatch -W`) and
+  the loopback SSH double in `tests/test_remote_scheduler_prestaging.py`.
+
 ## Security expectations
 
 - Never add real credentials to source files, docs, sample config, tests, or CI.

@@ -32,6 +32,8 @@ Workflow(
     max_threads=10,
     jsonload=None,
     checkpoint_file=None,
+    portable_emulation=False,
+    pre_stage=False,
 )
 ```
 
@@ -43,6 +45,12 @@ Parameters:
 - `max_threads`: semaphore size currently stored for task use.
 - `jsonload`: JSON-like workflow object to load.
 - `checkpoint_file`: file path for writing checkpoint metadata.
+- `portable_emulation`: run command tasks locally without contacting their
+  backends (see [task-type interoperability](tasktype_interoperability.md)).
+- `pre_stage`: default scheduler-aware pre-staging policy (`True` or `False`
+  only). Eligible Slurm and RemoteSlurm tasks with `pre_stage=None` inherit it,
+  and every other task type ignores it. See
+  [Scheduler-aware pre-staging](scheduler_prestaging.md).
 
 Selected methods:
 
@@ -206,9 +214,29 @@ Supported constructor options include:
   options, a `dagon.beeond.BeeONDConfig`, or a `dagon.beeond.BeeONDVolume`)
 - `working_dir`
 - `globusendpoint`
+- `pre_stage` (`None` inherits `Workflow.pre_stage`; `True` stages the
+  `workflow://` inputs on the submission host before `sbatch`; `False` keeps
+  stage-in inside the job). It is the last keyword parameter, and positional
+  arguments are unchanged.
 
 Remote Slurm is selected by passing `ip`; it accepts the same options plus
-`ssh_username`, `keypath`, and `ssh_port`.
+`ssh_username`, `keypath`, and `ssh_port`. With `pre_stage`, its stage-in runs on
+the remote login host over SSH.
+
+Pre-staging API (`dagon.prestage` and `dagon.task.Task`):
+
+- `Task.resolve_pre_stage()`: effective value; raises
+  `PreStageConfigurationError` (a `ValueError`) for an explicit request on an
+  ineligible task.
+- `Task.prepare_task(command, strict_staging=False)`: returns a `PreparedTask`
+  with `legacy_launcher()`, `stage_in_script()`, `compute_launcher()`,
+  `planned_order()`, `inputs` (a list of `StageInput`), and `resolved_command`.
+- `Task.pre_stage_phase` (`TaskPhase`), `Task.failure_phase` (`"staging"`,
+  `"submission"`, `"execution"`, or `None`), and `Task.pre_stage_metrics`.
+- Errors: `StageInFailedError`, `SchedulerSubmissionError`, and
+  `ScheduledExecutionError`, all subclasses of `PreStageError` with a `phase`
+  attribute.
+- `estimated_core_hours_saved(cores, staging_seconds)`.
 
 Workflow-scope BeeOND volumes are managed with
 `Workflow.create_beeond_volume(name="default", **options)`,

@@ -170,3 +170,68 @@ The `beeond-slurm` CI job runs the equivalent checks in
 `tools/ci_beeond_slurm.py` on a single-node Slurm cluster with an emulated
 BeeOND site; you can run that script on your own cluster with
 `--partition <partition> --nodes <n> --scratch <shared-dir>`.
+
+## Scheduler-aware pre-staging
+
+By default, a Slurm job stages its `workflow://` inputs after the scheduler
+has allocated its resources. With `Workflow(pre_stage=True)`, or with
+`pre_stage=True` on a Slurm task, DAGonStar stages and verifies the inputs on
+the submission host first, writes `.dagon/stage-in-complete.json`, and only
+then calls `sbatch`. If stage-in fails, no job is submitted. See
+[Scheduler-aware pre-staging](../../../docs/scheduler_prestaging.md).
+
+All three demos run the same coastal-forecast workflow. `forcing` writes 24
+hourly files, and `bathymetry` writes a depth profile. `simulate` requests the
+cores and reads `workflow:///forcing/forcing/hour_*.txt` and the bathymetry.
+`analyse` opts out with `pre_stage=False`.
+
+### Demo 5 - Legacy vs pre-staged with a mock scheduler (self-contained)
+
+No Slurm, `dagon.ini`, or credentials are needed:
+
+```bash
+python3 examples/dataflow/slurm/pre_stage_mock.py
+```
+
+`sbatch` is replaced by `mock_scheduler.py`. The mock runs the job script
+immediately with the local bash and records, at submission time, whether the
+stage-in marker existed and whether the inputs were on scratch. The legacy
+run shows `False`/`False` for `simulate`. The pre-staged run shows `True`/`True`
+for `simulate` and `False`/`False` for the opted-out `analyse`. The script ends
+with `Verification: ok`. The mock has no queue or allocation, so the printed
+core-hour figure is the estimate `cores x staging_seconds / 3600`, not a
+measurement. `tools/run_local_examples.py` runs this demo in CI.
+
+### Demo 6 - Local Slurm (infrastructure-dependent)
+
+Prerequisites: a Slurm login node, and a scratch directory on a file system
+that the login node and the compute nodes share at the same path and that
+persists while jobs are queued. Node-local and BeeOND storage are not
+suitable.
+
+```bash
+cd examples/dataflow/slurm
+python3 pre_stage_local.py --scratch /shared/scratch/$USER/dagon --partition <partition> --cores 200
+python3 pre_stage_local.py --scratch /shared/scratch/$USER/dagon --legacy
+```
+
+The script prints when stage-in finished and when the allocation started the
+compute launcher. The two times come from different hosts, have one-second
+resolution, and assume synchronised clocks. The script then checks that
+stage-in finished first. The `beeond-slurm` CI job runs this demo with
+`--partition ci` on its single-node cluster, together with
+`tools/ci_prestage_slurm.py`.
+
+### Demo 7 - Remote Slurm over SSH (infrastructure-dependent)
+
+```bash
+cd examples/dataflow/slurm
+python3 pre_stage_remote.py --host <login-host> --user <user> --key ~/.ssh/id_rsa \
+    --remote-scratch /shared/scratch/<user>/dagon [--port 22] [--partition <partition>]
+```
+
+`stage_in.sh` is written to the login node and run there over SSH, and the
+remote `sbatch` runs only after stage-in succeeds. Nothing is assumed to be
+mounted locally. The unit tests run this script against a loopback SSH double;
+it has not been run against a production cluster as part of this change.
+Demos 6 and 7 submit real jobs, so run them only where you are authorised to.

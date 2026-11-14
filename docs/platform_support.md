@@ -29,7 +29,7 @@ SSH, multi-node Slurm, real BeeGFS/BeeOND, Globus, SKYCDS, DynoStore, or cloud
 services. Those paths are tested through command generation and mocks only (see
 the [developer guide](developer_guide.md)). The one exception is the
 `beeond-slurm` job described below, which runs single-node Slurm with an
-emulated BeeOND site.
+emulated BeeOND site and also checks scheduler-aware pre-staging there.
 
 ### BeeOND on Slurm (emulated site)
 
@@ -55,6 +55,26 @@ To run the checks on a cluster you control:
 ```bash
 python tools/ci_beeond_slurm.py --partition <partition> --nodes <n> --scratch <shared-dir>
 ```
+
+### Scheduler-aware pre-staging on Slurm
+
+The same job runs `tests.test_scheduler_prestaging` and
+`tests.test_remote_scheduler_prestaging`, then `tools/ci_prestage_slurm.py`
+with real `sbatch`. The script checks that:
+
+- a pre-staged task's stage-in finished, and its completion marker existed,
+  before the job started, and the job saw its input at start;
+- the same task without pre-staging stages inside the job and gives the same
+  result;
+- a failed stage-in never wrote or submitted a compute launcher;
+- an explicit `pre_stage=True` with BeeOND is rejected.
+
+Finally, the job runs `examples/dataflow/slurm/pre_stage_local.py` on the
+cluster. A single node with an empty queue shows ordering and gating only, not
+queue-time effects or multi-node file-system visibility. On every other
+platform, the pre-staging unit tests and `pre_stage_mock.py` (part of the local
+examples) use a mock `sbatch`. The RemoteSlurm tests use a loopback SSH double
+and are skipped on Windows.
 
 ## Local execution on each platform
 
@@ -134,11 +154,11 @@ requests, on `v*` tags, and on manual dispatch.
 
 | Job | Purpose |
 | --- | --- |
-| `quality` | Ruff and mypy on the typed helper modules, tutorial validation, notebook JSON check, `bash -n` on the CI shell scripts. |
+| `quality` | Ruff and mypy on the typed helper modules (including `dagon/prestage.py`) and the pre-staging examples and harness, tutorial validation, notebook JSON check, `bash -n` on the CI shell scripts. |
 | `test` | Unit tests, `compileall`, and local examples on Ubuntu, macOS, and Windows. |
 | `rocky-linux` | Unit tests and local examples on Rocky Linux 9. |
 | `raspberry-pi` | Unit tests and local examples on Debian bookworm arm64. |
-| `beeond-slurm` | BeeOND unit tests and live per-task, per-workflow, failure, and signal persistence checks on single-node Slurm with an emulated BeeOND site. |
+| `beeond-slurm` | BeeOND unit tests and live per-task, per-workflow, failure, and signal persistence checks on single-node Slurm with an emulated BeeOND site; pre-staging unit tests, `tools/ci_prestage_slurm.py`, and `pre_stage_local.py` on the same cluster. |
 | `build` | Builds sdist and wheel, runs `twine check --strict`, imports the wheel in a clean virtual environment, and uploads `dist/` as an artifact. On a tag, it checks that the tag equals `v` + the `setup.cfg` version. |
 | `release` | On a `v*` tag only: creates a GitHub release with generated notes and attaches the distributions. |
 | `publish-pypi` | On a `v*` tag only, and only when the repository variable `PYPI_PUBLISH` is `true`: publishes to PyPI with trusted publishing (no stored token). |

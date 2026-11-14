@@ -23,6 +23,7 @@ The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) cove
 - [Workflow schema](the_workflow_schema.md)
 - [Checkpointing](checkpoints.md)
 - [BeeOND on-demand file systems](beeond.md)
+- [Scheduler-aware pre-staging](scheduler_prestaging.md)
 - [Asynchronous launch](asynch_launch.md)
 - [Native tasks](native_tasks.md)
 - [Web tasks](web_tasks.md)

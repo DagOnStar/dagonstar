@@ -151,6 +151,21 @@ task = DagonTask(
 )
 ```
 
+Scheduler-aware pre-staging is configured in Python, not in `dagon.ini`.
+Use `Workflow(..., pre_stage=False)` (the default) for the workflow and
+`pre_stage=None|True|False` for each Slurm task. When you enable it, set
+`[batch] scratch_dir_base` (or the task `working_dir`) to a directory that is
+
+- visible at the same absolute path from the submission host and every compute
+  node;
+- persistent while jobs are queued (not node-local, job-local, or BeeOND
+  storage);
+- writable by the submitting user.
+
+DAGonStar cannot always detect a violation of these conditions. See
+[Scheduler-aware pre-staging](scheduler_prestaging.md#filesystem-requirements).
+
+
 ## `[beeond]`
 
 Optional defaults for BeeOND (BeeGFS On Demand) volumes used by Slurm tasks.

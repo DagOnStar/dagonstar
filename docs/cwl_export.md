@@ -54,6 +54,10 @@ Slurm, cloud, Kubernetes, Nomad, service registration, and specialized staging
 are not reproduced. BeeOND volumes (see [BeeOND](beeond.md)) are DAGonStar
 execution behavior and are not exported. A command that refers to
 `$DAGON_BEEOND` needs that variable from the CWL runner's environment.
+Scheduler-aware pre-staging (`pre_stage`, see
+[Scheduler-aware pre-staging](scheduler_prestaging.md)) is a DAGonStar
+scheduler policy. It is neither exported nor annotated, so the document is
+identical whether or not it is enabled.
 
 In particular, `workflow://` text in a command is retained verbatim. It creates
 the correct step dependency in the exported graph, but a generic CWL runner
