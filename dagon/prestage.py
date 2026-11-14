@@ -31,7 +31,7 @@ from typing import Any, Dict, List, Optional
 from dagon.shell import quote
 
 #: Version of the pre-staging policy recorded in markers and metadata.
-PRE_STAGE_POLICY_VERSION = 3
+PRE_STAGE_POLICY_VERSION = 4
 
 #: Name of the generated stage-in script inside ``<working_dir>/.dagon``.
 STAGE_SCRIPT_NAME = "stage_in.sh"
@@ -55,7 +55,9 @@ IDENTITY_NAME = "stage-in-identity.txt"
 DESTINATION_IDENTITY_NAME = "stage-in-destinations.txt"
 
 #: File, inside ``<working_dir>/.dagon``, written by an ``EXIT`` trap of the compute
-#: launcher with the scheduler job identifier and the launcher's exit status.
+#: launcher as ``<job id> <exit status> <started> <rechecked>``: the scheduler job
+#: identifier, the launcher's exit status, and the epoch seconds at which it
+#: started and at which the staged inputs had been re-checked (empty if not).
 #: A successful ``sbatch -W`` counts as completion only when this record names
 #: the submitted job and status 0: Slurm's ``sbatch -W`` also exits 0 for a job
 #: cancelled before it started, which never ran the launcher.  ``stage_in.sh``
@@ -158,18 +160,23 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def estimated_core_hours_saved(cores: Optional[int], staging_seconds: Optional[float]) -> Optional[float]:
-    """Return ``cores * staging_seconds / 3600``.
+def estimated_core_hours_saved(cores: Optional[int], staging_seconds: Optional[float],
+                               recheck_seconds: Optional[float] = None) -> Optional[float]:
+    """Return ``cores * (staging_seconds - recheck_seconds) / 3600``.
 
-    This is the number of allocated core-hours that the legacy lifecycle would
-    have held while the same stage-in ran inside the allocation.  It is an
-    estimate of avoided *allocated* resources, not a measured queue-time saving.
+    *staging_seconds* stands for the time the legacy lifecycle would have held
+    the allocation while staging; *recheck_seconds* is the time the pre-staged
+    job measurably spent re-checking its staged inputs inside the allocation.
+    The result is an estimate of avoided *allocated* resources, not a measured
+    queue-time saving.  It is an upper bound in practice, because stage-in on
+    the submission host includes verification reads that a legacy job does not
+    make, and it is negative when the re-check cost more than the stage-in.
     """
     if cores is None or staging_seconds is None:
         return None
-    if cores <= 0 or staging_seconds < 0:
+    if cores <= 0 or staging_seconds < 0 or (recheck_seconds is not None and recheck_seconds < 0):
         return None
-    return round(cores * staging_seconds / 3600.0, 6)
+    return round(cores * (staging_seconds - (recheck_seconds or 0)) / 3600.0, 6)
 
 
 @dataclass
@@ -254,17 +261,19 @@ _VERIFY_FUNCTION = r"""dagon_verify_staged() {
 # listed as ``unreadable`` and never matches readable content.
 _DIGEST_FUNCTIONS = r"""dagon_tree_digest() {
   local LC_ALL=C
-  local dagon_pattern="$1" dagon_item dagon_entry dagon_saved_ifs="$IFS"
+  local dagon_pattern="$1" dagon_item dagon_saved_ifs="$IFS"
   IFS='
 '
   for dagon_item in $dagon_pattern; do
     IFS="$dagon_saved_ifs"
     (
       cd "$(dirname "$dagon_item")" || exit 1
-      find -L "$(basename "$dagon_item")" \( -type f -o -type l \) -print | sort | while IFS= read -r dagon_entry; do
-        printf '%s ' "$dagon_entry"
-        cksum < "$dagon_entry" 2>/dev/null || echo unreadable
-      done
+      # One "<CRC> <size> <name>" line per file. cksum runs on batches of files
+      # rather than once per file, and LC_ALL=C makes the order the same on
+      # every host. An unreadable file has no line, so it never matches a
+      # readable one.
+      find -L "$(basename "$dagon_item")" \( -type f -o -type l \) -exec cksum {} + 2>/dev/null \
+        | LC_ALL=C sort -k 3
     ) || echo "$dagon_item unreadable"
   done
   IFS="$dagon_saved_ifs"
@@ -288,6 +297,18 @@ def identity_body(inputs: List[StageInput]) -> str:
         body += "echo " + quote("== " + item.reference) + "\n"
         body += "dagon_tree_digest " + quote(item.source) + "\n"
     return body
+
+
+def _recorded_listing(number: int, reference: str, side: str) -> str:
+    """Return shell lines printing an input's listing captured in ``dagon_<side>_<number>``.
+
+    The output is byte-identical to what :func:`identity_body` and
+    :func:`destination_identity_body` print for that input: the header line,
+    then the listing, if any, with its trailing newline.
+    """
+    variable = "dagon_%s_%d" % (side, number)
+    return ("echo " + quote("== " + reference) + "\n"
+            "if [ -n \"$" + variable + "\" ]; then printf '%s\\n' \"$" + variable + "\"; fi\n")
 
 
 def destination_identity_body(inputs: List[StageInput]) -> str:
@@ -373,7 +394,7 @@ class PreparedTask:
         A non-shared scratch directory, or an input changed while the job was
         queued, therefore fails the job at once instead of computing on missing
         or different data.  An ``EXIT`` trap writes ``.dagon/compute-finished.txt``
-        (``<SLURM_JOB_ID> <exit status>``), which the controller requires before
+        (``<SLURM_JOB_ID> <exit status> <started> <rechecked>``), which the controller requires before
         it treats a successful ``sbatch -W`` as completion.
         """
         stamp = self.working_dir + "/.dagon/" + ALLOCATION_STARTED_NAME
@@ -410,9 +431,14 @@ class PreparedTask:
                 + "# Record, however this script ends, which job ran it and its exit status:\n"
                 + "# DAGonStar accepts a successful sbatch only with this record (see .dagon/"
                 + COMPUTE_RECORD_NAME + ")\n"
+                + "dagon_started_at=$(date +%s)\n"
                 + "dagon_compute_record=" + quote(record) + "\n"
-                + "trap 'echo \"${SLURM_JOB_ID:-} $?\" > \"$dagon_compute_record\"' EXIT\n\n"
-                + guard + "\n"
+                + "trap 'dagon_status=$?; echo \"${SLURM_JOB_ID:-} $dagon_status ${dagon_started_at:-} "
+                + "${dagon_rechecked_at:-}\" > \"$dagon_compute_record\"' EXIT\n\n"
+                + guard
+                + "# The staged inputs have been checked: the time spent so far is the\n"
+                + "# allocated cost of pre-staging (compute_recheck_seconds)\n"
+                + "dagon_rechecked_at=$(date +%s)\n\n"
                 + self.prologue
                 + "# Inputs were staged before scheduler submission (pre_stage=True),\n"
                 + "# see .dagon/" + STAGE_SCRIPT_NAME + " and .dagon/" + MARKER_NAME + "\n\n"
@@ -489,20 +515,30 @@ class PreparedTask:
             script += "\n# Verify every staged input before the scheduler job is requested\n"
             for item in self.inputs:
                 script += "dagon_verify_staged " + quote(item.destination) + " || code=1\n"
-            if any(item.integrity == INTEGRITY_CONTENT for item in self.inputs):
-                script += ("\n# Compare staged content with its source (inputs readable on this host)\n"
-                           "if [ \"$code\" -eq 0 ]; then\n")
-                for item in self.inputs:
-                    if item.integrity == INTEGRITY_CONTENT:
-                        script += ("  dagon_compare_staged " + quote(item.source) + " "
-                                   + quote(item.destination) + " || code=1\n")
-                script += "fi\n"
-        script += ("\n# Record the content identity of the compared sources (checkpoint validation)\n"
-                   "# and of every staged destination (checked when the job starts)\n"
+        script += ("\n# Checksum every staged destination, and every source readable on this host,\n"
+                   "# once; compare them, and record the same listings: the content identity of\n"
+                   "# the compared sources (checkpoint validation) and of every staged\n"
+                   "# destination (checked when the job starts)\n"
                    "if [ \"$code\" -eq 0 ]; then\n"
-                   "  " + _group(identity_body(self.inputs), "    ") + " > " + quote(identity + ".tmp")
+                   "  :\n")
+        for number, item in enumerate(self.inputs, 1):
+            script += "  dagon_dst_%d=\"$(dagon_tree_digest %s)\"\n" % (number, quote(item.destination))
+            if item.integrity == INTEGRITY_CONTENT:
+                script += ("  dagon_src_%d=\"$(dagon_tree_digest %s)\"\n"
+                           "  if [ \"$dagon_src_%d\" != \"$dagon_dst_%d\" ]; then\n"
+                           "    echo \"DAGonStar: staged content differs from its source: \"%s >&2\n"
+                           "    code=1\n"
+                           "  fi\n" % (number, quote(item.source), number, number, quote(item.destination)))
+        identity_lines = "".join(_recorded_listing(number, item.reference, "src")
+                                 for number, item in enumerate(self.inputs, 1)
+                                 if item.integrity == INTEGRITY_CONTENT)
+        destination_lines = "".join(_recorded_listing(number, item.reference, "dst")
+                                    for number, item in enumerate(self.inputs, 1))
+        script += ("fi\n"
+                   "if [ \"$code\" -eq 0 ]; then\n"
+                   "  " + _group(identity_lines, "    ") + " > " + quote(identity + ".tmp")
                    + " && mv -f " + quote(identity + ".tmp") + " " + quote(identity) + " || code=1\n"
-                   "  " + _group(destination_identity_body(self.inputs), "    ") + " > "
+                   "  " + _group(destination_lines, "    ") + " > "
                    + quote(destinations + ".tmp") + " && mv -f " + quote(destinations + ".tmp") + " "
                    + quote(destinations) + " || code=1\n"
                    "fi\n")
@@ -562,7 +598,7 @@ def compute_record_problem(record: Optional[str], job_id: str) -> Optional[str]:
         return "the job left no completion record (.dagon/" + COMPUTE_RECORD_NAME + "), so its launcher never ran"
     fields = record.split()
     expected = job_id.split(";", 1)[0]
-    if len(fields) != 2 or fields[0] != expected:
+    if len(fields) < 2 or fields[0] != expected:
         return "the completion record does not belong to job " + expected
     if fields[1] != "0":
         return "the launcher recorded exit status " + fields[1]

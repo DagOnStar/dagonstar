@@ -163,7 +163,8 @@ def scenario_volume(scratch: str, partition: Optional[str], size_mib: int) -> Li
         "size_mib": size_mib, "small_files": 5000,
         "pre_staged": {key: metadata.get(key) for key in (
             "staging_seconds", "allocation_wait_seconds", "execution_seconds", "scheduler_wall_seconds",
-            "inputs", "inputs_content_verified")},
+            "inputs", "inputs_content_verified", "compute_recheck_seconds",
+            "estimated_allocated_core_hours_saved")},
         # Whole workflow (producer and consumer), as seen by this process.
         "pre_staged_workflow_wall_seconds": wall,
         "legacy_workflow_wall_seconds": legacy_wall,

@@ -211,9 +211,12 @@ SSH for RemoteSlurm) passed the same harness, the local and remote examples,
 and a deeper site check (`tools/hpc_prestage_deep.py`: a 1 GiB input and
 5,000 small files, a two-node allocation, induced queue waits, a change and a
 cancellation while pending, two contending processes, node-local scratch).
-That site measured a longer allocation with pre-staging than without for the
-1 GiB input, because the job re-reads staged data; the reported core-hour
-figure is an estimate. This is evidence for one site, not a general guarantee. The `beeond-slurm` CI job runs
+On that site, the job's re-check of its staged data took most of the
+pre-staged allocation for a 1 GiB input; after checksum batching, the
+pre-staged job was shorter than the legacy one under load, but not on a quiet
+file system before it. The re-check time is reported as
+`compute_recheck_seconds` and subtracted from the core-hour figure, which
+remains an estimate. This is evidence for one site, not a general guarantee. The `beeond-slurm` CI job runs
 the same scenarios with real `sbatch` on its single-node cluster, once the
 branch is pushed. Inputs moved by `SCP`, `GRIDFTP`, or `SKYCDS` are checked
 for existence only, not content. Production-scale transfers and real queue

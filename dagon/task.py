@@ -483,7 +483,7 @@ class Task(Thread):
                 % (self.name, self.result.get('message')))
         # sbatch -W also exits 0 for a job cancelled before it started: require
         # the record that the compute launcher writes when it ends.
-        problem = self._compute_completion_problem(job_id)
+        problem, record = self._compute_completion_problem(job_id)
         if problem is not None:
             checkpoint["code"] = 1
             self._set_pre_stage_phase(TaskPhase.FAILED)
@@ -492,10 +492,29 @@ class Task(Thread):
                 "%s: scheduler job %s returned success, but %s; the task is not treated as completed "
                 "(for example, the job was cancelled before it started)" % (self.name, job_id, problem))
         metrics["compute_completion_confirmed"] = True
+        self._record_compute_timing(record, submitted, returned)
         self._set_pre_stage_phase(TaskPhase.COMPLETED)
 
-    def _compute_completion_problem(self, job_id: str, attempts: int = 5) -> Optional[str]:
-        """Return why the job's completion record does not confirm success, or ``None``.
+    def _record_compute_timing(self, record: Optional[str], submitted: float, returned: float) -> None:
+        """Use the times in the completion record: the re-check cost, and the start as a fallback.
+
+        Both times come from the compute node's clock, so their difference does
+        not depend on clock skew; the resolution is one second.
+        """
+        fields = (record or "").split()
+        if len(fields) < 4 or not (fields[2].isdigit() and fields[3].isdigit()):
+            return
+        started, rechecked = int(fields[2]), int(fields[3])
+        metrics = self.pre_stage_metrics
+        metrics["compute_recheck_seconds"] = max(rechecked - started, 0)
+        if metrics.get("allocation_wait_seconds") is None:
+            self._apply_allocation_start(float(started), submitted, returned)
+        if metrics.get("staging_seconds") is not None:
+            metrics["estimated_allocated_core_hours_saved"] = estimated_core_hours_saved(
+                metrics.get("requested_cores"), metrics["staging_seconds"], metrics["compute_recheck_seconds"])
+
+    def _compute_completion_problem(self, job_id: str, attempts: int = 5) -> Tuple[Optional[str], Optional[str]]:
+        """Return why the job's completion record does not confirm success (or ``None``), and the record.
 
         A missing record is read again a few times, one second apart, because a
         shared file system may show a file written on a compute node with a delay.
@@ -506,10 +525,10 @@ class Task(Thread):
             record = self.read_scratch_file(path)
             problem = compute_record_problem(record, job_id)
             if record is not None and record.strip():
-                return problem
+                return problem, record
             if attempt + 1 < attempts:
                 sleep(1)
-        return problem
+        return problem, None
 
     def plan_pre_staged_dry_run(self) -> PreparedTask:
         """Plan a pre-staged task without any side effect (dry run).
@@ -632,6 +651,10 @@ class Task(Thread):
             started = float((content or "").strip())
         except (TypeError, ValueError, OSError):
             return
+        self._apply_allocation_start(started, submitted, returned)
+
+    def _apply_allocation_start(self, started: float, submitted: float, returned: float) -> None:
+        """Record queue and execution time from the epoch second at which the launcher started."""
         # ``date +%s`` has whole-second precision; tolerate one second either side.
         if submitted - 1 <= started <= returned + 1:
             started = min(max(started, submitted), returned)

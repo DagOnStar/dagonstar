@@ -243,6 +243,10 @@ class ConfigurationTests(unittest.TestCase):
         self.assertEqual(10.0, estimated_core_hours_saved(200, 180))
         self.assertIsNone(estimated_core_hours_saved(None, 10))
         self.assertIsNone(estimated_core_hours_saved(4, None))
+        # The measured re-check inside the allocation is subtracted; it can outweigh stage-in.
+        self.assertEqual(9.0, estimated_core_hours_saved(200, 180, 18))
+        self.assertEqual(-0.002222, estimated_core_hours_saved(1, 10, 18))
+        self.assertIsNone(estimated_core_hours_saved(4, 10, -1))
         task = Slurm("t", "true", nodes=4, ntasks_per_node=50)
         self.assertEqual(200, task.requested_cores())
         self.assertEqual(8, Slurm("t", "true", ntasks=8).requested_cores())
@@ -338,8 +342,11 @@ class LauncherGenerationTests(unittest.TestCase):
         self.assertLess(stage_in.index(": > " + record), stage_in.index("dagon_verify_staged()"))
         launcher = prepared.compute_launcher()
         self.assertIn("dagon_compute_record=" + record + "\n", launcher)
-        self.assertIn("trap 'echo \"${SLURM_JOB_ID:-} $?\" > \"$dagon_compute_record\"' EXIT\n", launcher)
-        self.assertLess(launcher.index("trap "), launcher.index("RUN\n"))
+        self.assertIn("trap 'dagon_status=$?; echo \"${SLURM_JOB_ID:-} $dagon_status ${dagon_started_at:-} "
+                      "${dagon_rechecked_at:-}\" > \"$dagon_compute_record\"' EXIT\n", launcher)
+        self.assertLess(launcher.index("dagon_started_at=$(date +%s)"), launcher.index("trap "))
+        self.assertLess(launcher.index("trap "), launcher.index("dagon_rechecked_at=$(date +%s)"))
+        self.assertLess(launcher.index("dagon_rechecked_at="), launcher.index("RUN\n"))
 
     def test_empty_inputs_produce_a_no_op_stage_script(self):
         prepared = PreparedTask(working_dir="/w", header="", prologue="", stage_blocks=[], invoke="",
@@ -357,7 +364,8 @@ class LifecycleOrderTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
 
-    def run_consumer(self, workflow_pre_stage, consumer_pre_stage, stage_code=0, submit_result=None):
+    def run_consumer(self, workflow_pre_stage, consumer_pre_stage, stage_code=0, submit_result=None,
+                     record="7 0\n"):
         workflow, first, second, consumer = three_task_workflow(
             self.tmp.name, workflow_pre_stage=workflow_pre_stage, consumer_pre_stage=consumer_pre_stage)
         for producer in (first, second):
@@ -380,7 +388,7 @@ class LifecycleOrderTests(unittest.TestCase):
 
         def read_scratch_file(task, filepath):
             if filepath.endswith(COMPUTE_RECORD_NAME):
-                return "7 0\n"  # the launcher of job 7 ended with status 0
+                return record  # by default, the launcher of job 7 ended with status 0
             return "" if filepath.endswith((IDENTITY_NAME, DESTINATION_IDENTITY_NAME)) else None
 
         with mock.patch.object(Slurm, "on_execute", on_execute), \
@@ -478,8 +486,21 @@ class LifecycleOrderTests(unittest.TestCase):
                 self.assertIsNone(consumer.get_execution_metadata()["pre_stage"]["scheduler_job_id"])
                 self.assertNotEqual(0, consumer.workflow.checkpoints[consumer.checkpoint_key()]["code"])
 
+    def test_completion_record_times_give_recheck_cost_and_allocation_start(self):
+        # The separate allocation stamp is unreadable here (as when a shared file
+        # system does not show a new file yet): the record's start time is used.
+        now = int(time.time())
+        consumer, _calls, error = self.run_consumer(True, None, record="7 0 %d %d\n" % (now, now))
+        self.assertIsNone(error)
+        metadata = consumer.get_execution_metadata()["pre_stage"]
+        self.assertEqual(0, metadata["compute_recheck_seconds"])
+        self.assertIsNotNone(metadata["allocation_wait_seconds"])
+        self.assertEqual(1, metadata["allocation_timing_resolution_seconds"])
+
     def test_compute_record_must_name_the_job_and_status_zero(self):
         self.assertIsNone(compute_record_problem("7 0\n", "7"))
+        self.assertIsNone(compute_record_problem("7 0 1700000000 1700000004\n", "7"))
+        self.assertIsNone(compute_record_problem("7 0 1700000000\n", "7"))  # stopped before the re-check
         for record, reason in ((None, "never ran"), ("", "never ran"), ("8 0\n", "does not belong to job 7"),
                                (" 0\n", "does not belong to job 7"), ("7 1\n", "exit status 1"),
                                ("7\n", "does not belong to job 7")):
@@ -570,6 +591,49 @@ class ContentIdentityTests(unittest.TestCase):
                 linked = 'dagon_compare_staged "%s/src dir" "%s/link/src dir"; echo "rc=$?"' % (root, root)
                 self.assertIn("rc=0", self.run_bash(linked).stdout)
 
+    def test_single_pass_records_match_what_is_recomputed_later(self):
+        # Stage-in checksums each side once and writes the records from those
+        # values; checkpoint validation (identity_script) and the compute
+        # launcher (destination_identity_body) recompute them independently,
+        # so the bytes must agree, including for an empty directory.
+        from dagon.prestage import _DIGEST_FUNCTIONS, destination_identity_body
+        with tempfile.TemporaryDirectory(prefix="dagon single pass ") as directory:
+            root = directory.replace("\\", "/")
+            sources = {"one file.txt": None, "many": 300, "empty dir": 0}
+            inputs = []
+            for name, count in sources.items():
+                source = Path(directory, "src", name)
+                if count is None:
+                    source.parent.mkdir(parents=True, exist_ok=True)
+                    source.write_text("alpha\n", encoding="utf-8")
+                else:
+                    source.mkdir(parents=True)
+                    for number in range(count):
+                        Path(source, "f %d.txt" % number).write_text(str(number), encoding="utf-8")
+                inputs.append(StageInput("workflow:///A/" + name, "wf", "A", "/" + name, root + "/src/" + name,
+                                         root + "/work/.dagon/inputs/wf/A/" + name, integrity=INTEGRITY_CONTENT))
+            copy = 'mkdir -p "%s/work/.dagon/inputs/wf/A" && cp -R "%s/src/." "%s/work/.dagon/inputs/wf/A/"\n' % (
+                root, root, root)
+            prepared = PreparedTask(working_dir=root + "/work", header="", prologue="", stage_blocks=[copy],
+                                    invoke="", resolved_command="", inputs=inputs)
+            Path(directory, "work", ".dagon").mkdir(parents=True)
+            script = Path(directory, "work", ".dagon", "stage_in.sh")
+            script.write_text(prepared.stage_in_script(), encoding="utf-8", newline="\n")
+            completed = subprocess.run([bash_executable(), str(script)], capture_output=True, text=True)
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            recorded_identity = Path(directory, "work", ".dagon", IDENTITY_NAME).read_text(encoding="utf-8")
+            recorded_destinations = Path(directory, "work", ".dagon", DESTINATION_IDENTITY_NAME).read_text(
+                encoding="utf-8")
+            recomputed_identity = subprocess.run([bash_executable(), "-c", identity_script(inputs)],
+                                                 capture_output=True, text=True).stdout
+            recomputed_destinations = subprocess.run(
+                [bash_executable(), "-c", _DIGEST_FUNCTIONS + destination_identity_body(inputs)],
+                capture_output=True, text=True).stdout
+            self.assertEqual(recomputed_identity, recorded_identity)
+            self.assertEqual(recomputed_destinations, recorded_destinations)
+            self.assertEqual(3 + 1 + 300, len(recorded_destinations.splitlines()))  # 3 headers, 301 files
+            self.assertIn("== workflow:///A/empty dir\n", recorded_destinations)
+
     def test_identity_changes_with_content_only(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory, "a.txt")
@@ -622,9 +686,15 @@ class LocalMockSchedulerTests(unittest.TestCase):
         submission = mock_scheduler.submission_for(self.log, "C")
         self.assertTrue(submission["marker_present"])
         self.assertTrue(submission["inputs_populated"])
-        record = Path(consumer.working_dir, ".dagon", COMPUTE_RECORD_NAME)
-        self.assertEqual("4242 0\n", record.read_text(encoding="utf-8"))
-        self.assertTrue(consumer.get_execution_metadata()["pre_stage"]["compute_completion_confirmed"])
+        record = Path(consumer.working_dir, ".dagon", COMPUTE_RECORD_NAME).read_text(encoding="utf-8").split()
+        self.assertEqual(["4242", "0"], record[:2])
+        self.assertEqual(4, len(record))  # job, status, started, re-checked
+        metadata = consumer.get_execution_metadata()["pre_stage"]
+        self.assertTrue(metadata["compute_completion_confirmed"])
+        self.assertEqual(int(record[3]) - int(record[2]), metadata["compute_recheck_seconds"])
+        self.assertEqual(estimated_core_hours_saved(metadata["requested_cores"], metadata["staging_seconds"],
+                                                    metadata["compute_recheck_seconds"]),
+                         metadata["estimated_allocated_core_hours_saved"])
         self.assertLess(staged_at["C"], submission["time"])
         self.assertEqual(3, len(log))
         marker = json.loads(Path(consumer.working_dir, ".dagon", MARKER_NAME).read_text(encoding="utf-8"))
@@ -872,7 +942,8 @@ class LocalMockSchedulerTests(unittest.TestCase):
                 self.assertFalse(Path(consumer.working_dir, "c.txt").exists())  # the command never ran
                 self.assertTrue(Path(consumer.working_dir, ".dagon", DESTINATION_IDENTITY_NAME).exists())
                 record = Path(consumer.working_dir, ".dagon", COMPUTE_RECORD_NAME).read_text(encoding="utf-8")
-                self.assertEqual("4242 1\n", record)  # the EXIT trap ran on the guard's exit
+                self.assertEqual(["4242", "1"], record.split()[:2])  # the EXIT trap ran on the guard's exit
+                self.assertEqual(3, len(record.split()))  # it stopped before the re-check completed
 
     def test_job_cancelled_before_it_started_is_never_completed(self):
         # Slurm's sbatch -W exits 0, with the job identifier, for a job cancelled

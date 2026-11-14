@@ -29,22 +29,37 @@ allocation holds
 before the scientific computation starts. With pre-staging, the copy runs on
 the submission (login) host first, so those 100 allocated core-hours are not
 held. DAGonStar reports this figure as
-`estimated_allocated_core_hours_saved = cores x staging_seconds / 3600`. It is
+`estimated_allocated_core_hours_saved = cores x (staging_seconds -
+compute_recheck_seconds) / 3600`, where the second term is the time the job
+measurably spent re-checking its staged inputs inside the allocation. It is
 an estimate of allocated resources not held. It is **not** a measured
 saving in queue time or wall time: the queue wait may be longer or shorter,
 and the submission is simply later by the time spent staging.
 
-The estimate assumes that staging inside the allocation would take as long
-as stage-in on the submission host. That is not always true, and pre-staging
-also adds work inside the allocation: the job re-reads every staged input to
-check that it did not change while queued. On the production cluster used for
-validation (NFS-shared `/home`, fast compute-node access), a consumer of a
-1 GiB file and 5,000 small files ran for 18 s with pre-staging and 10 s in
-the legacy lifecycle (Slurm `RunTime`, one run each, same `cp -r` mover). Stage-in on the login
-node took 46 to 52 s, so the reported estimate overstated the saving there.
-Pre-staging pays off where transfers into the allocation are slow or remote
-compared with re-reading staged data, and where holding many cores idle is
-expensive. Measure with `tools/hpc_prestage_deep.py` before relying on it.
+The estimate still assumes that staging inside the allocation would take as
+long as stage-in on the submission host, which includes verification reads a
+legacy job does not make, so treat it as an upper bound. Pre-staging also adds
+work inside the allocation: the job re-reads every staged input to check that
+it did not change while queued. Measurements on the production cluster used
+for validation (NFS-shared `/home`), for a consumer of a 1 GiB file and 5,000
+small files, same `cp -r` mover, job time from Slurm `RunTime`:
+
+- **Quiet file system, earlier code** (one `cksum` per file, each side read
+  twice at stage-in): the pre-staged job ran 18 s and the legacy job 10 s.
+- **Loaded file system, earlier and current code alternated** in three rounds
+  (the legacy job alone ranged from 122 to 261 s, so compare within a round):
+  with the earlier code, the pre-staged job ran as long as the legacy job
+  (122 and 128 s each), and stage-in took 431 and 572 s, with a third run over
+  25 minutes. With the current code, the pre-staged job ran 91 and 137 s
+  against 125 and 172 s for the legacy job, and stage-in took 285 to 621 s,
+  about half the earlier time relative to the legacy job in the same round.
+  The re-check took 75 to 173 s of the pre-staged job.
+
+These are single runs under uncontrolled load, not benchmarks. Pre-staging
+pays off where transfers into the allocation are slow or remote compared with
+re-reading staged data, and where holding many cores idle is expensive.
+Measure with `tools/hpc_prestage_deep.py` before relying on it, and read
+`compute_recheck_seconds` for the allocated cost of the re-check.
 
 ## Lifecycles
 
@@ -219,13 +234,13 @@ Each pre-staged task writes these files in `<working_dir>/.dagon/`:
 |---|---|---|
 | `context.sh` | DAGonStar | host and protocol discovery (unchanged) |
 | `stage_in.sh` | DAGonStar | removes a stale marker, identity record, and previously staged inputs; empties the completion record; runs the planned transfers; stops at the first failure; checks that every staged input exists and, where the source is readable on the submission host, that its content matches the source; records the source identity; exits non-zero on any failure; never runs the task command or the allocation prologue |
-| `stage-in-identity.txt` | `stage_in.sh`, after successful verification | one `<name> <CRC> <size>` line per file of every content-verified source (POSIX `cksum`); its SHA-256 is stored in the marker and the checkpoint |
+| `stage-in-identity.txt` | `stage_in.sh`, after successful verification | one `<CRC> <size> <name>` line per file of every content-verified source (POSIX `cksum`, run on batches of files, sorted by name in the C locale); its SHA-256 is stored in the marker and the checkpoint |
 | `stage-in-destinations.txt` | `stage_in.sh`, after successful verification | the same listing for every staged destination, whatever the mover; its SHA-256 is stored in the marker, and the compute launcher compares it with the content it finds at job start |
 | `stage-in.lock/` | `stage_in.sh` (atomic `mkdir`); removed by DAGonStar after `sbatch` returns or stage-in fails, or by `stage_in.sh` itself when it cannot record the owner | lock directory with an `owner` file holding a random per-run token; DAGonStar removes the lock only when the token matches |
 | `stage-in-complete.json` | DAGonStar, after `stage_in.sh` exits 0 | marker (schema `dagonstar.stage-in-marker/2`): task identity, input manifest with each input's integrity level, movers, policy version, timestamps, `source_identity_sha256`, `destination_identity_sha256`; no credentials |
 | `launcher.sh` | DAGonStar | compute-only launcher: no transfers; records `allocation_started_at`, checks that the marker and staged inputs are visible on the compute node and that their content still matches `stage-in-destinations.txt`, then runs the prologue and the command |
 | `allocation_started_at` | the job | epoch seconds at which the allocation started running the launcher |
-| `compute-finished.txt` | created empty by `stage_in.sh`; written by the job, from an `EXIT` trap of `launcher.sh`, however the launcher ends | `<SLURM_JOB_ID> <exit status>`; DAGonStar treats a successful `sbatch -W` as completion only when this record names the submitted job and status 0 |
+| `compute-finished.txt` | created empty by `stage_in.sh`; written by the job, from an `EXIT` trap of `launcher.sh`, however the launcher ends | `<SLURM_JOB_ID> <exit status> <started> <rechecked>` (epoch seconds on the compute node; the last is empty if the launcher stopped before the re-check finished); DAGonStar treats a successful `sbatch -W` as completion only when this record names the submitted job and status 0 |
 
 The stage-in plan and the compute launcher are rendered from one structured
 `PreparedTask` (`Task.prepare_task`), not by splitting the legacy launcher's
@@ -257,6 +272,9 @@ relies on the mover's own exit status and checks only that the data arrived.
 `cksum` is a CRC, which detects accidental corruption, not deliberate
 tampering. Content verification reads every staged input and its source once
 more on the submission host, so it adds I/O proportional to the input size.
+Each side is checksummed once: the same values serve the comparison and the
+two records below. `cksum` runs on batches of files, not once per file, so
+many small files do not cost one process each.
 
 ### Changes while the job is queued
 
@@ -269,7 +287,7 @@ the job was queued, the job exits with "staged inputs changed between
 stage-in and the start of the job". The task fails with
 `failure_phase == "execution"`, and the command never runs on the changed
 data. This check reads every staged input once more inside the allocation, so
-large inputs cost some allocated time; that time is spent reading scratch, not
+large inputs cost some allocated time, reported as `compute_recheck_seconds`; that time is spent reading scratch, not
 transferring. Like the stage-time comparison, it detects accidental changes,
 not tampering: the listing is stored in the same scratch directory.
 
@@ -296,8 +314,9 @@ On Slurm 23.11.3, `sbatch -W` exits 0 and prints the job identifier for a job
 that was cancelled while still pending, for example with `scancel`. The job
 never started, so its command never ran. An exit status of 0 is therefore not
 enough evidence that a job completed. The compute launcher sets an `EXIT` trap
-that writes `.dagon/compute-finished.txt` with `$SLURM_JOB_ID` and the
-launcher's exit status, however the launcher ends. After `sbatch` exits 0,
+that writes `.dagon/compute-finished.txt` with `$SLURM_JOB_ID`, the
+launcher's exit status, and when the launcher started and finished re-checking
+its inputs, however the launcher ends. After `sbatch` exits 0,
 DAGonStar reads that record (retrying for a few seconds, because a shared file
 system may show a file written on a compute node with a delay). It accepts the
 task as completed only if the record names the submitted job and status 0.
@@ -364,9 +383,9 @@ mode instead (`Stager.stage_in(..., strict=True)`).
 - A completed checkpoint is also **not** reused, and the task runs again, when
   an input has the `existence` integrity level (its source cannot be re-read on
   the submission host), when a producer cannot be found, or when the
-  checkpoint was written under another policy version (for example, before
-  policy version 3, which requires the completion record). Rerunning is the
-  safe choice in each case.
+  checkpoint was written under another policy version (version 3 added the
+  completion record and version 4 the current listing format). Rerunning is
+  the safe choice in each case.
 - Identity covers content (names, CRCs, sizes), not timestamps. A producer
   that runs again and writes identical content does not invalidate its
   consumers.
@@ -378,7 +397,7 @@ mode instead (`Stager.stage_in(..., strict=True)`).
 - The marker is provenance, not a skip token. DAGonStar never skips stage-in
   because a marker exists.
 - The checkpoint entry gains
-  `"pre_stage": {"effective": true, "staged": <bool>, "stage_in_code": <int>, "marker": ".dagon/stage-in-complete.json", "policy_version": 3, "source_identity_sha256": <hex>, "inputs": [{"reference", "workflow", "task", "local_path", "integrity"}]}`.
+  `"pre_stage": {"effective": true, "staged": <bool>, "stage_in_code": <int>, "marker": ".dagon/stage-in-complete.json", "policy_version": 4, "source_identity_sha256": <hex>, "inputs": [{"reference", "workflow", "task", "local_path", "integrity"}]}`.
   These are references and relative paths. No credentials are stored.
 - Legacy (non-pre-staged) checkpoints keep their historical behaviour: they
   are reused without input validation.
@@ -412,7 +431,7 @@ paths or credentials:
 | Key | Meaning |
 |---|---|
 | `pre_stage_effective` | whether the task was pre-staged (also `false` when configured but not effective) |
-| `policy_version` | pre-staging policy version (`3`) |
+| `policy_version` | pre-staging policy version (`4`) |
 | `phase` | last internal phase |
 | `inputs` | number of `workflow://` inputs |
 | `inputs_content_verified` | how many inputs had their staged content compared with the source |
@@ -421,7 +440,8 @@ paths or credentials:
 | `dry_run` | `true` for a dry run |
 | `stage_in_lock_busy` | `true` when stage-in stopped because another run held the lock |
 | `staging_started_at`, `staging_finished_at`, `staging_seconds` | submission-host stage-in timing |
-| `requested_cores`, `estimated_allocated_core_hours_saved` | `ntasks` (or `nodes x ntasks_per_node`) and `cores x staging_seconds / 3600` |
+| `compute_recheck_seconds` | seconds the job spent, inside its allocation, checking its staged inputs before the prologue and command (from the completion record; one-second resolution) |
+| `requested_cores`, `estimated_allocated_core_hours_saved` | `ntasks` (or `nodes x ntasks_per_node`) and `cores x (staging_seconds - compute_recheck_seconds) / 3600`; before the job has returned, or if the record has no times, `cores x staging_seconds / 3600`. An estimate, in practice an upper bound, and negative when the re-check cost more than stage-in |
 | `submission_started_at`, `scheduler_returned_at`, `scheduler_wall_seconds` | `sbatch -W` call; the wall time includes the queue wait |
 | `allocation_wait_seconds`, `execution_seconds` | derived from `allocation_started_at` when it can be read; one-second resolution and dependent on synchronised clocks; otherwise `null` |
 
