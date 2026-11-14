@@ -156,8 +156,9 @@ generated shell text. Add information to `PreparedTask` instead.
   historical launcher. `tests/fixtures/legacy_slurm_launcher.sh` guards it, so
   update that fixture only for an intended, documented change.
 - `Stager.stage_in(..., strict=True)` and `generate_command(..., strict=True)`
-  produce the failure-propagating, space-safe loop used by `stage_in.sh`. The
-  non-strict text is the legacy one.
+  produce the loop used by `stage_in.sh`. That loop propagates failures, keeps
+  paths with spaces intact, and is safe against injection: the template is
+  single-quoted before `eval`. The non-strict text is the legacy one.
 - To make another backend pre-stage-capable, set `pre_stage_capable = True` and
   implement `run_stage_in()` (run the script outside any allocation),
   `write_stage_marker()` (atomic), `read_scratch_file()`, and optionally

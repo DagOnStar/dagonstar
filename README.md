@@ -205,7 +205,11 @@ BeeOND rejection with real `sbatch` on its single-node cluster. Pre-staging has
 not been validated on a production multi-node cluster. Shared-scratch
 visibility cannot always be detected automatically. Rewritten `workflow://`
 arguments in user commands remain unquoted, as before, so scratch paths with
-spaces are supported by stage-in but not by those arguments.
+spaces are supported by stage-in but not by those arguments. As part of this
+change, the context-discovery script (`context.sh`, used in every lifecycle)
+quotes its scratch path, so shell syntax in that path is no longer executed. The
+pre-staging transfer loop is injection-safe, while the legacy launcher text
+is unchanged.
 
 The repository has a sound baseline for changes to the core behavior:
 

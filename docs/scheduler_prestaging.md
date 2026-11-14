@@ -136,9 +136,15 @@ Pre-staging is correct only when the task's scratch directory:
    BeeOND, `$TMPDIR` on a compute node, or a burst buffer created at job
    start.
 
-DAGonStar cannot always detect a violation of these requirements. A
-non-shared scratch path that happens to exist on both sides would let
-stage-in succeed while the job sees different or empty data. Configure
+DAGonStar cannot detect a violation of these requirements before submission.
+The compute launcher therefore checks, before the prologue and the command,
+that `.dagon/stage-in-complete.json` and every staged input are visible on the
+compute node. If they are not, the job exits with "the scratch directory must
+be shared with the submission host" and the task fails with
+`failure_phase == "execution"`, so the command never runs on missing data.
+This check catches a scratch directory that is missing or empty on the compute
+node. It cannot detect a different copy of the same files at the same path,
+and by the time it runs the allocation has already been granted. Configure
 `[batch] scratch_dir_base` (or the task `working_dir`) on a shared parallel
 file system before you enable pre-staging. For RemoteSlurm, scratch paths are
 paths on the cluster. Stage-in runs on the login node, so the login node must
@@ -178,7 +184,7 @@ Each pre-staged task writes these files in `<working_dir>/.dagon/`:
 | `context.sh` | DAGonStar | host and protocol discovery (unchanged) |
 | `stage_in.sh` | DAGonStar | removes a stale marker, runs the planned transfers, stops at the first failure, checks that every staged input exists, exits non-zero on any failure; never runs the task command or the allocation prologue |
 | `stage-in-complete.json` | DAGonStar, after `stage_in.sh` exits 0 | marker: task identity, input manifest, movers, policy version, timestamps; no credentials |
-| `launcher.sh` | DAGonStar | compute-only launcher: no transfers; records `allocation_started_at` and runs the prologue and the command |
+| `launcher.sh` | DAGonStar | compute-only launcher: no transfers; records `allocation_started_at`, checks that the marker and staged inputs are visible on the compute node, then runs the prologue and the command |
 | `allocation_started_at` | the job | epoch seconds at which the allocation started running the launcher |
 
 The stage-in plan and the compute launcher are rendered from one structured
@@ -208,7 +214,7 @@ success cannot be confirmed.**
 | a transfer fails, or an input is missing (verification) | `StageInFailedError` (`staging`) | `staging` | no | absent (a stale one is removed first) |
 | writing `stage_in.sh` or the marker fails, or SSH drops | `StageInFailedError` (`staging`) | `staging` | no | absent |
 | `sbatch` exits non-zero without `Submitted batch job` | `SchedulerSubmissionError` (`submission`) | `submission` | rejected | kept |
-| the job ran and failed | `ScheduledExecutionError` (`execution`) | `execution` | yes | kept |
+| the job ran and failed, including staged data not visible on the compute node | `ScheduledExecutionError` (`execution`) | `execution` | yes | kept |
 | explicit unsupported request | `PreStageConfigurationError` (`configuration`) | — | no | — |
 
 The task status becomes `FAILED`, downstream tasks do not run, and the error
@@ -278,7 +284,14 @@ annotated, and the export stays standards-valid.
 
 - Generated scripts quote scratch paths with `shlex.quote`. The stage-in loop
   expands sources with `IFS` set to a newline, so scratch paths that contain
-  spaces are staged correctly.
+  spaces are staged correctly. Its transfer template is assigned in single
+  quotes, so `eval` expands `$file` and `$dst` as quoted variables rather than
+  re-parsing their values. Shell syntax in a scratch path, such as `$(...)`,
+  backticks, or `;`, is never executed (tested). The legacy launcher keeps its
+  historical text, which expands the paths before `eval`.
+- `context.sh`, which runs in both lifecycles, now quotes its `cd` into the
+  scratch directory. Before this change, shell syntax in a scratch path was
+  executed there, in every lifecycle.
 - Rewritten `workflow://` arguments in the *user command* are inserted
   unquoted, as in the legacy lifecycle. The reference parser also ends a
   reference only at a space. A scratch path with spaces therefore breaks the
