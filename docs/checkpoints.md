@@ -94,7 +94,7 @@ when resuming. See [BeeOND](beeond.md).
 
 Pre-staged Slurm tasks (see [Scheduler-aware pre-staging](scheduler_prestaging.md))
 add `"pre_stage": {"effective": true, "staged": ..., "stage_in_code": ...,
-"marker": ".dagon/stage-in-complete.json", "policy_version": 2,
+"marker": ".dagon/stage-in-complete.json", "policy_version": 3,
 "source_identity_sha256": ..., "inputs": [...]}`. Their restart rule is
 stricter than the general one. A pre-staged task with `code == 0` and an
 accessible working directory is reused only when the content identity of its

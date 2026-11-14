@@ -78,7 +78,19 @@ with real `sbatch`. The script checks that:
 - a staged input changed after stage-in but before the job starts stops the
   job before the command runs;
 - a stage-in lock held by another run blocks stage-in without touching that
-  run's data, and a finished run releases its own lock.
+  run's data, and a finished run releases its own lock;
+- a failed lock-owner write removes the new lock and stops before anything is
+  removed or submitted (skipped when run as root);
+- a job held pending with `--begin` and cancelled with `scancel` is an
+  execution failure, not a completed task, and its checkpoint is not reusable.
+
+`tools/hpc_prestage_deep.py` is a manual site-validation tool, not run in CI.
+On a real cluster it stages a large file and many small files, checks a
+two-node allocation, holds jobs pending with `--begin` to observe a real queue
+wait, a queued change, and a cancellation, runs two processes against one
+working directory, and uses node-local scratch to observe the execution-phase
+failure. A separate mode checks checkpoint re-verification for RemoteSlurm over
+real SSH.
 
 Finally, the job runs `examples/dataflow/slurm/pre_stage_local.py` on the
 cluster. A single node with an empty queue shows ordering and gating only, not
@@ -176,8 +188,8 @@ requests, on `v*` tags, and on manual dispatch.
 
 ### Publishing a release
 
-1. Set `version` in `setup.cfg`, for example `1.0.3`, and merge to `main`.
-2. Tag and push: `git tag v1.0.3 && git push origin v1.0.3`.
+1. Set `version` in `setup.cfg`, for example `2.9.5`, and merge to `main`.
+2. Tag and push: `git tag v2.9.5 && git push origin v2.9.5`.
 3. The workflow tests every platform, builds, and creates the GitHub release.
 
 PyPI publishing is off until a maintainer sets it up once: add a trusted

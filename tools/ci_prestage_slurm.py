@@ -32,7 +32,10 @@ The CI job ``beeond-slurm`` runs it on the single-node Slurm cluster set up by
 * ``owner``: when the lock's owner token cannot be written (injected with
   ``umask 0277`` in the generated stage-in script), stage-in gives the new
   lock back and stops before removing earlier inputs or submitting.  Skipped
-  when run as root, whom file permissions do not bind.
+  when run as root, whom file permissions do not bind;
+* ``cancelled``: a job held pending with ``--begin`` and cancelled with
+  ``scancel`` (``sbatch -W`` then exits 0 on Slurm 23.11) is an execution
+  failure, never a completed task, and its checkpoint is not reusable.
 
 A single-node cluster cannot show queue-time effects; this is ordering and
 gating evidence only.  The script exits non-zero when any check fails.
@@ -41,8 +44,10 @@ import argparse
 import calendar
 import json
 import os
+import subprocess
 import sys
 import tempfile
+import threading
 import time
 from typing import Dict, List, Optional, Tuple
 
@@ -52,7 +57,7 @@ sys.path.insert(0, ROOT)
 from dagon import Workflow  # noqa: E402
 from dagon.prestage import PreStageConfigurationError  # noqa: E402
 from dagon.batch import Slurm  # noqa: E402
-from dagon.prestage import LOCK_NAME, MARKER_NAME, PreparedTask  # noqa: E402
+from dagon.prestage import COMPUTE_RECORD_NAME, LOCK_NAME, MARKER_NAME, PreparedTask  # noqa: E402
 from dagon.stager.base import StagerMover  # noqa: E402
 from dagon.task import DagonTask, TaskType  # noqa: E402
 
@@ -358,6 +363,46 @@ def scenario_owner(scratch: str, partition: Optional[str]) -> List[Check]:
     ]
 
 
+def scenario_cancelled(scratch: str, partition: Optional[str]) -> List[Check]:
+    name = "ci-prestage-cancelled-%d" % os.getpid()
+    workflow = Workflow("ci-prestage-cancelled", config=site_config(scratch, partition), pre_stage=True)
+    producer = DagonTask(TaskType.SLURM, "produce", "seq 1 7 > data.txt", partition=partition, ntasks=1)
+    consumer = DagonTask(TaskType.SLURM, name, JOB, partition=partition, ntasks=1,
+                         sbatch_options=["--begin=now+600"])
+    workflow.add_task(producer)
+    workflow.add_task(consumer)
+    cancelled: Dict[str, str] = {}
+
+    def cancel_when_pending() -> None:
+        deadline = time.time() + 180
+        while time.time() < deadline:
+            job = subprocess.run(["squeue", "-h", "-t", "PD", "-n", name, "-o", "%i"],
+                                 capture_output=True, text=True).stdout.strip()
+            if job:
+                subprocess.run(["scancel", job], check=False)
+                cancelled["job"] = job
+                return
+            time.sleep(2)
+
+    watcher = threading.Thread(target=cancel_when_pending, daemon=True)
+    watcher.start()
+    run(workflow)
+    watcher.join(timeout=5)
+    metadata = consumer.get_execution_metadata().get("pre_stage", {})
+    checkpoint = workflow.checkpoints.get(consumer.checkpoint_key(), {})
+    return [
+        ("cancelled: the pending job was cancelled", bool(cancelled.get("job")), json.dumps(cancelled)),
+        ("cancelled: an execution failure, not a completed task",
+         consumer.status.name == "FAILED" and consumer.failure_phase == "execution"
+         and str(metadata.get("scheduler_job_id")) == cancelled.get("job"),
+         "%s %s %s" % (consumer.status.name, consumer.failure_phase, metadata.get("scheduler_job_id"))),
+        ("cancelled: no completion record, checkpoint not reusable, command never ran",
+         not (read(consumer.working_dir, ".dagon", COMPUTE_RECORD_NAME) or "").strip()
+         and checkpoint.get("code") != 0
+         and read(consumer.working_dir, "job_started_at") is None, json.dumps(checkpoint.get("code"))),
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--scratch", help="shared scratch directory (default: temporary)")
@@ -369,7 +414,7 @@ def main() -> int:
         checks: List[Check] = []
         for scenario in (scenario_order, scenario_legacy, scenario_gate, scenario_beeond, scenario_stager,
                          scenario_checkpoint, scenario_traversal, scenario_dry, scenario_mutation, scenario_lock,
-                         scenario_owner):
+                         scenario_owner, scenario_cancelled):
             print("== %s" % scenario.__name__, flush=True)
             checks.extend(scenario(scratch, args.partition))
     failed = 0

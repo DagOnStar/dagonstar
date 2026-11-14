@@ -34,6 +34,18 @@ an estimate of allocated resources not held. It is **not** a measured
 saving in queue time or wall time: the queue wait may be longer or shorter,
 and the submission is simply later by the time spent staging.
 
+The estimate assumes that staging inside the allocation would take as long
+as stage-in on the submission host. That is not always true, and pre-staging
+also adds work inside the allocation: the job re-reads every staged input to
+check that it did not change while queued. On the production cluster used for
+validation (NFS-shared `/home`, fast compute-node access), a consumer of a
+1 GiB file and 5,000 small files ran for 18 s with pre-staging and 10 s in
+the legacy lifecycle (Slurm `RunTime`, one run each, same `cp -r` mover). Stage-in on the login
+node took 46 to 52 s, so the reported estimate overstated the saving there.
+Pre-staging pays off where transfers into the allocation are slow or remote
+compared with re-reading staged data, and where holding many cores idle is
+expensive. Measure with `tools/hpc_prestage_deep.py` before relying on it.
+
 ## Lifecycles
 
 Legacy (default, `pre_stage=False`):
@@ -206,13 +218,14 @@ Each pre-staged task writes these files in `<working_dir>/.dagon/`:
 | File | Written by | Content |
 |---|---|---|
 | `context.sh` | DAGonStar | host and protocol discovery (unchanged) |
-| `stage_in.sh` | DAGonStar | removes a stale marker, identity record, and previously staged inputs; runs the planned transfers; stops at the first failure; checks that every staged input exists and, where the source is readable on the submission host, that its content matches the source; records the source identity; exits non-zero on any failure; never runs the task command or the allocation prologue |
+| `stage_in.sh` | DAGonStar | removes a stale marker, identity record, and previously staged inputs; empties the completion record; runs the planned transfers; stops at the first failure; checks that every staged input exists and, where the source is readable on the submission host, that its content matches the source; records the source identity; exits non-zero on any failure; never runs the task command or the allocation prologue |
 | `stage-in-identity.txt` | `stage_in.sh`, after successful verification | one `<name> <CRC> <size>` line per file of every content-verified source (POSIX `cksum`); its SHA-256 is stored in the marker and the checkpoint |
 | `stage-in-destinations.txt` | `stage_in.sh`, after successful verification | the same listing for every staged destination, whatever the mover; its SHA-256 is stored in the marker, and the compute launcher compares it with the content it finds at job start |
 | `stage-in.lock/` | `stage_in.sh` (atomic `mkdir`); removed by DAGonStar after `sbatch` returns or stage-in fails, or by `stage_in.sh` itself when it cannot record the owner | lock directory with an `owner` file holding a random per-run token; DAGonStar removes the lock only when the token matches |
 | `stage-in-complete.json` | DAGonStar, after `stage_in.sh` exits 0 | marker (schema `dagonstar.stage-in-marker/2`): task identity, input manifest with each input's integrity level, movers, policy version, timestamps, `source_identity_sha256`, `destination_identity_sha256`; no credentials |
 | `launcher.sh` | DAGonStar | compute-only launcher: no transfers; records `allocation_started_at`, checks that the marker and staged inputs are visible on the compute node and that their content still matches `stage-in-destinations.txt`, then runs the prologue and the command |
 | `allocation_started_at` | the job | epoch seconds at which the allocation started running the launcher |
+| `compute-finished.txt` | created empty by `stage_in.sh`; written by the job, from an `EXIT` trap of `launcher.sh`, however the launcher ends | `<SLURM_JOB_ID> <exit status>`; DAGonStar treats a successful `sbatch -W` as completion only when this record names the submitted job and status 0 |
 
 The stage-in plan and the compute launcher are rendered from one structured
 `PreparedTask` (`Task.prepare_task`), not by splitting the legacy launcher's
@@ -277,6 +290,29 @@ identified by the token, when `sbatch` returns or stage-in fails. It never
 removes another run's lock. A run that is killed may leave its lock behind:
 check that no other run is active, delete `.dagon/stage-in.lock`, and rerun.
 
+### Jobs that end without running
+
+On Slurm 23.11.3, `sbatch -W` exits 0 and prints the job identifier for a job
+that was cancelled while still pending, for example with `scancel`. The job
+never started, so its command never ran. An exit status of 0 is therefore not
+enough evidence that a job completed. The compute launcher sets an `EXIT` trap
+that writes `.dagon/compute-finished.txt` with `$SLURM_JOB_ID` and the
+launcher's exit status, however the launcher ends. After `sbatch` exits 0,
+DAGonStar reads that record (retrying for a few seconds, because a shared file
+system may show a file written on a compute node with a delay). It accepts the
+task as completed only if the record names the submitted job and status 0.
+Otherwise the task fails in the execution phase with "scheduler job N
+returned success, but the job left no completion record", and its checkpoint
+`code` is set to 1, so a resumed run submits it again. `stage_in.sh` empties
+any record left by an earlier attempt before anything is staged. It empties
+the file rather than removing it, because on NFS a file newly created on a
+compute node stayed invisible to the login node for more than five seconds on
+the production cluster used for validation, while an existing file rewritten
+by the job was visible at once.
+
+The legacy lifecycle is unchanged and keeps this weakness: a legacy Slurm task
+whose job is cancelled while pending is reported as finished.
+
 ## Failure handling
 
 The gate is strict: **`sbatch` is never called when stage-in fails or when its
@@ -294,6 +330,7 @@ success cannot be confirmed.**
 | `sbatch` exits non-zero and printed no job identifier | `SchedulerSubmissionError` (`submission`) | `submission` | rejected | kept |
 | `sbatch` exits 0 but printed no job identifier | `SchedulerSubmissionError` (`submission`); the checkpoint `code` is set to 1, so the task is never treated as completed | `submission` | unconfirmed | kept |
 | `sbatch` printed a job identifier and the job failed, including staged data not visible on the compute node or changed while queued | `ScheduledExecutionError` (`execution`) | `execution` | yes | kept |
+| `sbatch` exited 0 with a job identifier, but the job left no completion record for that job with status 0 (for example, it was cancelled while pending) | `ScheduledExecutionError` (`execution`); the checkpoint `code` is set to 1 | `execution` | yes | kept |
 | explicit unsupported request | `PreStageConfigurationError` (`configuration`) | — | no | — |
 
 Pre-staged submissions add `--parsable` to `sbatch`, so its first output line
@@ -327,8 +364,9 @@ mode instead (`Stager.stage_in(..., strict=True)`).
 - A completed checkpoint is also **not** reused, and the task runs again, when
   an input has the `existence` integrity level (its source cannot be re-read on
   the submission host), when a producer cannot be found, or when the
-  checkpoint has no identity for the current policy version (for example, one
-  written before policy version 2). Rerunning is the safe choice in each case.
+  checkpoint was written under another policy version (for example, before
+  policy version 3, which requires the completion record). Rerunning is the
+  safe choice in each case.
 - Identity covers content (names, CRCs, sizes), not timestamps. A producer
   that runs again and writes identical content does not invalidate its
   consumers.
@@ -340,7 +378,7 @@ mode instead (`Stager.stage_in(..., strict=True)`).
 - The marker is provenance, not a skip token. DAGonStar never skips stage-in
   because a marker exists.
 - The checkpoint entry gains
-  `"pre_stage": {"effective": true, "staged": <bool>, "stage_in_code": <int>, "marker": ".dagon/stage-in-complete.json", "policy_version": 2, "source_identity_sha256": <hex>, "inputs": [{"reference", "workflow", "task", "local_path", "integrity"}]}`.
+  `"pre_stage": {"effective": true, "staged": <bool>, "stage_in_code": <int>, "marker": ".dagon/stage-in-complete.json", "policy_version": 3, "source_identity_sha256": <hex>, "inputs": [{"reference", "workflow", "task", "local_path", "integrity"}]}`.
   These are references and relative paths. No credentials are stored.
 - Legacy (non-pre-staged) checkpoints keep their historical behaviour: they
   are reused without input validation.
@@ -374,11 +412,12 @@ paths or credentials:
 | Key | Meaning |
 |---|---|
 | `pre_stage_effective` | whether the task was pre-staged (also `false` when configured but not effective) |
-| `policy_version` | pre-staging policy version (`2`) |
+| `policy_version` | pre-staging policy version (`3`) |
 | `phase` | last internal phase |
 | `inputs` | number of `workflow://` inputs |
 | `inputs_content_verified` | how many inputs had their staged content compared with the source |
 | `scheduler_job_id` | job identifier printed by `sbatch --parsable`, or `null` when none was printed |
+| `compute_completion_confirmed` | `true` when the job's completion record named it with status 0 (absent otherwise) |
 | `dry_run` | `true` for a dry run |
 | `stage_in_lock_busy` | `true` when stage-in stopped because another run held the lock |
 | `staging_started_at`, `staging_finished_at`, `staging_seconds` | submission-host stage-in timing |
@@ -435,13 +474,16 @@ annotated, and the export stays standards-valid.
 | Ordering, gate, failures, retries, checkpoint resume and changed-input invalidation, side-effect-free dry run, content verification and corruption, `..` references, `StagerMover.SLURM` rejection, `--parsable` classification, spaces, JSON, CWL, FAIR | `tests/test_scheduler_prestaging.py` (mock `sbatch`) |
 | RemoteSlurm over SSH, disconnects, failed script creation, failed remote `sbatch`, non-default port, dry run without SSH traffic, changed-input invalidation over SSH | `tests/test_remote_scheduler_prestaging.py` (loopback SSH double) |
 | Stage-in finished before the job started, the job saw its inputs at start, content verified, job identifier from `--parsable`, failed stage-in never reached `sbatch`, BeeOND and `StagerMover.SLURM` rejected, changed input invalidates a checkpoint, `..` reference refused, dry run creates nothing, a change while queued stops the job before the command, a held lock blocks stage-in, a failed lock-owner write removes the new lock and stops before anything is removed or submitted | `tools/ci_prestage_slurm.py` on the CI single-node Slurm cluster (once the branch is pushed) |
-| The same harness checks (41 at commit `14b8698`, 44 with the owner-write scenario), `pre_stage_local.py` in both lifecycles, and `pre_stage_remote.py` over real SSH from a workstation | one manual run on a production Slurm 23.11 cluster (login node submitting to compute nodes, NFS-shared scratch, an otherwise idle CPU partition) |
+| The same harness checks (47 with the owner-write and cancellation scenarios), `pre_stage_local.py` in both lifecycles, and `pre_stage_remote.py` over real SSH from a workstation | manual runs on a production Slurm 23.11.3 cluster (login node submitting to compute nodes, NFS v4.2-shared scratch, an otherwise idle CPU partition) |
+| A 1 GiB file and 5,000 small files staged and seen intact, a two-node allocation seeing identical staged content on both nodes, a real pending state (`BeginTime`) with an 80 to 98 s allocation wait, a change while pending stopping the job, a cancellation while pending failing and rerunning on resume, two processes contending for one working directory, node-local scratch failing in the execution phase, and RemoteSlurm checkpoint re-verification over real SSH | `tools/hpc_prestage_deep.py` (26 + 4 checks) on the same production cluster |
 
 A single-node CI cluster with an empty queue cannot show queue-time
 behaviour, multi-node file-system visibility, or production-scale transfers.
-The manual production run used small inputs on a nearly idle partition, so it
-shows correctness across a real login node, real compute nodes, and a shared
-file system, but not queue-time effects or large transfers.
+The manual production runs show correctness across a real login node, two
+compute nodes, a shared NFS file system, induced pending states, and inputs up
+to 1 GiB plus 5,000 files on one site. They do not show behaviour under a
+busy queue with competing users, multi-terabyte inputs, parallel file systems
+such as Lustre or GPFS, or other Slurm releases.
 Before you rely on pre-staging at a site, run `pre_stage_local.py` or
 `pre_stage_remote.py` there with a representative input size, and confirm that
 the scratch file system meets the requirements above.

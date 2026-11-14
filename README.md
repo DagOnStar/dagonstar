@@ -205,10 +205,15 @@ content did not change while queued, a fail-atomic, token-owned stage-in lock wi
 rejection of shared working directories, side-effect-free dry run, rejection
 of `..` references and of `StagerMover.SLURM`, and the RemoteSlurm path are
 tested with a mock `sbatch` and a loopback SSH double. A submission that exits
-0 without a job identifier is treated as a submission failure. One manual run
+0 without a job identifier is treated as a submission failure, and one that exits 0 for a job that never ran its launcher (for example, cancelled while pending) as an execution failure. Manual runs
 on a production Slurm 23.11 cluster (NFS-shared scratch, compute nodes, real
-SSH for RemoteSlurm) passed the same harness and the local and remote
-examples; it is evidence for one site, not a general guarantee. The `beeond-slurm` CI job runs
+SSH for RemoteSlurm) passed the same harness, the local and remote examples,
+and a deeper site check (`tools/hpc_prestage_deep.py`: a 1 GiB input and
+5,000 small files, a two-node allocation, induced queue waits, a change and a
+cancellation while pending, two contending processes, node-local scratch).
+That site measured a longer allocation with pre-staging than without for the
+1 GiB input, because the job re-reads staged data; the reported core-hour
+figure is an estimate. This is evidence for one site, not a general guarantee. The `beeond-slurm` CI job runs
 the same scenarios with real `sbatch` on its single-node cluster, once the
 branch is pushed. Inputs moved by `SCP`, `GRIDFTP`, or `SKYCDS` are checked
 for existence only, not content. Production-scale transfers and real queue

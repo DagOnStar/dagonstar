@@ -18,9 +18,10 @@ import dagon
 from dagon.shell import quote
 from dagon.platform_support import bash_executable, launcher_environment, shell_path
 from dagon.prestage import (
-    ALLOCATION_STARTED_NAME, DESTINATION_IDENTITY_NAME, IDENTITY_NAME, INTEGRITY_CONTENT, LOCK_BUSY_EXIT, INTEGRITY_EXISTENCE, MARKER_NAME,
+    ALLOCATION_STARTED_NAME, COMPUTE_RECORD_NAME, DESTINATION_IDENTITY_NAME, IDENTITY_NAME, INTEGRITY_CONTENT, LOCK_BUSY_EXIT, INTEGRITY_EXISTENCE, MARKER_NAME,
     PRE_STAGE_POLICY_VERSION, PreparedTask, PreStageConfigurationError, ScheduledExecutionError,
-    SchedulerSubmissionError, StageInFailedError, StageInput, TaskPhase, estimated_core_hours_saved,
+    SchedulerSubmissionError, StageInFailedError, StageInput, TaskPhase, compute_record_problem,
+    estimated_core_hours_saved,
     identity_digest, identity_script, marker_document, utc_now, validate_pre_stage, validate_reference_path,
 )
 
@@ -480,7 +481,35 @@ class Task(Thread):
             raise SchedulerSubmissionError(
                 "%s: scheduler submission failed after successful pre-staging (staged inputs kept): %s"
                 % (self.name, self.result.get('message')))
+        # sbatch -W also exits 0 for a job cancelled before it started: require
+        # the record that the compute launcher writes when it ends.
+        problem = self._compute_completion_problem(job_id)
+        if problem is not None:
+            checkpoint["code"] = 1
+            self._set_pre_stage_phase(TaskPhase.FAILED)
+            self.failure_phase = "execution"
+            raise ScheduledExecutionError(
+                "%s: scheduler job %s returned success, but %s; the task is not treated as completed "
+                "(for example, the job was cancelled before it started)" % (self.name, job_id, problem))
+        metrics["compute_completion_confirmed"] = True
         self._set_pre_stage_phase(TaskPhase.COMPLETED)
+
+    def _compute_completion_problem(self, job_id: str, attempts: int = 5) -> Optional[str]:
+        """Return why the job's completion record does not confirm success, or ``None``.
+
+        A missing record is read again a few times, one second apart, because a
+        shared file system may show a file written on a compute node with a delay.
+        """
+        path = self.working_dir + "/.dagon/" + COMPUTE_RECORD_NAME
+        problem = None
+        for attempt in range(attempts):
+            record = self.read_scratch_file(path)
+            problem = compute_record_problem(record, job_id)
+            if record is not None and record.strip():
+                return problem
+            if attempt + 1 < attempts:
+                sleep(1)
+        return problem
 
     def plan_pre_staged_dry_run(self) -> PreparedTask:
         """Plan a pre-staged task without any side effect (dry run).

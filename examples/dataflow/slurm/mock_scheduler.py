@@ -88,7 +88,8 @@ def main(argv: List[str]) -> int:
     sys.stdout.flush()
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
     from dagon.platform_support import bash_executable
-    completed = subprocess.run([bash_executable(), script], cwd=directory)
+    # Like Slurm, the job sees its identifier in SLURM_JOB_ID.
+    completed = subprocess.run([bash_executable(), script], cwd=directory, env=dict(os.environ, SLURM_JOB_ID="4242"))
     return completed.returncode
 
 

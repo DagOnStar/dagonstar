@@ -31,7 +31,7 @@ from typing import Any, Dict, List, Optional
 from dagon.shell import quote
 
 #: Version of the pre-staging policy recorded in markers and metadata.
-PRE_STAGE_POLICY_VERSION = 2
+PRE_STAGE_POLICY_VERSION = 3
 
 #: Name of the generated stage-in script inside ``<working_dir>/.dagon``.
 STAGE_SCRIPT_NAME = "stage_in.sh"
@@ -53,6 +53,16 @@ IDENTITY_NAME = "stage-in-identity.txt"
 #: content listing of every staged destination.  The compute launcher recomputes
 #: it when the allocation starts and refuses to run if anything changed.
 DESTINATION_IDENTITY_NAME = "stage-in-destinations.txt"
+
+#: File, inside ``<working_dir>/.dagon``, written by an ``EXIT`` trap of the compute
+#: launcher with the scheduler job identifier and the launcher's exit status.
+#: A successful ``sbatch -W`` counts as completion only when this record names
+#: the submitted job and status 0: Slurm's ``sbatch -W`` also exits 0 for a job
+#: cancelled before it started, which never ran the launcher.  ``stage_in.sh``
+#: creates it empty, so the job overwrites an existing file: on NFS, a file
+#: newly created on a compute node can stay invisible to the submission host
+#: for several seconds, while a rewritten one is seen on the next open.
+COMPUTE_RECORD_NAME = "compute-finished.txt"
 
 #: Lock directory, inside ``<working_dir>/.dagon``, held from the start of
 #: stage-in until the scheduler job has returned.  ``mkdir`` creates it
@@ -362,7 +372,9 @@ class PreparedTask:
         the listing recorded at stage-in (``.dagon/stage-in-destinations.txt``).
         A non-shared scratch directory, or an input changed while the job was
         queued, therefore fails the job at once instead of computing on missing
-        or different data.
+        or different data.  An ``EXIT`` trap writes ``.dagon/compute-finished.txt``
+        (``<SLURM_JOB_ID> <exit status>``), which the controller requires before
+        it treats a successful ``sbatch -W`` as completion.
         """
         stamp = self.working_dir + "/.dagon/" + ALLOCATION_STARTED_NAME
         marker = self.working_dir + "/.dagon/" + MARKER_NAME
@@ -391,9 +403,15 @@ class PreparedTask:
                       "  echo \"DAGonStar: staged inputs changed between stage-in and the start of the job\" >&2\n"
                       "  exit 1\n"
                       "fi\n")
+        record = self.working_dir + "/.dagon/" + COMPUTE_RECORD_NAME
         return (self.header + self._cd(True)
                 + "# Record when the allocation started running this launcher\n"
-                + "date +%s > " + quote(stamp) + " 2>/dev/null || true\n\n"
+                + "date +%s > " + quote(stamp) + " 2>/dev/null || true\n"
+                + "# Record, however this script ends, which job ran it and its exit status:\n"
+                + "# DAGonStar accepts a successful sbatch only with this record (see .dagon/"
+                + COMPUTE_RECORD_NAME + ")\n"
+                + "dagon_compute_record=" + quote(record) + "\n"
+                + "trap 'echo \"${SLURM_JOB_ID:-} $?\" > \"$dagon_compute_record\"' EXIT\n\n"
                 + guard + "\n"
                 + self.prologue
                 + "# Inputs were staged before scheduler submission (pre_stage=True),\n"
@@ -452,6 +470,11 @@ class PreparedTask:
                   + "rm -f " + quote(marker) + " " + quote(identity) + " " + quote(destinations) + "\n"
                   "# Inputs are always staged again: nothing from an earlier attempt is trusted\n"
                   "rm -rf " + quote(self.working_dir + "/.dagon/inputs") + "\n"
+                  "# Empty the job's completion record rather than removing it: the job then\n"
+                  "# overwrites an existing file, which a shared file system such as NFS shows\n"
+                  "# to this host at once, while a file newly created on a compute node can\n"
+                  "# stay invisible here for seconds\n"
+                  ": > " + quote(self.working_dir + "/.dagon/" + COMPUTE_RECORD_NAME) + " || exit 1\n"
                   "cd " + quote(self.working_dir) + " || exit 1\n\n"
                   + _VERIFY_FUNCTION + _DIGEST_FUNCTIONS + "\n")
         if not self.stage_blocks:
@@ -525,3 +548,22 @@ def marker_document(task: Any, prepared: PreparedTask, started_at: str, finished
         "destination_identity_sha256": destination_identity,
     }
     return json.dumps(document, indent=2, sort_keys=True) + "\n"
+
+
+def compute_record_problem(record: Optional[str], job_id: str) -> Optional[str]:
+    """Return why *record* does not confirm that job *job_id* completed, or ``None``.
+
+    *record* is the content of ``.dagon/compute-finished.txt``: the job
+    identifier and the exit status written by the compute launcher's ``EXIT``
+    trap.  A missing record means the launcher never ran (for example, the job
+    was cancelled while pending); another job's record is never accepted.
+    """
+    if record is None or not record.strip():
+        return "the job left no completion record (.dagon/" + COMPUTE_RECORD_NAME + "), so its launcher never ran"
+    fields = record.split()
+    expected = job_id.split(";", 1)[0]
+    if len(fields) != 2 or fields[0] != expected:
+        return "the completion record does not belong to job " + expected
+    if fields[1] != "0":
+        return "the launcher recorded exit status " + fields[1]
+    return None

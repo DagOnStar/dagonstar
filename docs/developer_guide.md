@@ -174,7 +174,9 @@ generated shell text. Add information to `PreparedTask` instead.
   `task.pre_stage_submission` is true), never from display text. `sbatch`
   must never run when stage-in failed or cannot be confirmed, and a
   submission without a job identifier is a submission failure, even with
-  exit status 0.
+  exit status 0. With a job identifier and exit status 0, completion still
+  requires `.dagon/compute-finished.txt` naming that job with status 0
+  (`compute_record_problem()`); otherwise it is an execution failure.
 - Test with `examples/dataflow/slurm/mock_scheduler.py` (a mock `sbatch -W`) and
   the loopback SSH double in `tests/test_remote_scheduler_prestaging.py`.
 

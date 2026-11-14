@@ -38,7 +38,7 @@ jobs:
       - name: Install quality tools
         run: python -m pip install mypy==1.13.0 ruff==0.6.9
       - name: Run focused style checks
-        run: python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/beeond.py dagon/prestage.py tests tools/run_local_examples.py tools/ci_beeond_slurm.py tools/ci_prestage_slurm.py examples/dataflow/slurm/mock_scheduler.py examples/dataflow/slurm/pre_stage_mock.py examples/dataflow/slurm/pre_stage_local.py examples/dataflow/slurm/pre_stage_remote.py
+        run: python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/beeond.py dagon/prestage.py tests tools/run_local_examples.py tools/ci_beeond_slurm.py tools/ci_prestage_slurm.py tools/hpc_prestage_deep.py examples/dataflow/slurm/mock_scheduler.py examples/dataflow/slurm/pre_stage_mock.py examples/dataflow/slurm/pre_stage_local.py examples/dataflow/slurm/pre_stage_remote.py
       - name: Run progressive type checks
         run: python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/beeond.py dagon/prestage.py
       - name: Validate tutorial structure and notebook

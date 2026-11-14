@@ -38,6 +38,7 @@ class LoopbackSSH:
         self.fail_create = None      # substring of a filepath whose creation fails
         self.reject_sbatch = False
         self.omit_job_id = False     # exit 0 without printing a job identifier
+        self.cancel_pending = False  # exit 0 with a job identifier, never running the job (scancel while pending)
         LoopbackSSH.instances.append(self)
 
     def create_file(self, filepath, content):
@@ -64,7 +65,10 @@ class LoopbackSSH:
             }))
             if self.reject_sbatch:
                 return {"code": 1, "output": "", "message": "sbatch: error: invalid account"}
-            completed = subprocess.run([bash_executable(), script], cwd=directory, capture_output=True, text=True)
+            if self.cancel_pending:
+                return {"code": 0, "output": "77\n", "message": ""}
+            completed = subprocess.run([bash_executable(), script], cwd=directory, capture_output=True, text=True,
+                                       env=dict(os.environ, SLURM_JOB_ID="77"))
             banner = "77\n" if "--parsable" in argv else "Submitted batch job 77\n"
             if self.omit_job_id:
                 return {"code": 0, "output": "", "message": ""}
@@ -259,6 +263,17 @@ class RemoteSlurmPreStageTests(unittest.TestCase):
         self.assertEqual("FAILED", consumer.status.name)
         self.assertEqual("submission", consumer.failure_phase)
         self.assertNotEqual(0, workflow.checkpoints[consumer.checkpoint_key()]["code"])
+
+    def test_remote_job_cancelled_before_it_started_is_never_completed(self):
+        workflow, _producer, consumer = self.build()
+        consumer.ssh_connection.cancel_pending = True
+        with mock.patch("dagon.task.sleep"):
+            self.run_workflow(workflow, fails=True)
+        self.assertEqual("FAILED", consumer.status.name)
+        self.assertEqual("execution", consumer.failure_phase)
+        self.assertEqual("77", consumer.get_execution_metadata()["pre_stage"]["scheduler_job_id"])
+        self.assertNotEqual(0, workflow.checkpoints[consumer.checkpoint_key()]["code"])
+        self.assertFalse(Path(consumer.working_dir, "c.txt").exists())
 
     def test_remote_lock_is_released_over_ssh(self):
         workflow, _producer, consumer = self.build()

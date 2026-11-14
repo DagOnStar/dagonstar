@@ -223,6 +223,14 @@ stage-in finished first. The `beeond-slurm` CI job runs this demo with
 `--partition ci` on its single-node cluster, together with
 `tools/ci_prestage_slurm.py`.
 
+For a deeper site check, run `tools/hpc_prestage_deep.py` from the repository
+root on the login node. It submits real jobs, and some stay pending on purpose
+for a minute or more, so use a partition where that is acceptable:
+
+```bash
+python3 tools/hpc_prestage_deep.py --scratch /shared/scratch/$USER/dagon-deep --partition <partition> --size-mib 1024
+```
+
 ### Demo 7 - Remote Slurm over SSH (infrastructure-dependent)
 
 ```bash

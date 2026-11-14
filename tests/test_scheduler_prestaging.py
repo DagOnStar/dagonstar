@@ -20,10 +20,11 @@ from dagon import Workflow
 from dagon.batch import Batch, Slurm
 from dagon.platform_support import bash_executable
 from dagon.prestage import (
-    DESTINATION_IDENTITY_NAME, IDENTITY_NAME, INTEGRITY_CONTENT, INTEGRITY_EXISTENCE, LOCK_NAME, MARKER_NAME,
+    COMPUTE_RECORD_NAME, DESTINATION_IDENTITY_NAME, IDENTITY_NAME, INTEGRITY_CONTENT, INTEGRITY_EXISTENCE, LOCK_NAME,
+    MARKER_NAME,
     PRE_STAGE_POLICY_VERSION, PreparedTask, PreStageConfigurationError, SchedulerSubmissionError,
     ScheduledExecutionError, StageInFailedError, StageInput, TaskPhase, estimated_core_hours_saved,
-    identity_digest, identity_script, validate_pre_stage, validate_reference_path,
+    compute_record_problem, identity_digest, identity_script, validate_pre_stage, validate_reference_path,
 )
 from dagon.stager.base import DataMover, Stager, StagerMover
 from dagon.task import DagonTask, Task, TaskType, parsable_job_id
@@ -325,6 +326,21 @@ class LauncherGenerationTests(unittest.TestCase):
         self.assertIn("BLOCK", prepared.stage_in_script())
         self.assertNotIn("BLOCK", prepared.compute_launcher())
 
+    def test_completion_record_is_emptied_and_written_by_an_exit_trap(self):
+        prepared = PreparedTask(working_dir="/w", header="#! /bin/bash\ncode=0\n", prologue="", stage_blocks=[],
+                                invoke="RUN\n", resolved_command="run")
+        record = "/w/.dagon/" + COMPUTE_RECORD_NAME
+        stage_in = prepared.stage_in_script("token")
+        # Emptied, not removed: on NFS a newly created file can stay invisible
+        # to the submission host, while a rewritten one is seen on the next open.
+        self.assertIn(": > " + record + " || exit 1\n", stage_in)
+        self.assertNotIn(record, "".join(line for line in stage_in.splitlines(True) if line.startswith("rm ")))
+        self.assertLess(stage_in.index(": > " + record), stage_in.index("dagon_verify_staged()"))
+        launcher = prepared.compute_launcher()
+        self.assertIn("dagon_compute_record=" + record + "\n", launcher)
+        self.assertIn("trap 'echo \"${SLURM_JOB_ID:-} $?\" > \"$dagon_compute_record\"' EXIT\n", launcher)
+        self.assertLess(launcher.index("trap "), launcher.index("RUN\n"))
+
     def test_empty_inputs_produce_a_no_op_stage_script(self):
         prepared = PreparedTask(working_dir="/w", header="", prologue="", stage_blocks=[], invoke="",
                                 resolved_command="true")
@@ -363,6 +379,8 @@ class LifecycleOrderTests(unittest.TestCase):
             calls.append(("marker", MARKER_NAME, content))
 
         def read_scratch_file(task, filepath):
+            if filepath.endswith(COMPUTE_RECORD_NAME):
+                return "7 0\n"  # the launcher of job 7 ended with status 0
             return "" if filepath.endswith((IDENTITY_NAME, DESTINATION_IDENTITY_NAME)) else None
 
         with mock.patch.object(Slurm, "on_execute", on_execute), \
@@ -459,6 +477,14 @@ class LifecycleOrderTests(unittest.TestCase):
                 self.assertEqual(TaskPhase.FAILED, consumer.pre_stage_phase)
                 self.assertIsNone(consumer.get_execution_metadata()["pre_stage"]["scheduler_job_id"])
                 self.assertNotEqual(0, consumer.workflow.checkpoints[consumer.checkpoint_key()]["code"])
+
+    def test_compute_record_must_name_the_job_and_status_zero(self):
+        self.assertIsNone(compute_record_problem("7 0\n", "7"))
+        for record, reason in ((None, "never ran"), ("", "never ran"), ("8 0\n", "does not belong to job 7"),
+                               (" 0\n", "does not belong to job 7"), ("7 1\n", "exit status 1"),
+                               ("7\n", "does not belong to job 7")):
+            with self.subTest(record=record):
+                self.assertIn(reason, compute_record_problem(record, "7"))
 
     def test_parsable_job_id(self):
         self.assertEqual("42", parsable_job_id("42\n"))
@@ -596,6 +622,9 @@ class LocalMockSchedulerTests(unittest.TestCase):
         submission = mock_scheduler.submission_for(self.log, "C")
         self.assertTrue(submission["marker_present"])
         self.assertTrue(submission["inputs_populated"])
+        record = Path(consumer.working_dir, ".dagon", COMPUTE_RECORD_NAME)
+        self.assertEqual("4242 0\n", record.read_text(encoding="utf-8"))
+        self.assertTrue(consumer.get_execution_metadata()["pre_stage"]["compute_completion_confirmed"])
         self.assertLess(staged_at["C"], submission["time"])
         self.assertEqual(3, len(log))
         marker = json.loads(Path(consumer.working_dir, ".dagon", MARKER_NAME).read_text(encoding="utf-8"))
@@ -842,6 +871,39 @@ class LocalMockSchedulerTests(unittest.TestCase):
                 self.assertEqual("execution", consumer.failure_phase)
                 self.assertFalse(Path(consumer.working_dir, "c.txt").exists())  # the command never ran
                 self.assertTrue(Path(consumer.working_dir, ".dagon", DESTINATION_IDENTITY_NAME).exists())
+                record = Path(consumer.working_dir, ".dagon", COMPUTE_RECORD_NAME).read_text(encoding="utf-8")
+                self.assertEqual("4242 1\n", record)  # the EXIT trap ran on the guard's exit
+
+    def test_job_cancelled_before_it_started_is_never_completed(self):
+        # Slurm's sbatch -W exits 0, with the job identifier, for a job cancelled
+        # while pending: the launcher never ran, so no completion record exists.
+        consumer_dir = os.path.join(self.scratch, "consumer")
+        stale = Path(consumer_dir, ".dagon", COMPUTE_RECORD_NAME)
+        stale.parent.mkdir(parents=True)
+        stale.write_text("4242 0\n", encoding="utf-8")  # an earlier attempt's record, same identifier
+        workflow = Workflow("wf", config=scratch_config(self.scratch), pre_stage=True)
+        producer = Slurm("A", "echo alpha > a.txt")
+        consumer = Slurm("C", "cat workflow:///A/a.txt > c.txt", working_dir=consumer_dir)
+        workflow.add_task(producer)
+        workflow.add_task(consumer)
+        original = Slurm.on_execute
+
+        def cancelled_while_pending(task, script, script_name):
+            if task is consumer and script_name == "launcher.sh":
+                return {"code": 0, "output": "4242\n", "message": ""}
+            return original(task, script, script_name)
+
+        with mock.patch.object(Slurm, "on_execute", cancelled_while_pending), mock.patch("dagon.task.sleep"):
+            self.run_workflow(workflow, fails=True)
+        metadata = consumer.get_execution_metadata()["pre_stage"]
+        self.assertEqual("FAILED", consumer.status.name)
+        self.assertEqual("execution", consumer.failure_phase)
+        self.assertEqual("4242", metadata["scheduler_job_id"])
+        self.assertNotIn("compute_completion_confirmed", metadata)
+        self.assertNotEqual(0, workflow.checkpoints[consumer.checkpoint_key()]["code"])
+        self.assertEqual("", stale.read_text(encoding="utf-8"))  # stage-in emptied the earlier record
+        self.assertFalse(Path(consumer_dir, "c.txt").exists())
+        self.assertFalse(Path(consumer_dir, ".dagon", LOCK_NAME).exists())
 
     def test_stage_in_lock_is_released_after_the_job(self):
         workflow, _first, _second, consumer = three_task_workflow(self.scratch, workflow_pre_stage=True)

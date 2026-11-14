@@ -130,7 +130,10 @@ configuration validation separately from live integration behavior.
   scheduler calls), and `..` references must be refused before any transfer.
 - Classify submission versus execution failures from the `sbatch --parsable`
   job identifier, never from display text, and never treat a submission
-  without a job identifier as completed.
+  without a job identifier as completed. A successful `sbatch -W` counts as
+  completion only when `.dagon/compute-finished.txt`, written by the compute
+  launcher's `EXIT` trap, names that job with status 0: Slurm also exits 0 for
+  a job cancelled while pending.
 - The compute launcher must re-check staged content against
   `.dagon/stage-in-destinations.txt` before the payload runs.
 - Keep shared working directories ineligible and the stage-in lock
@@ -140,7 +143,8 @@ configuration validation separately from live integration behavior.
 - Stage-in markers and metadata must never contain credentials, and
   `execution.pre_stage` must stay path-free. A marker is never a skip token.
 - Changes require the local and remote pre-staging tests,
-  `tools/ci_prestage_slurm.py`, the `examples/dataflow/slurm/pre_stage_*.py`
+  `tools/ci_prestage_slurm.py`, the manual `tools/hpc_prestage_deep.py`, the
+  `examples/dataflow/slurm/pre_stage_*.py`
   examples, `docs/scheduler_prestaging.md`, and the Lesson 14 tutorial section
   to stay consistent.
 
