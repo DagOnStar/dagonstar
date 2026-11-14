@@ -209,7 +209,7 @@ Each pre-staged task writes these files in `<working_dir>/.dagon/`:
 | `stage_in.sh` | DAGonStar | removes a stale marker, identity record, and previously staged inputs; runs the planned transfers; stops at the first failure; checks that every staged input exists and, where the source is readable on the submission host, that its content matches the source; records the source identity; exits non-zero on any failure; never runs the task command or the allocation prologue |
 | `stage-in-identity.txt` | `stage_in.sh`, after successful verification | one `<name> <CRC> <size>` line per file of every content-verified source (POSIX `cksum`); its SHA-256 is stored in the marker and the checkpoint |
 | `stage-in-destinations.txt` | `stage_in.sh`, after successful verification | the same listing for every staged destination, whatever the mover; its SHA-256 is stored in the marker, and the compute launcher compares it with the content it finds at job start |
-| `stage-in.lock/` | `stage_in.sh` (atomic `mkdir`); removed by DAGonStar after `sbatch` returns or stage-in fails | lock directory with an `owner` file holding a random per-run token; DAGonStar removes the lock only when the token matches |
+| `stage-in.lock/` | `stage_in.sh` (atomic `mkdir`); removed by DAGonStar after `sbatch` returns or stage-in fails, or by `stage_in.sh` itself when it cannot record the owner | lock directory with an `owner` file holding a random per-run token; DAGonStar removes the lock only when the token matches |
 | `stage-in-complete.json` | DAGonStar, after `stage_in.sh` exits 0 | marker (schema `dagonstar.stage-in-marker/2`): task identity, input manifest with each input's integrity level, movers, policy version, timestamps, `source_identity_sha256`, `destination_identity_sha256`; no credentials |
 | `launcher.sh` | DAGonStar | compute-only launcher: no transfers; records `allocation_started_at`, checks that the marker and staged inputs are visible on the compute node and that their content still matches `stage-in-destinations.txt`, then runs the prologue and the command |
 | `allocation_started_at` | the job | epoch seconds at which the allocation started running the launcher |
@@ -267,8 +267,13 @@ not tampering: the listing is stored in the same scratch directory.
 exists, another run is using this working directory. The script then exits
 with status 75 before it removes or writes anything. The task fails in the
 staging phase, with `stage_in_lock_busy: true` in its metadata, and nothing is
-submitted. DAGonStar removes its own lock, identified by a random token in
-`stage-in.lock/owner`, when `sbatch` returns or stage-in fails. It never
+submitted. Right after creating the lock, the script writes this run's random
+token to `stage-in.lock/owner` and reads it back. If that fails, for example
+because the file system is full or refuses the write, the script removes the
+lock it has just created and exits 1. It does so before it removes earlier
+inputs or transfers anything, so a failed owner write never leaves an
+ownerless lock that no run could release. DAGonStar removes its own lock,
+identified by the token, when `sbatch` returns or stage-in fails. It never
 removes another run's lock. A run that is killed may leave its lock behind:
 check that no other run is active, delete `.dagon/stage-in.lock`, and rerun.
 
@@ -285,6 +290,7 @@ success cannot be confirmed.**
 | staged content differs from its source (`content` inputs) | `StageInFailedError` (`staging`) | `staging` | no | absent |
 | a `workflow://` reference with a `..` component, an empty or `..` task name, or naming a whole scratch directory | `StageInFailedError` (`staging`), wrapping `PreStageConfigurationError` | `staging` | no | absent |
 | another run holds the stage-in lock (`stage_in.sh` exits 75) | `StageInFailedError` (`staging`) | `staging` | no | the other run's files are untouched |
+| the lock's owner token cannot be written or read back (`stage_in.sh` exits 1; the new lock is removed) | `StageInFailedError` (`staging`) | `staging` | no | untouched, like earlier inputs |
 | `sbatch` exits non-zero and printed no job identifier | `SchedulerSubmissionError` (`submission`) | `submission` | rejected | kept |
 | `sbatch` exits 0 but printed no job identifier | `SchedulerSubmissionError` (`submission`); the checkpoint `code` is set to 1, so the task is never treated as completed | `submission` | unconfirmed | kept |
 | `sbatch` printed a job identifier and the job failed, including staged data not visible on the compute node or changed while queued | `ScheduledExecutionError` (`execution`) | `execution` | yes | kept |
@@ -428,8 +434,8 @@ annotated, and the export stays standards-valid.
 | Legacy launcher unchanged byte for byte | `tests/test_scheduler_prestaging.py`, fixture captured before the refactor |
 | Ordering, gate, failures, retries, checkpoint resume and changed-input invalidation, side-effect-free dry run, content verification and corruption, `..` references, `StagerMover.SLURM` rejection, `--parsable` classification, spaces, JSON, CWL, FAIR | `tests/test_scheduler_prestaging.py` (mock `sbatch`) |
 | RemoteSlurm over SSH, disconnects, failed script creation, failed remote `sbatch`, non-default port, dry run without SSH traffic, changed-input invalidation over SSH | `tests/test_remote_scheduler_prestaging.py` (loopback SSH double) |
-| Stage-in finished before the job started, the job saw its inputs at start, content verified, job identifier from `--parsable`, failed stage-in never reached `sbatch`, BeeOND and `StagerMover.SLURM` rejected, changed input invalidates a checkpoint, `..` reference refused, dry run creates nothing, a change while queued stops the job before the command, a held lock blocks stage-in | `tools/ci_prestage_slurm.py` on the CI single-node Slurm cluster (once the branch is pushed) |
-| The same 41 harness checks, `pre_stage_local.py` in both lifecycles, and `pre_stage_remote.py` over real SSH from a workstation | one manual run on a production Slurm 23.11 cluster (login node submitting to compute nodes, NFS-shared scratch, an otherwise idle CPU partition) |
+| Stage-in finished before the job started, the job saw its inputs at start, content verified, job identifier from `--parsable`, failed stage-in never reached `sbatch`, BeeOND and `StagerMover.SLURM` rejected, changed input invalidates a checkpoint, `..` reference refused, dry run creates nothing, a change while queued stops the job before the command, a held lock blocks stage-in, a failed lock-owner write removes the new lock and stops before anything is removed or submitted | `tools/ci_prestage_slurm.py` on the CI single-node Slurm cluster (once the branch is pushed) |
+| The same harness checks (41 at commit `14b8698`, 44 with the owner-write scenario), `pre_stage_local.py` in both lifecycles, and `pre_stage_remote.py` over real SSH from a workstation | one manual run on a production Slurm 23.11 cluster (login node submitting to compute nodes, NFS-shared scratch, an otherwise idle CPU partition) |
 
 A single-node CI cluster with an empty queue cannot show queue-time
 behaviour, multi-node file-system visibility, or production-scale transfers.

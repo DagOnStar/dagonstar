@@ -201,7 +201,7 @@ unchanged: the legacy launcher is guarded by a byte-for-byte fixture. Its
 ordering, `sbatch` gate, typed failure phases (from `sbatch --parsable` job
 identifiers), retries, content verification of same-host transfers,
 changed-input checkpoint invalidation, a compute-side check that staged
-content did not change while queued, a token-owned stage-in lock with
+content did not change while queued, a fail-atomic, token-owned stage-in lock with
 rejection of shared working directories, side-effect-free dry run, rejection
 of `..` references and of `StagerMover.SLURM`, and the RemoteSlurm path are
 tested with a mock `sbatch` and a loopback SSH double. A submission that exits

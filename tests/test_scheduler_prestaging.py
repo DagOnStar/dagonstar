@@ -42,6 +42,21 @@ def no_network_context():
     return mock.patch.object(Task, "get_how_im_script", canned_context_script)
 
 
+def unwritable_lock_owner(stage_in_script, working_dir):
+    """Wrap ``PreparedTask.stage_in_script`` so *working_dir*'s new lock directory is read-only.
+
+    With ``umask 0277`` the ``mkdir`` that takes the lock still succeeds, but the
+    owner token cannot be written into it: an injected owner-write failure.
+    """
+    def wrapped(self, lock_token=None):
+        script = stage_in_script(self, lock_token)
+        if os.path.normpath(self.working_dir) != os.path.normpath(working_dir):
+            return script
+        first, _newline, rest = script.partition("\n")
+        return first + "\numask 0277\n" + rest
+    return wrapped
+
+
 class ConfigurationTests(unittest.TestCase):
     def test_workflow_default_is_false(self):
         self.assertIs(False, make_workflow().pre_stage)
@@ -863,6 +878,30 @@ class LocalMockSchedulerTests(unittest.TestCase):
         self.assertIsNone(mock_scheduler.submission_for(self.log, "C"))
         self.assertEqual("another-run\n", Path(lock, "owner").read_text(encoding="utf-8"))  # not released
         self.assertEqual("theirs\n", foreign.read_text(encoding="utf-8"))  # nothing replaced
+        self.assertTrue(Path(consumer_dir, ".dagon", MARKER_NAME).exists())
+
+    @unittest.skipIf(os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0),
+                     "needs POSIX permissions that bind the current user")
+    def test_lock_owner_write_failure_gives_the_lock_back_before_staging(self):
+        # Seed an earlier attempt's inputs and marker, which must survive.
+        consumer_dir = os.path.join(self.scratch, "consumer")
+        earlier = Path(consumer_dir, ".dagon", "inputs", "wf", "A", "a.txt")
+        earlier.parent.mkdir(parents=True)
+        earlier.write_text("earlier\n", encoding="utf-8")
+        Path(consumer_dir, ".dagon", MARKER_NAME).write_text("{}", encoding="utf-8")
+        workflow = Workflow("wf", config=scratch_config(self.scratch), pre_stage=True)
+        producer = Slurm("A", "echo alpha > a.txt")
+        consumer = Slurm("C", "cat workflow:///A/a.txt > c.txt", working_dir=consumer_dir)
+        workflow.add_task(producer)
+        workflow.add_task(consumer)
+        with mock.patch.object(PreparedTask, "stage_in_script", unwritable_lock_owner(PreparedTask.stage_in_script,
+                                                                                         consumer_dir)):
+            self.run_workflow(workflow, fails=True)
+        self.assertEqual("staging", consumer.failure_phase)
+        self.assertFalse(consumer.get_execution_metadata()["pre_stage"].get("stage_in_lock_busy"))
+        self.assertIsNone(mock_scheduler.submission_for(self.log, "C"))
+        self.assertFalse(Path(consumer_dir, ".dagon", LOCK_NAME).exists())  # no ownerless lock left
+        self.assertEqual("earlier\n", earlier.read_text(encoding="utf-8"))  # nothing removed
         self.assertTrue(Path(consumer_dir, ".dagon", MARKER_NAME).exists())
 
     def test_stage_in_handles_spaces_in_scratch_paths(self):

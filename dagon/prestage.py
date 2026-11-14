@@ -414,7 +414,9 @@ class PreparedTask:
         ``.dagon/stage-in-destinations.txt``, which the compute launcher checks.
         With *lock_token*, it first takes the stage-in lock
         (``.dagon/stage-in.lock``) and exits with :data:`LOCK_BUSY_EXIT`,
-        changing nothing, when another run holds it.  The lock is released by
+        changing nothing, when another run holds it.  If the owner token cannot
+        be written and read back, it removes the lock it has just created and
+        exits 1, again before anything is removed or transferred.  The lock is released by
         DAGonStar after the scheduler job has returned.
         It never runs the task command or the allocation prologue.
         """
@@ -431,7 +433,16 @@ class PreparedTask:
                     + " '(if no other run is active, remove that directory and retry)' >&2\n"
                     "  exit " + str(LOCK_BUSY_EXIT) + "\n"
                     "fi\n"
-                    "echo " + quote(lock_token) + " > " + quote(lock_dir + "/owner") + "\n")
+                    "# Record the owner; if that fails, give the new lock back before anything\n"
+                    "# is removed or transferred, so no ownerless lock is left behind\n"
+                    "if ! { echo " + quote(lock_token) + " > " + quote(lock_dir + "/owner")
+                    + "; } 2>/dev/null || [ \"$(head -n 1 " + quote(lock_dir + "/owner") + " 2>/dev/null)\" != "
+                    + quote(lock_token) + " ]; then\n"
+                    "  rm -rf " + quote(lock_dir) + "\n"
+                    "  echo 'DAGonStar: could not record the stage-in lock owner in' " + quote(lock_dir)
+                    + " '; nothing was staged' >&2\n"
+                    "  exit 1\n"
+                    "fi\n")
         script = ("#! /bin/bash\n"
                   "export PATH=\"$HOME/.local/bin:$PATH\"\n"
                   "# This is the DagOn stage-in script (scheduler-aware pre-staging).\n"

@@ -28,7 +28,11 @@ The CI job ``beeond-slurm`` runs it on the single-node Slurm cluster set up by
   starts is detected by the compute launcher, and the command never runs;
 * ``lock``: a stage-in lock held by another run blocks stage-in and
   submission without touching that run's data, and a finished run releases
-  its own lock.
+  its own lock;
+* ``owner``: when the lock's owner token cannot be written (injected with
+  ``umask 0277`` in the generated stage-in script), stage-in gives the new
+  lock back and stops before removing earlier inputs or submitting.  Skipped
+  when run as root, whom file permissions do not bind.
 
 A single-node cluster cannot show queue-time effects; this is ordering and
 gating evidence only.  The script exits non-zero when any check fails.
@@ -48,7 +52,7 @@ sys.path.insert(0, ROOT)
 from dagon import Workflow  # noqa: E402
 from dagon.prestage import PreStageConfigurationError  # noqa: E402
 from dagon.batch import Slurm  # noqa: E402
-from dagon.prestage import LOCK_NAME  # noqa: E402
+from dagon.prestage import LOCK_NAME, MARKER_NAME, PreparedTask  # noqa: E402
 from dagon.stager.base import StagerMover  # noqa: E402
 from dagon.task import DagonTask, TaskType  # noqa: E402
 
@@ -313,6 +317,47 @@ def scenario_lock(scratch: str, partition: Optional[str]) -> List[Check]:
     ]
 
 
+def scenario_owner(scratch: str, partition: Optional[str]) -> List[Check]:
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        print("owner: skipped (file permissions do not bind root)", flush=True)
+        return []
+    # Seed what an earlier attempt would have left; it must survive.
+    consumer_dir = os.path.join(scratch, "ci-prestage-owner-consume")
+    workflow = Workflow("ci-prestage-owner", config=site_config(scratch, partition), pre_stage=True)
+    producer = DagonTask(TaskType.SLURM, "produce", "seq 1 7 > data.txt", partition=partition, ntasks=1)
+    consumer = DagonTask(TaskType.SLURM, "consume", JOB, partition=partition, ntasks=1, working_dir=consumer_dir)
+    workflow.add_task(producer)
+    workflow.add_task(consumer)
+    earlier = os.path.join(consumer_dir, ".dagon", "inputs", "earlier.txt")
+    os.makedirs(os.path.dirname(earlier), exist_ok=True)
+    with open(earlier, "w", encoding="utf-8", newline="\n") as stream:
+        stream.write("earlier\n")
+    original = PreparedTask.stage_in_script
+
+    def unwritable_owner(prepared, lock_token=None):
+        script = original(prepared, lock_token)
+        if os.path.normpath(prepared.working_dir) != os.path.normpath(consumer_dir):
+            return script
+        first, _newline, rest = script.partition("\n")
+        return first + "\numask 0277\n" + rest  # the lock directory is created read-only
+
+    PreparedTask.stage_in_script = unwritable_owner  # type: ignore[method-assign]
+    try:
+        run(workflow)
+    finally:
+        PreparedTask.stage_in_script = original  # type: ignore[method-assign]
+    return [
+        ("owner: consumer failed in staging",
+         consumer.status.name == "FAILED" and consumer.failure_phase == "staging",
+         "%s %s" % (consumer.status.name, consumer.failure_phase)),
+        ("owner: no ownerless lock was left", not os.path.exists(os.path.join(consumer_dir, ".dagon", LOCK_NAME)),
+         ""),
+        ("owner: earlier inputs were not removed and nothing was submitted",
+         read(earlier) == "earlier\n" and read(consumer_dir, ".dagon", "launcher.sh") is None
+         and read(consumer_dir, ".dagon", MARKER_NAME) is None, ""),
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--scratch", help="shared scratch directory (default: temporary)")
@@ -323,7 +368,8 @@ def main() -> int:
         os.makedirs(scratch, exist_ok=True)
         checks: List[Check] = []
         for scenario in (scenario_order, scenario_legacy, scenario_gate, scenario_beeond, scenario_stager,
-                         scenario_checkpoint, scenario_traversal, scenario_dry, scenario_mutation, scenario_lock):
+                         scenario_checkpoint, scenario_traversal, scenario_dry, scenario_mutation, scenario_lock,
+                         scenario_owner):
             print("== %s" % scenario.__name__, flush=True)
             checks.extend(scenario(scratch, args.partition))
     failed = 0

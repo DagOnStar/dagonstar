@@ -19,10 +19,11 @@ from unittest import mock
 from dagon import Workflow
 from dagon.batch import Batch, RemoteSlurm, Slurm
 from dagon.platform_support import bash_executable
-from dagon.prestage import MARKER_NAME, SchedulerSubmissionError, StageInFailedError
+from dagon.prestage import MARKER_NAME, PreparedTask, SchedulerSubmissionError, StageInFailedError
 from dagon.task import Task
 
 from tests.helpers import canned_context_script, scratch_config
+from tests.test_scheduler_prestaging import unwritable_lock_owner
 
 
 class LoopbackSSH:
@@ -265,6 +266,16 @@ class RemoteSlurmPreStageTests(unittest.TestCase):
         self.assertEqual("FINISHED", consumer.status.name)
         self.assertFalse(Path(consumer.working_dir, ".dagon", "stage-in.lock").exists())
         self.assertTrue(Path(consumer.working_dir, ".dagon", "stage-in-destinations.txt").exists())
+
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "needs permissions that bind the current user")
+    def test_remote_lock_owner_write_failure_stops_before_sbatch(self):
+        workflow, _producer, consumer = self.build()
+        injected = unwritable_lock_owner(PreparedTask.stage_in_script, consumer.working_dir)
+        with mock.patch.object(PreparedTask, "stage_in_script", injected):
+            self.run_workflow(workflow, fails=True)
+        self.assertEqual("staging", consumer.failure_phase)
+        self.assertNotIn("sbatch", [event[0] for event in self.events(consumer)])
+        self.assertFalse(Path(consumer.working_dir, ".dagon", "stage-in.lock").exists())
 
     def test_remote_example_with_loopback_ssh(self):
         import importlib

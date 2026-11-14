@@ -134,7 +134,9 @@ configuration validation separately from live integration behavior.
 - The compute launcher must re-check staged content against
   `.dagon/stage-in-destinations.txt` before the payload runs.
 - Keep shared working directories ineligible and the stage-in lock
-  token-owned: never remove another run's lock.
+  token-owned: never remove another run's lock. Taking the lock must be
+  fail-atomic: if the owner token cannot be written and read back, remove the
+  new lock and exit non-zero before any input is removed or transferred.
 - Stage-in markers and metadata must never contain credentials, and
   `execution.pre_stage` must stay path-free. A marker is never a skip token.
 - Changes require the local and remote pre-staging tests,
