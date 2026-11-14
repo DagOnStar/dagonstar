@@ -6,11 +6,17 @@ runs immediately with the local bash, in the ``-D`` directory, and the process
 exits with the script's status, which is what ``sbatch -W`` reports.  There is
 no queue, no allocation, and no resource accounting.
 
-Every submission is appended to a JSON-lines log with a wall-clock timestamp
-and two observations taken *at submission time*: whether the task's stage-in
+Every submission is recorded with a wall-clock timestamp and two
+observations taken *at submission time*: whether the task's stage-in
 completion marker already existed and whether ``.dagon/inputs`` was already
 populated.  That is how the pre-staging examples and tests show that staging
 finished before resources were requested.
+
+Independent tasks submit concurrently, so each submission is written to its
+own file in ``<log>.d/`` with an atomic rename, rather than appended to one
+shared file: concurrent appends from several processes are not reliable on
+every platform (records were observed to go missing on Windows).
+:func:`read_log` returns the records ordered by time.
 
 Usage::
 
@@ -45,6 +51,21 @@ def _inputs_populated(directory: str) -> bool:
     return False
 
 
+def _record_dir(log_path: str) -> str:
+    return log_path + ".d"
+
+
+def _write_record(log_path: str, record: Dict[str, Any]) -> None:
+    """Write *record* to its own file with an atomic rename (safe under concurrency)."""
+    directory = _record_dir(log_path)
+    os.makedirs(directory, exist_ok=True)
+    name = "%020d-%d.json" % (time.time_ns(), os.getpid())
+    temporary = os.path.join(directory, "." + name + ".tmp")
+    with open(temporary, "w", encoding="utf-8", newline="\n") as stream:
+        stream.write(json.dumps(record))
+    os.replace(temporary, os.path.join(directory, name))
+
+
 def main(argv: List[str]) -> int:
     log_path, arguments = argv[0], argv[1:]
     reject = "--reject" in arguments
@@ -58,8 +79,7 @@ def main(argv: List[str]) -> int:
         "inputs_populated": _inputs_populated(directory), "rejected": reject,
         "parsable": "--parsable" in arguments,
     }
-    with open(log_path, "a", encoding="utf-8") as stream:
-        stream.write(json.dumps(record) + "\n")
+    _write_record(log_path, record)
     if reject:
         sys.stderr.write("sbatch: error: Batch job submission failed: Invalid partition name specified\n")
         return 1
@@ -90,11 +110,16 @@ def mock_sbatch(log_path: str, reject: bool = False) -> Iterator[None]:
 
 
 def read_log(log_path: str) -> List[Dict[str, Any]]:
-    """Return the recorded submissions in order."""
-    if not os.path.isfile(log_path):
+    """Return the recorded submissions, ordered by submission time."""
+    directory = _record_dir(log_path)
+    if not os.path.isdir(directory):
         return []
-    with open(log_path, encoding="utf-8") as stream:
-        return [json.loads(line) for line in stream if line.strip()]
+    records = []
+    for name in os.listdir(directory):
+        if name.endswith(".json") and not name.startswith("."):
+            with open(os.path.join(directory, name), encoding="utf-8") as stream:
+                records.append(json.load(stream))
+    return sorted(records, key=lambda item: item["time"])
 
 
 def submission_for(log_path: str, job_name: str) -> Optional[Dict[str, Any]]:
