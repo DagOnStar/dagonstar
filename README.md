@@ -200,14 +200,20 @@ Scheduler-aware pre-staging is opt-in and leaves the default lifecycle
 unchanged: the legacy launcher is guarded by a byte-for-byte fixture. Its
 ordering, `sbatch` gate, typed failure phases (from `sbatch --parsable` job
 identifiers), retries, content verification of same-host transfers,
-changed-input checkpoint invalidation, side-effect-free dry run, rejection of
-`..` references and of `StagerMover.SLURM`, and RemoteSlurm path are tested
-with a mock `sbatch` and a loopback SSH double. The `beeond-slurm` CI job runs
+changed-input checkpoint invalidation, a compute-side check that staged
+content did not change while queued, a token-owned stage-in lock with
+rejection of shared working directories, side-effect-free dry run, rejection
+of `..` references and of `StagerMover.SLURM`, and the RemoteSlurm path are
+tested with a mock `sbatch` and a loopback SSH double. A submission that exits
+0 without a job identifier is treated as a submission failure. One manual run
+on a production Slurm 23.11 cluster (NFS-shared scratch, compute nodes, real
+SSH for RemoteSlurm) passed the same harness and the local and remote
+examples; it is evidence for one site, not a general guarantee. The `beeond-slurm` CI job runs
 the same scenarios with real `sbatch` on its single-node cluster, once the
 branch is pushed. Inputs moved by `SCP`, `GRIDFTP`, or `SKYCDS` are checked
-for existence only, not content. Pre-staging has
-not been validated on a production multi-node cluster. Shared-scratch
-visibility cannot always be detected automatically. Rewritten `workflow://`
+for existence only, not content. Production-scale transfers and real queue
+waits have not been measured. Shared-scratch visibility cannot be detected
+before submission; it is checked when the job starts. Rewritten `workflow://`
 arguments in user commands remain unquoted, as before, so scratch paths with
 spaces are supported by stage-in but not by those arguments. As part of this
 change, the context-discovery script (`context.sh`, used in every lifecycle)

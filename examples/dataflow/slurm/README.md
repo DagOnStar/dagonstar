@@ -233,6 +233,8 @@ python3 pre_stage_remote.py --host <login-host> --user <user> --key ~/.ssh/id_rs
 
 `stage_in.sh` is written to the login node and run there over SSH, and the
 remote `sbatch` runs only after stage-in succeeds. Nothing is assumed to be
-mounted locally. The unit tests run this script against a loopback SSH double;
-it has not been run against a production cluster as part of this change.
+mounted locally. The unit tests run this script against a loopback SSH double.
+It has also been run once, manually, from a workstation against one production
+Slurm 23.11 cluster, and ended with `Verification: ok`. Demo 6 passed on the
+same cluster in both lifecycles.
 Demos 6 and 7 submit real jobs, so run them only where you are authorised to.

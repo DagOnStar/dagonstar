@@ -177,8 +177,10 @@ the compute nodes share at the same path, and that persists while the job is
 queued. If stage-in fails, or a staged input's content differs from its
 source, the job is never submitted, and the task fails with
 `failure_phase == "staging"`. BeeOND tasks and tasks using
-`StagerMover.SLURM` are not eligible. A completed pre-staged task is reused on
-resume only if its inputs are unchanged. Other task types
+`StagerMover.SLURM` are not eligible, and neither are tasks that share a fixed
+`working_dir`. A completed pre-staged task is reused on resume only if its
+inputs are unchanged, and the job refuses to run if its staged inputs changed
+while it was queued. Other task types
 ignore the workflow default. See [Scheduler-aware pre-staging](scheduler_prestaging.md)
 for eligibility, filesystem requirements, failure handling, and metrics, and
 `examples/dataflow/slurm/pre_stage_mock.py` for a run without Slurm.

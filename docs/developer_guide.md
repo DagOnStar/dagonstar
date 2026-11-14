@@ -163,15 +163,18 @@ generated shell text. Add information to `PreparedTask` instead.
   implement `run_stage_in()` (run the script outside any allocation),
   `write_stage_marker()` (atomic), `read_scratch_file()` (also used to read
   the stage-in identity record), `run_identity_check()` (run a read-only
-  script without writing a file, for checkpoint re-verification), and
-  optionally `requested_cores()`. Extend `pre_stage_unsupported_reason()` for
+  script without writing a file, for checkpoint re-verification),
+  `release_stage_lock()` (remove `.dagon/stage-in.lock` only when the token
+  matches), and optionally `requested_cores()`. Extend `pre_stage_unsupported_reason()` for
   per-task restrictions, as `Slurm` does for BeeOND; the base class already
   refuses `StagerMover.SLURM`. Scheduler-only setup belongs in
   `launcher_prologue()`, which only the compute launcher contains.
 - Classify scheduler failures as staging, submission, or execution failures,
   from the job identifier printed by `sbatch --parsable` (set while
   `task.pre_stage_submission` is true), never from display text. `sbatch`
-  must never run when stage-in failed or cannot be confirmed.
+  must never run when stage-in failed or cannot be confirmed, and a
+  submission without a job identifier is a submission failure, even with
+  exit status 0.
 - Test with `examples/dataflow/slurm/mock_scheduler.py` (a mock `sbatch -W`) and
   the loopback SSH double in `tests/test_remote_scheduler_prestaging.py`.
 

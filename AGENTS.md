@@ -129,7 +129,12 @@ configuration validation separately from live integration behavior.
 - Pre-staged dry runs must stay side-effect free (no scratch, scripts, SSH, or
   scheduler calls), and `..` references must be refused before any transfer.
 - Classify submission versus execution failures from the `sbatch --parsable`
-  job identifier, never from display text.
+  job identifier, never from display text, and never treat a submission
+  without a job identifier as completed.
+- The compute launcher must re-check staged content against
+  `.dagon/stage-in-destinations.txt` before the payload runs.
+- Keep shared working directories ineligible and the stage-in lock
+  token-owned: never remove another run's lock.
 - Stage-in markers and metadata must never contain credentials, and
   `execution.pre_stage` must stay path-free. A marker is never a skip token.
 - Changes require the local and remote pre-staging tests,

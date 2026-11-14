@@ -114,7 +114,10 @@ pre-staging is effective (`Workflow(pre_stage=True)` or `Slurm(...,
 pre_stage=True)`), steps 12 and 13 split. `stage_in.sh` runs on the submission
 host and is verified (content is compared with the source when the source is
 readable there), `.dagon/stage-in-complete.json` is written, and only then is a
-compute-only launcher submitted with `sbatch --parsable`. A failed stage-in never reaches the
+compute-only launcher submitted with `sbatch --parsable`. The compute launcher
+re-checks the staged content before the command runs, and a token-owned lock
+in `.dagon/stage-in.lock` keeps concurrent runs out of the same working
+directory until the job has returned. A failed stage-in never reaches the
 scheduler. See [Scheduler-aware pre-staging](scheduler_prestaging.md).
 
 ## Status model

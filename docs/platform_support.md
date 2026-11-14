@@ -74,7 +74,11 @@ with real `sbatch`. The script checks that:
 - a completed task is reused when its input is unchanged and runs again when
   the producer's output changed;
 - a `workflow://` reference with `..` fails in staging without a transfer or
-  submission, and a dry run creates no scratch directory.
+  submission, and a dry run creates no scratch directory;
+- a staged input changed after stage-in but before the job starts stops the
+  job before the command runs;
+- a stage-in lock held by another run blocks stage-in without touching that
+  run's data, and a finished run releases its own lock.
 
 Finally, the job runs `examples/dataflow/slurm/pre_stage_local.py` on the
 cluster. A single node with an empty queue shows ordering and gating only, not
