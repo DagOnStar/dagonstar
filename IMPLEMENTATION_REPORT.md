@@ -210,7 +210,10 @@ The guide is `docs/scheduler_prestaging.md`, linked from `README.md`, `docs/READ
 ## 11. Commit history
 
 ```text
-<audit-fix commits; see git log>
+(this commit) Record the audit-fix commits in the implementation report
+aac6d5c Document the pre-staging audit fixes and update the report
+c6b9761 Cover the audit fixes in the real-Slurm pre-staging harness
+88e5c17 Fix the audit findings in scheduler-aware pre-staging
 2d0d69a Add implementation report for scheduler-aware pre-staging
 4c971a5 Document the compute-side visibility check and quoting fixes
 025525e Harden pre-staging against injection and non-shared scratch
