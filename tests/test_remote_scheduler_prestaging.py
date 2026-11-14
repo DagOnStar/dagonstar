@@ -36,6 +36,7 @@ class LoopbackSSH:
         self.fail_on = None          # substring of a command that raises (disconnect)
         self.fail_create = None      # substring of a filepath whose creation fails
         self.reject_sbatch = False
+        self.omit_job_id = False     # exit 0 without printing a job identifier
         LoopbackSSH.instances.append(self)
 
     def create_file(self, filepath, content):
@@ -64,9 +65,14 @@ class LoopbackSSH:
                 return {"code": 1, "output": "", "message": "sbatch: error: invalid account"}
             completed = subprocess.run([bash_executable(), script], cwd=directory, capture_output=True, text=True)
             banner = "77\n" if "--parsable" in argv else "Submitted batch job 77\n"
+            if self.omit_job_id:
+                return {"code": 0, "output": "", "message": ""}
             return {"code": completed.returncode, "output": banner + completed.stdout,
                     "message": completed.stderr}
-        if argv and argv[0] == "bash":
+        if argv[:2] == ["bash", "-c"]:
+            # Inline scripts (checkpoint identity check, lock release) write no file.
+            self.events.append(("command", "bash -c"))
+        elif argv and argv[0] == "bash":
             self.events.append(("bash", os.path.basename(argv[-1])))
         else:
             self.events.append(("command", argv[0] if argv else command.split()[0]))
@@ -244,6 +250,21 @@ class RemoteSlurmPreStageTests(unittest.TestCase):
         self.run_workflow(workflow)
         self.assertIn("--parsable", self.events(consumer)[-1][1]["options"])
         self.assertEqual("77", consumer.get_execution_metadata()["pre_stage"]["scheduler_job_id"])
+
+    def test_remote_success_without_job_identifier_fails(self):
+        workflow, _producer, consumer = self.build()
+        consumer.ssh_connection.omit_job_id = True
+        self.run_workflow(workflow, fails=True)
+        self.assertEqual("FAILED", consumer.status.name)
+        self.assertEqual("submission", consumer.failure_phase)
+        self.assertNotEqual(0, workflow.checkpoints[consumer.checkpoint_key()]["code"])
+
+    def test_remote_lock_is_released_over_ssh(self):
+        workflow, _producer, consumer = self.build()
+        self.run_workflow(workflow)
+        self.assertEqual("FINISHED", consumer.status.name)
+        self.assertFalse(Path(consumer.working_dir, ".dagon", "stage-in.lock").exists())
+        self.assertTrue(Path(consumer.working_dir, ".dagon", "stage-in-destinations.txt").exists())
 
     def test_remote_example_with_loopback_ssh(self):
         import importlib

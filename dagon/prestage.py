@@ -49,6 +49,19 @@ MARKER_SCHEMA = "dagonstar.stage-in-marker/2"
 #: content identity of every source it could verify (see :func:`identity_script`).
 IDENTITY_NAME = "stage-in-identity.txt"
 
+#: File, inside ``<working_dir>/.dagon``, in which the stage-in script records the
+#: content listing of every staged destination.  The compute launcher recomputes
+#: it when the allocation starts and refuses to run if anything changed.
+DESTINATION_IDENTITY_NAME = "stage-in-destinations.txt"
+
+#: Lock directory, inside ``<working_dir>/.dagon``, held from the start of
+#: stage-in until the scheduler job has returned.  ``mkdir`` creates it
+#: atomically; an ``owner`` file inside identifies the holder.
+LOCK_NAME = "stage-in.lock"
+
+#: Exit status of ``stage_in.sh`` when another run holds the stage-in lock.
+LOCK_BUSY_EXIT = 75
+
 #: Integrity level of an input whose staged content was compared with its
 #: source on the submission host (local ``COPY`` and ``LINK`` transfers).
 INTEGRITY_CONTENT = "content"
@@ -267,6 +280,32 @@ def identity_body(inputs: List[StageInput]) -> str:
     return body
 
 
+def destination_identity_body(inputs: List[StageInput]) -> str:
+    """Return shell commands printing the content listing of every staged destination.
+
+    Unlike :func:`identity_body`, this covers every input, whatever its
+    integrity level: the staged copies are always readable where the stage-in
+    script and the compute launcher run.
+    """
+    body = ""
+    for item in inputs:
+        body += "echo " + quote("== " + item.reference) + "\n"
+        body += "dagon_tree_digest " + quote(item.destination) + "\n"
+    return body
+
+
+def _group(body: str, indent: str = "  ") -> str:
+    """Return *body* as a brace group whose output can be redirected or captured."""
+    return "{ :\n" + "".join(indent + line + "\n" for line in body.splitlines()) + indent + "}"
+
+
+def lock_release_script(lock_dir: str, token: str) -> str:
+    """Return shell commands that remove *lock_dir* only if *token* owns it."""
+    owner = lock_dir + "/owner"
+    return ("if [ -f " + quote(owner) + " ] && [ \"$(head -n 1 " + quote(owner) + ")\" = "
+            + quote(token) + " ]; then rm -rf " + quote(lock_dir) + "; fi\n")
+
+
 def identity_script(inputs: List[StageInput]) -> str:
     """Return a bash script that prints the current content identity of *inputs*.
 
@@ -319,8 +358,11 @@ class PreparedTask:
 
         It contains no transfers.  Before the prologue and the command, it checks
         that the stage-in marker and every staged input are visible on the
-        compute node, so a non-shared scratch directory fails the job at once
-        instead of computing on missing data.
+        compute node, and that the content of the staged inputs still matches
+        the listing recorded at stage-in (``.dagon/stage-in-destinations.txt``).
+        A non-shared scratch directory, or an input changed while the job was
+        queued, therefore fails the job at once instead of computing on missing
+        or different data.
         """
         stamp = self.working_dir + "/.dagon/" + ALLOCATION_STARTED_NAME
         marker = self.working_dir + "/.dagon/" + MARKER_NAME
@@ -332,9 +374,23 @@ class PreparedTask:
                  "  exit 1\n"
                  "fi\n")
         if self.inputs:
+            recorded = self.working_dir + "/.dagon/" + DESTINATION_IDENTITY_NAME
             guard += _VERIFY_FUNCTION
             for item in self.inputs:
                 guard += "dagon_verify_staged " + quote(item.destination) + " || exit 1\n"
+            guard += ("# Confirm that the staged content is still what stage-in verified: a file\n"
+                      "# changed or truncated while the job was queued fails here.\n"
+                      + _DIGEST_FUNCTIONS
+                      + "if [ ! -f " + quote(recorded) + " ]; then\n"
+                      "  echo \"DAGonStar: the staged-input record .dagon/" + DESTINATION_IDENTITY_NAME
+                      + " is missing\" >&2\n"
+                      "  exit 1\n"
+                      "fi\n"
+                      "dagon_staged_now=\"$(" + _group(destination_identity_body(self.inputs)) + ")\"\n"
+                      "if [ \"$dagon_staged_now\" != \"$(cat " + quote(recorded) + ")\" ]; then\n"
+                      "  echo \"DAGonStar: staged inputs changed between stage-in and the start of the job\" >&2\n"
+                      "  exit 1\n"
+                      "fi\n")
         return (self.header + self._cd(True)
                 + "# Record when the allocation started running this launcher\n"
                 + "date +%s > " + quote(stamp) + " 2>/dev/null || true\n\n"
@@ -344,7 +400,7 @@ class PreparedTask:
                 + "# see .dagon/" + STAGE_SCRIPT_NAME + " and .dagon/" + MARKER_NAME + "\n\n"
                 + self.invoke)
 
-    def stage_in_script(self) -> str:
+    def stage_in_script(self, lock_token: Optional[str] = None) -> str:
         """Return the stage-in script that runs on the submission host.
 
         The script removes a stale completion marker, identity record, and
@@ -354,16 +410,35 @@ class PreparedTask:
         (:data:`INTEGRITY_CONTENT`) are compared file by file with their source;
         the others are only checked for existence.  On success it records the
         content identity of the compared sources in ``.dagon/stage-in-identity.txt``.
+        It also records the content listing of every staged destination in
+        ``.dagon/stage-in-destinations.txt``, which the compute launcher checks.
+        With *lock_token*, it first takes the stage-in lock
+        (``.dagon/stage-in.lock``) and exits with :data:`LOCK_BUSY_EXIT`,
+        changing nothing, when another run holds it.  The lock is released by
+        DAGonStar after the scheduler job has returned.
         It never runs the task command or the allocation prologue.
         """
         marker = self.working_dir + "/.dagon/" + MARKER_NAME
         identity = self.working_dir + "/.dagon/" + IDENTITY_NAME
+        destinations = self.working_dir + "/.dagon/" + DESTINATION_IDENTITY_NAME
+        lock = ""
+        if lock_token is not None:
+            lock_dir = self.working_dir + "/.dagon/" + LOCK_NAME
+            lock = ("# Take the stage-in lock: another run using this working directory must\n"
+                    "# not delete or replace these inputs until its job has returned\n"
+                    "if ! mkdir " + quote(lock_dir) + " 2>/dev/null; then\n"
+                    "  echo 'DAGonStar: another pre-staged run holds the stage-in lock' " + quote(lock_dir)
+                    + " '(if no other run is active, remove that directory and retry)' >&2\n"
+                    "  exit " + str(LOCK_BUSY_EXIT) + "\n"
+                    "fi\n"
+                    "echo " + quote(lock_token) + " > " + quote(lock_dir + "/owner") + "\n")
         script = ("#! /bin/bash\n"
                   "export PATH=\"$HOME/.local/bin:$PATH\"\n"
                   "# This is the DagOn stage-in script (scheduler-aware pre-staging).\n"
                   "# It runs on the submission host before the scheduler job is requested.\n\n"
                   "code=0\n"
-                  "rm -f " + quote(marker) + " " + quote(identity) + "\n"
+                  + lock
+                  + "rm -f " + quote(marker) + " " + quote(identity) + " " + quote(destinations) + "\n"
                   "# Inputs are always staged again: nothing from an earlier attempt is trusted\n"
                   "rm -rf " + quote(self.working_dir + "/.dagon/inputs") + "\n"
                   "cd " + quote(self.working_dir) + " || exit 1\n\n"
@@ -389,10 +464,13 @@ class PreparedTask:
                                    + quote(item.destination) + " || code=1\n")
                 script += "fi\n"
         script += ("\n# Record the content identity of the compared sources (checkpoint validation)\n"
+                   "# and of every staged destination (checked when the job starts)\n"
                    "if [ \"$code\" -eq 0 ]; then\n"
-                   "  { :\n" + "".join("  " + line + "\n" for line in identity_body(self.inputs).splitlines())
-                   + "  } > " + quote(identity + ".tmp") + " && mv -f " + quote(identity + ".tmp") + " "
-                   + quote(identity) + " || code=1\n"
+                   "  " + _group(identity_body(self.inputs), "    ") + " > " + quote(identity + ".tmp")
+                   + " && mv -f " + quote(identity + ".tmp") + " " + quote(identity) + " || code=1\n"
+                   "  " + _group(destination_identity_body(self.inputs), "    ") + " > "
+                   + quote(destinations + ".tmp") + " && mv -f " + quote(destinations + ".tmp") + " "
+                   + quote(destinations) + " || code=1\n"
                    "fi\n")
         script += "\nexit $code\n"
         return script
@@ -410,7 +488,8 @@ class PreparedTask:
 
 
 def marker_document(task: Any, prepared: PreparedTask, started_at: str, finished_at: str,
-                    staging_seconds: float, source_identity: Optional[str] = None) -> str:
+                    staging_seconds: float, source_identity: Optional[str] = None,
+                    destination_identity: Optional[str] = None) -> str:
     """Return the JSON content of the stage-in completion marker.
 
     The marker is local provenance written only after a verified successful
@@ -432,5 +511,6 @@ def marker_document(task: Any, prepared: PreparedTask, started_at: str, finished
         "staging_finished_at": finished_at,
         "staging_seconds": round(staging_seconds, 3),
         "source_identity_sha256": source_identity,
+        "destination_identity_sha256": destination_identity,
     }
     return json.dumps(document, indent=2, sort_keys=True) + "\n"

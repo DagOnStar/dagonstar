@@ -20,10 +20,10 @@ from dagon import Workflow
 from dagon.batch import Batch, Slurm
 from dagon.platform_support import bash_executable
 from dagon.prestage import (
-    IDENTITY_NAME, INTEGRITY_CONTENT, INTEGRITY_EXISTENCE, MARKER_NAME, PRE_STAGE_POLICY_VERSION, PreparedTask,
-    PreStageConfigurationError, SchedulerSubmissionError, ScheduledExecutionError, StageInFailedError, StageInput,
-    TaskPhase, estimated_core_hours_saved, identity_digest, identity_script, validate_pre_stage,
-    validate_reference_path,
+    DESTINATION_IDENTITY_NAME, IDENTITY_NAME, INTEGRITY_CONTENT, INTEGRITY_EXISTENCE, LOCK_NAME, MARKER_NAME,
+    PRE_STAGE_POLICY_VERSION, PreparedTask, PreStageConfigurationError, SchedulerSubmissionError,
+    ScheduledExecutionError, StageInFailedError, StageInput, TaskPhase, estimated_core_hours_saved,
+    identity_digest, identity_script, validate_pre_stage, validate_reference_path,
 )
 from dagon.stager.base import DataMover, Stager, StagerMover
 from dagon.task import DagonTask, Task, TaskType, parsable_job_id
@@ -143,6 +143,32 @@ class ConfigurationTests(unittest.TestCase):
                 eligible.set_stager_mover(mover)
                 make_workflow().add_task(eligible)
                 self.assertTrue(eligible.resolve_pre_stage())
+
+    def test_shared_working_directory_is_not_eligible(self):
+        with tempfile.TemporaryDirectory() as directory:
+            shared = os.path.join(directory, "shared")
+            workflow = make_workflow()
+            workflow.add_task(Slurm("first", "true", working_dir=shared))
+            with self.assertRaisesRegex(PreStageConfigurationError, "shared with task first"):
+                workflow.add_task(Slurm("second", "true", working_dir=shared + "/", pre_stage=True))
+            workflow = Workflow("w", config=minimal_config(), pre_stage=True)
+            first = Slurm("first", "true", working_dir=shared)
+            second = Slurm("second", "true", working_dir=os.path.join(shared, ".", ""))
+            workflow.add_task(first)
+            workflow.add_task(second)
+            with self.assertLogs(level="WARNING") as logs:
+                self.assertFalse(second.resolve_pre_stage())
+                self.assertFalse(first.resolve_pre_stage())
+            self.assertIn("shared with task", "\n".join(logs.output))
+            # The same path on another host is a different directory.
+            workflow = make_workflow()
+            local = Slurm("local", "true", working_dir=shared)
+            elsewhere = Slurm("elsewhere", "true", working_dir=shared, pre_stage=True)
+            elsewhere.ip = "192.0.2.1"
+            workflow.add_task(local)
+            workflow.add_task(elsewhere)
+            self.assertIsNone(elsewhere.shared_working_dir_task())
+            self.assertIsNone(Slurm("solo", "true", working_dir=shared).shared_working_dir_task())
 
     def test_unsafe_references_are_rejected(self):
         for workflow_name, task_name, local_path in (("wf", "A", "/../outside"), ("wf", "A", "/x/../../y"),
@@ -322,7 +348,7 @@ class LifecycleOrderTests(unittest.TestCase):
             calls.append(("marker", MARKER_NAME, content))
 
         def read_scratch_file(task, filepath):
-            return "" if filepath.endswith(IDENTITY_NAME) else None
+            return "" if filepath.endswith((IDENTITY_NAME, DESTINATION_IDENTITY_NAME)) else None
 
         with mock.patch.object(Slurm, "on_execute", on_execute), \
                 mock.patch.object(Slurm, "run_stage_in", run_stage_in), \
@@ -406,6 +432,18 @@ class LifecycleOrderTests(unittest.TestCase):
                 _consumer, _calls, error = self.run_consumer(
                     True, None, submit_result={"code": 1, "output": output, "message": "failed"})
                 self.assertIsInstance(error, expected)
+
+    def test_success_without_a_job_identifier_is_never_completed(self):
+        for output in ("", "Submitted batch job 7\n", "sbatch: warning: partition is draining\n", "7 jobs\n"):
+            with self.subTest(output=output):
+                consumer, calls, error = self.run_consumer(
+                    True, None, submit_result={"code": 0, "output": output, "message": ""})
+                self.assertIsInstance(error, SchedulerSubmissionError)
+                self.assertIn("without a job identifier", str(error))
+                self.assertEqual("submission", consumer.failure_phase)
+                self.assertEqual(TaskPhase.FAILED, consumer.pre_stage_phase)
+                self.assertIsNone(consumer.get_execution_metadata()["pre_stage"]["scheduler_job_id"])
+                self.assertNotEqual(0, consumer.workflow.checkpoints[consumer.checkpoint_key()]["code"])
 
     def test_parsable_job_id(self):
         self.assertEqual("42", parsable_job_id("42\n"))
@@ -767,6 +805,65 @@ class LocalMockSchedulerTests(unittest.TestCase):
         self.assertIsNone(mock_scheduler.submission_for(self.log, "C"))
         self.assertFalse(Path(consumer.working_dir, ".dagon", MARKER_NAME).exists())
         self.assertFalse(Path(consumer.working_dir, ".dagon", IDENTITY_NAME).exists())
+
+    def test_staged_input_changed_while_queued_never_reaches_the_command(self):
+        original = Slurm.on_execute
+        for label, change in (("same-size rewrite", lambda staged: staged.write_text("ALPHA\n", encoding="utf-8")),
+                              ("truncation", lambda staged: staged.write_text("", encoding="utf-8")),
+                              ("removed", lambda staged: staged.unlink())):
+            with self.subTest(change=label):
+                scratch = os.path.join(self.tmp.name, label.replace(" ", "-"))
+                workflow, _first, _second, consumer = three_task_workflow(scratch, workflow_pre_stage=True)
+
+                def queued_change(task, script, script_name, change=change):
+                    if task.name == "C" and script_name == "launcher.sh":
+                        # Stage-in has verified and recorded the inputs; the job is queued.
+                        change(Path(task.working_dir, ".dagon", "inputs", "wf", "A", "a.txt"))
+                    return original(task, script, script_name)
+
+                with mock.patch.object(Slurm, "on_execute", queued_change):
+                    self.run_workflow(workflow, fails=True)
+                self.assertEqual("FAILED", consumer.status.name)
+                self.assertEqual("execution", consumer.failure_phase)
+                self.assertFalse(Path(consumer.working_dir, "c.txt").exists())  # the command never ran
+                self.assertTrue(Path(consumer.working_dir, ".dagon", DESTINATION_IDENTITY_NAME).exists())
+
+    def test_stage_in_lock_is_released_after_the_job(self):
+        workflow, _first, _second, consumer = three_task_workflow(self.scratch, workflow_pre_stage=True)
+        self.run_workflow(workflow)
+        self.assertEqual("FINISHED", consumer.status.name)
+        self.assertFalse(Path(consumer.working_dir, ".dagon", LOCK_NAME).exists())
+        marker = json.loads(Path(consumer.working_dir, ".dagon", MARKER_NAME).read_text(encoding="utf-8"))
+        self.assertEqual(64, len(marker["destination_identity_sha256"]))
+
+    def test_lock_is_released_when_staging_fails(self):
+        workflow, _first, _second, consumer = three_task_workflow(
+            self.scratch, workflow_pre_stage=True, command="cat workflow:///A/missing.txt")
+        self.run_workflow(workflow, fails=True)
+        self.assertEqual("staging", consumer.failure_phase)
+        self.assertFalse(Path(consumer.working_dir, ".dagon", LOCK_NAME).exists())
+
+    def test_another_runs_lock_blocks_stage_in_without_touching_its_data(self):
+        consumer_dir = os.path.join(self.scratch, "consumer")
+        lock = Path(consumer_dir, ".dagon", LOCK_NAME)
+        lock.mkdir(parents=True)
+        Path(lock, "owner").write_text("another-run\n", encoding="utf-8")
+        foreign = Path(consumer_dir, ".dagon", "inputs", "wf", "A", "a.txt")
+        foreign.parent.mkdir(parents=True)
+        foreign.write_text("theirs\n", encoding="utf-8")
+        Path(consumer_dir, ".dagon", MARKER_NAME).write_text("{}", encoding="utf-8")
+        workflow = Workflow("wf", config=scratch_config(self.scratch), pre_stage=True)
+        producer = Slurm("A", "echo alpha > a.txt")
+        consumer = Slurm("C", "cat workflow:///A/a.txt > c.txt", working_dir=consumer_dir)
+        workflow.add_task(producer)
+        workflow.add_task(consumer)
+        self.run_workflow(workflow, fails=True)
+        self.assertEqual("staging", consumer.failure_phase)
+        self.assertTrue(consumer.get_execution_metadata()["pre_stage"]["stage_in_lock_busy"])
+        self.assertIsNone(mock_scheduler.submission_for(self.log, "C"))
+        self.assertEqual("another-run\n", Path(lock, "owner").read_text(encoding="utf-8"))  # not released
+        self.assertEqual("theirs\n", foreign.read_text(encoding="utf-8"))  # nothing replaced
+        self.assertTrue(Path(consumer_dir, ".dagon", MARKER_NAME).exists())
 
     def test_stage_in_handles_spaces_in_scratch_paths(self):
         scratch = os.path.join(self.tmp.name, "scratch with spaces")

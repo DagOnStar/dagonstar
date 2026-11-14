@@ -1,5 +1,6 @@
 import os
 import shlex
+import shutil
 from typing import Any, Dict, List, Optional, Union
 
 from dagon.task import ExecutionResult, Task
@@ -7,7 +8,7 @@ from dagon.remote import RemoteTask
 from subprocess import Popen, PIPE, STDOUT
 from dagon.shell import join_command, quote
 from dagon.platform_support import bash_executable, launcher_environment
-from dagon.prestage import MARKER_NAME, STAGE_SCRIPT_NAME, validate_pre_stage
+from dagon.prestage import LOCK_NAME, MARKER_NAME, STAGE_SCRIPT_NAME, lock_release_script, validate_pre_stage
 
 
 class Batch(Task):
@@ -433,6 +434,18 @@ class Slurm(Batch):
         """Run a read-only identity script with the local bash, writing no file."""
         return Batch.execute_command(join_command((bash_executable(), "-c", script)))
 
+    def release_stage_lock(self, token: str) -> None:
+        """Remove ``.dagon/stage-in.lock`` only when *token* owns it."""
+        lock_dir = os.path.join(self.working_dir, ".dagon", LOCK_NAME)
+        owner = os.path.join(lock_dir, "owner")
+        try:
+            with open(owner, encoding="utf-8") as stream:
+                holder = stream.readline().strip()
+        except OSError:
+            return
+        if holder == token:
+            shutil.rmtree(lock_dir, ignore_errors=True)
+
     def write_stage_marker(self, content: str) -> None:
         """Write the marker through a temporary file and an atomic rename."""
         target = self.working_dir + "/.dagon/" + MARKER_NAME
@@ -745,6 +758,13 @@ class RemoteSlurm(RemoteTask, Slurm):
     def run_identity_check(self, script: str) -> ExecutionResult:
         """Run a read-only identity script on the remote login host, writing no file."""
         return self.ssh_connection.execute_command(join_command(("bash", "-c", script)))
+
+    def release_stage_lock(self, token: str) -> None:
+        """Remove the remote ``.dagon/stage-in.lock`` only when *token* owns it."""
+        script = lock_release_script(self.working_dir + "/.dagon/" + LOCK_NAME, token)
+        result = self.ssh_connection.execute_command(join_command(("bash", "-c", script)))
+        if result.get("code"):
+            raise IOError("cannot release the stage-in lock: %s" % result.get("message"))
 
     def write_stage_marker(self, content: str) -> None:
         """Write the marker on the remote host through a temporary file and ``mv``."""

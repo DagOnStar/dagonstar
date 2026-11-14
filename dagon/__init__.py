@@ -329,7 +329,7 @@ class Workflow(object):
         # the effective value is resolved again when the task executes.
         validate_pre_stage = getattr(task, "validate_pre_stage_declaration", None)
         if validate_pre_stage is not None:
-            validate_pre_stage()
+            validate_pre_stage(self)
 
         self.tasks.append(task)
         task.set_workflow(self)

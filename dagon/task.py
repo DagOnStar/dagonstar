@@ -1,6 +1,7 @@
 import logging
 import re
 import shutil
+import uuid
 import glob
 import os
 import subprocess
@@ -17,7 +18,7 @@ import dagon
 from dagon.shell import quote
 from dagon.platform_support import bash_executable, launcher_environment, shell_path
 from dagon.prestage import (
-    ALLOCATION_STARTED_NAME, IDENTITY_NAME, INTEGRITY_CONTENT, INTEGRITY_EXISTENCE, MARKER_NAME,
+    ALLOCATION_STARTED_NAME, DESTINATION_IDENTITY_NAME, IDENTITY_NAME, INTEGRITY_CONTENT, LOCK_BUSY_EXIT, INTEGRITY_EXISTENCE, MARKER_NAME,
     PRE_STAGE_POLICY_VERSION, PreparedTask, PreStageConfigurationError, ScheduledExecutionError,
     SchedulerSubmissionError, StageInFailedError, StageInput, TaskPhase, estimated_core_hours_saved,
     identity_digest, identity_script, marker_document, utc_now, validate_pre_stage, validate_reference_path,
@@ -274,9 +275,34 @@ class Task(Thread):
             return ("pre-staging is not supported with StagerMover.SLURM: its copy jobs are scheduler "
                     "submissions, and pre-staging must not request scheduler resources before stage-in "
                     "has succeeded")
+        return self._shared_working_dir_reason(self.workflow)
+
+    def _shared_working_dir_reason(self, workflow: Any) -> Optional[str]:
+        other = self.shared_working_dir_task(workflow)
+        if other is None:
+            return None
+        return ("pre-staging is not supported for a working directory shared with task %s: stage-in "
+                "replaces the staged inputs, marker, and records in that directory" % other.name)
+
+    def shared_working_dir_task(self, workflow: Any = None) -> Optional["Task"]:
+        """Return another task of the workflow with the same fixed working directory, if any.
+
+        Directories are compared on the same host (``ip``) after normalisation.
+        Generated scratch directories are unique per task, so only explicit
+        ``working_dir`` values can collide.
+        """
+        workflow = workflow if workflow is not None else self.workflow
+        if workflow is None or not self.working_dir:
+            return None
+        mine = (getattr(self, "ip", None), path.normpath(str(self.working_dir)))
+        for task in getattr(workflow, "tasks", []):
+            if task is self or not getattr(task, "working_dir", None):
+                continue
+            if (getattr(task, "ip", None), path.normpath(str(task.working_dir))) == mine:
+                return task
         return None
 
-    def validate_pre_stage_declaration(self) -> None:
+    def validate_pre_stage_declaration(self, workflow: Any = None) -> None:
         """Validate the declared override; reject an explicit request that cannot be honoured.
 
         :raises PreStageConfigurationError: for a non-boolean value, or for
@@ -285,6 +311,9 @@ class Task(Thread):
         declared = validate_pre_stage(self.pre_stage)
         if declared is True:
             reason = self.pre_stage_unsupported_reason()
+            if reason is None and workflow is not None and workflow is not self.workflow:
+                # Called by Workflow.add_task before the task joins *workflow*.
+                reason = self._shared_working_dir_reason(workflow)
             if reason is not None:
                 raise PreStageConfigurationError("Task %s: %s" % (self.name, reason))
 
@@ -331,6 +360,10 @@ class Task(Thread):
 
     def read_scratch_file(self, filepath: str) -> Optional[str]:
         """Return the content of a scratch file, or ``None`` (backend specific)."""
+        return None
+
+    def release_stage_lock(self, token: str) -> None:
+        """Remove the stage-in lock if *token* owns it (backend specific)."""
         return None
 
     def run_identity_check(self, script: str) -> ExecutionResult:
@@ -380,10 +413,30 @@ class Task(Thread):
             metrics["inputs"] = len(prepared.inputs)
             metrics["inputs_content_verified"] = sum(
                 1 for item in prepared.inputs if item.integrity == INTEGRITY_CONTENT)
-            self._run_stage_in(prepared, key)
+            # The stage-in lock is held from stage-in until the scheduler job
+            # has returned, so no other run can replace these inputs meanwhile.
+            lock_token = uuid.uuid4().hex
+            try:
+                self._run_stage_in(prepared, key, lock_token)
+            except BaseException:
+                self._release_stage_lock(lock_token)
+                raise
         finally:
             self.workflow._fire_event("on_task_staging_in_end", self)
+        try:
+            self._submit_pre_staged(prepared, checkpoint)
+        finally:
+            self._release_stage_lock(lock_token)
 
+    def _release_stage_lock(self, token: str) -> None:
+        try:
+            self.release_stage_lock(token)
+        except Exception as exc:  # never hide the task outcome behind a cleanup failure
+            self.workflow.logger.warning("%s: could not release the stage-in lock: %s", self.name, exc)
+
+    def _submit_pre_staged(self, prepared: PreparedTask, checkpoint: Dict[str, Any]) -> None:
+        """Submit the compute-only launcher and classify the outcome from the job identifier."""
+        metrics = self.pre_stage_metrics
         launcher_script = self.post_process_command(prepared.compute_launcher())
         self.workflow._fire_event("on_task_execute_start", self)
 
@@ -404,15 +457,25 @@ class Task(Thread):
         metrics["scheduler_wall_seconds"] = round(self.completetion_time, 3)
         self.workflow.logger.debug("%s Completed in %s seconds ---" % (self.name, self.completetion_time))
         self._record_allocation_timing(submitted, returned)
-        checkpoint["code"] = self.result['code']
         job_id = parsable_job_id(self.result.get("output"))
         metrics["scheduler_job_id"] = job_id
+        if not self.result['code'] and job_id is None:
+            # A successful exit is not evidence that the scheduler accepted and
+            # ran the job: without a job identifier the outcome is unconfirmed.
+            checkpoint["code"] = 1
+            self._set_pre_stage_phase(TaskPhase.FAILED)
+            self.failure_phase = "submission"
+            raise SchedulerSubmissionError(
+                "%s: the scheduler returned success without a job identifier (sbatch --parsable printed "
+                "none), so acceptance of the job cannot be confirmed (staged inputs kept)" % self.name)
+        checkpoint["code"] = self.result['code']
         if self.result['code']:
             self._set_pre_stage_phase(TaskPhase.FAILED)
             if job_id is not None:
                 self.failure_phase = "execution"
                 raise ScheduledExecutionError(
-                    "%s: scheduler job failed after pre-staging: %s" % (self.name, self.result.get('message')))
+                    "%s: scheduler job %s failed after pre-staging; see its output (by default "
+                    "slurm-%s.out in the working directory)" % (self.name, job_id, job_id))
             self.failure_phase = "submission"
             raise SchedulerSubmissionError(
                 "%s: scheduler submission failed after successful pre-staging (staged inputs kept): %s"
@@ -478,14 +541,14 @@ class Task(Thread):
         self.workflow._fire_event("on_task_execute_start", self)
         return prepared
 
-    def _run_stage_in(self, prepared: PreparedTask, key: str) -> None:
+    def _run_stage_in(self, prepared: PreparedTask, key: str, lock_token: Optional[str] = None) -> None:
         metrics = self.pre_stage_metrics
         self._set_pre_stage_phase(TaskPhase.STAGING)
         started_at = utc_now()
         metrics["staging_started_at"] = started_at
         started = time()
         try:
-            result = self.run_stage_in(prepared.stage_in_script())
+            result = self.run_stage_in(prepared.stage_in_script(lock_token))
         except Exception as exc:
             result = {"code": 1, "message": str(exc), "output": ""}
         staging_seconds = time() - started
@@ -495,6 +558,8 @@ class Task(Thread):
         if result.get("code"):
             self.failure_phase = "staging"
             self._set_pre_stage_phase(TaskPhase.FAILED)
+            if result.get("code") == LOCK_BUSY_EXIT:
+                metrics["stage_in_lock_busy"] = True
             raise StageInFailedError(
                 "%s: stage-in failed on the submission host; no scheduler job was submitted: %s"
                 % (self.name, (result.get("message") or result.get("output") or "").strip()))
@@ -503,8 +568,11 @@ class Task(Thread):
             if listing is None:
                 raise IOError("the stage-in identity record .dagon/%s is missing" % IDENTITY_NAME)
             source_identity = identity_digest(listing)
+            staged = self.read_scratch_file(self.working_dir + "/.dagon/" + DESTINATION_IDENTITY_NAME)
+            if staged is None:
+                raise IOError("the staged-input record .dagon/%s is missing" % DESTINATION_IDENTITY_NAME)
             self.write_stage_marker(marker_document(self, prepared, started_at, finished_at, staging_seconds,
-                                                    source_identity))
+                                                    source_identity, identity_digest(staged)))
         except Exception as exc:
             self.failure_phase = "staging"
             self._set_pre_stage_phase(TaskPhase.FAILED)
