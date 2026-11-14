@@ -591,5 +591,35 @@ class LocalMockSchedulerTests(unittest.TestCase):
         self.assertNotIn(os.path.join(consumer.working_dir, ".dagon", "inputs"), exported)
 
 
+def load_slurm_example(name):
+    import importlib
+    import sys
+    directory = str(ROOT / "examples" / "dataflow" / "slurm")
+    if directory not in sys.path:
+        sys.path.insert(0, directory)
+    return importlib.import_module(name)
+
+
+class ExampleTests(unittest.TestCase):
+    """The pre-staging examples, with ``sbatch`` replaced by the mock scheduler."""
+
+    def test_mock_example_verifies(self):
+        completed = subprocess.run(
+            [__import__("sys").executable, str(ROOT / "examples" / "dataflow" / "slurm" / "pre_stage_mock.py")],
+            capture_output=True, text=True, timeout=300,
+            env=dict(os.environ, PYTHONPATH=os.pathsep.join([str(ROOT), os.environ.get("PYTHONPATH", "")])))
+        self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+        self.assertIn("Verification: ok", completed.stdout)
+
+    def test_local_slurm_example_with_mock_scheduler(self):
+        example = load_slurm_example("pre_stage_local")
+        with tempfile.TemporaryDirectory() as directory:
+            log = os.path.join(directory, "sbatch.jsonl")
+            argv = ["pre_stage_local.py", "--scratch", os.path.join(directory, "scratch"), "--cores", "8"]
+            with no_network_context(), mock_scheduler.mock_sbatch(log), mock.patch("sys.argv", argv):
+                self.assertEqual(0, example.main())
+            self.assertTrue(mock_scheduler.submission_for(log, "simulate")["marker_present"])
+
+
 if __name__ == "__main__":
     unittest.main()

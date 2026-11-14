@@ -203,5 +203,22 @@ class RemoteSlurmPreStageTests(unittest.TestCase):
             consumer.execute()
 
 
+    def test_remote_example_with_loopback_ssh(self):
+        import importlib
+        import sys
+        directory = str(Path(__file__).resolve().parents[1] / "examples" / "dataflow" / "slurm")
+        if directory not in sys.path:
+            sys.path.insert(0, directory)
+        example = importlib.import_module("pre_stage_remote")
+        argv = ["pre_stage_remote.py", "--host", "192.0.2.10", "--user", "hpc-user", "--key",
+                os.path.join(self.tmp.name, "key"), "--port", "2222", "--remote-scratch", self.remote]
+        with mock.patch("sys.argv", argv):
+            self.assertEqual(0, example.main())
+        sbatch = [event for connection in LoopbackSSH.instances for event in connection.events
+                  if event[0] == "sbatch"]
+        self.assertEqual(4, len(sbatch))
+        self.assertTrue(all(connection.port == 2222 for connection in LoopbackSSH.instances))
+
+
 if __name__ == "__main__":
     unittest.main()
