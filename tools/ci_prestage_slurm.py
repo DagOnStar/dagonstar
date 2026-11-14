@@ -15,7 +15,15 @@ The CI job ``beeond-slurm`` runs it on the single-node Slurm cluster set up by
 * ``gate``: a failed stage-in (missing producer output) leaves no compute
   launcher and therefore never reached ``sbatch``;
 * ``beeond``: an explicit ``pre_stage=True`` together with BeeOND is rejected
-  before anything is staged or submitted.
+  before anything is staged or submitted;
+* ``stager``: an explicit ``pre_stage=True`` with ``StagerMover.SLURM`` (whose
+  copy jobs are scheduler submissions) is rejected before anything runs;
+* ``checkpoint``: a completed pre-staged task is reused when its input is
+  unchanged and runs again, with the new input, when the producer's output
+  changed after the checkpoint was written;
+* ``traversal``: a ``workflow://`` reference with a ``..`` component fails in
+  the staging phase without any transfer or submission;
+* ``dry``: a dry run creates no scratch directory and submits nothing.
 
 A single-node cluster cannot show queue-time effects; this is ordering and
 gating evidence only.  The script exits non-zero when any check fails.
@@ -34,6 +42,7 @@ sys.path.insert(0, ROOT)
 
 from dagon import Workflow  # noqa: E402
 from dagon.prestage import PreStageConfigurationError  # noqa: E402
+from dagon.stager.base import StagerMover  # noqa: E402
 from dagon.task import DagonTask, TaskType  # noqa: E402
 
 Check = Tuple[str, bool, str]
@@ -106,6 +115,10 @@ def scenario_order(scratch: str, partition: Optional[str]) -> List[Check]:
         ("order: result", (read(consumer.working_dir, "lines.txt") or "").strip() == "7",
          str(read(consumer.working_dir, "lines.txt"))),
         ("order: metadata phase", metadata.get("phase") == "COMPLETED", json.dumps(metadata)),
+        ("order: job identifier from sbatch --parsable", str(metadata.get("scheduler_job_id") or "").isdigit(),
+         json.dumps(metadata)),
+        ("order: staged content compared with its source",
+         [item.get("integrity") for item in marker.get("inputs", [])] == ["content"], str(marker_text)),
     ]
 
 
@@ -152,6 +165,91 @@ def scenario_beeond(scratch: str, partition: Optional[str]) -> List[Check]:
     ]
 
 
+def scenario_stager(scratch: str, partition: Optional[str]) -> List[Check]:
+    workflow = Workflow("ci-prestage-stager", config=site_config(scratch, partition))
+    task = DagonTask(TaskType.SLURM, "copyjobs", "true", partition=partition, pre_stage=True)
+    task.set_stager_mover(StagerMover.SLURM)
+    try:
+        workflow.add_task(task)
+        rejected, detail = False, "accepted"
+    except PreStageConfigurationError as exc:
+        rejected, detail = True, str(exc)
+    return [
+        ("stager: explicit pre_stage with StagerMover.SLURM is rejected",
+         rejected and "StagerMover.SLURM" in detail, detail),
+        ("stager: nothing was staged or submitted", task.working_dir is None, str(task.working_dir)),
+    ]
+
+
+def scenario_checkpoint(scratch: str, partition: Optional[str]) -> List[Check]:
+    checkpoint = os.path.join(scratch, "ci-prestage-checkpoint.json")
+
+    def build():
+        workflow, producer, consumer = two_tasks("ci-prestage-checkpoint", scratch, partition, True,
+                                                 "seq 1 7 > data.txt")
+        workflow.checkpoint_file = checkpoint
+        return workflow, producer, consumer
+
+    workflow, producer, first = build()
+    error = run(workflow)
+    workflow, _producer, unchanged = build()
+    try:
+        workflow.run(resume_checkpoint_file=checkpoint)
+        resume_error = None
+    except Exception as exc:  # reported as a check failure
+        resume_error = exc
+    if producer.working_dir is not None and os.path.isdir(producer.working_dir):
+        with open(os.path.join(producer.working_dir, "data.txt"), "w", encoding="utf-8", newline="\n") as stream:
+            stream.write("".join("%d\n" % number for number in range(1, 10)))
+    workflow, _producer, changed = build()
+    try:
+        workflow.run(resume_checkpoint_file=checkpoint)
+        changed_error = None
+    except Exception as exc:  # reported as a check failure
+        changed_error = exc
+    return [
+        ("checkpoint: first run", error is None and first.status.name == "FINISHED", repr(error)),
+        ("checkpoint: unchanged input is reused",
+         resume_error is None and unchanged.fair_checkpoint_reused, repr(resume_error)),
+        ("checkpoint: changed input runs the task again",
+         changed_error is None and not changed.fair_checkpoint_reused and changed.status.name == "FINISHED",
+         "%r %s" % (changed_error, changed.status.name)),
+        ("checkpoint: the new run used the changed input",
+         (read(changed.working_dir, "lines.txt") or "").strip() == "9", str(read(changed.working_dir, "lines.txt"))),
+    ]
+
+
+def scenario_traversal(scratch: str, partition: Optional[str]) -> List[Check]:
+    workflow = Workflow("ci-prestage-traversal", config=site_config(scratch, partition), pre_stage=True)
+    producer = DagonTask(TaskType.SLURM, "produce", "seq 1 7 > data.txt", partition=partition, ntasks=1)
+    consumer = DagonTask(TaskType.SLURM, "consume", "cat workflow:///produce/../../outside.txt",
+                         partition=partition, ntasks=1)
+    workflow.add_task(producer)
+    workflow.add_task(consumer)
+    run(workflow)
+    return [
+        ("traversal: consumer failed in staging",
+         consumer.status.name == "FAILED" and consumer.failure_phase == "staging",
+         "%s %s" % (consumer.status.name, consumer.failure_phase)),
+        ("traversal: no stage-in script", read(consumer.working_dir, ".dagon", "stage_in.sh") is None, ""),
+        ("traversal: no compute launcher was submitted", read(consumer.working_dir, ".dagon", "launcher.sh") is None,
+         ""),
+    ]
+
+
+def scenario_dry(scratch: str, partition: Optional[str]) -> List[Check]:
+    base = os.path.join(scratch, "dry-run-scratch")
+    workflow, producer, consumer = two_tasks("ci-prestage-dry", base, partition, True, "seq 1 7 > data.txt")
+    workflow.set_dry(True)
+    error = run(workflow)
+    return [
+        ("dry: workflow ran", error is None, repr(error)),
+        ("dry: no scratch directory was created", not os.path.exists(base), base),
+        ("dry: no working directory assigned", producer.working_dir is None and consumer.working_dir is None,
+         "%s %s" % (producer.working_dir, consumer.working_dir)),
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--scratch", help="shared scratch directory (default: temporary)")
@@ -161,7 +259,8 @@ def main() -> int:
         scratch = os.path.abspath(args.scratch or temporary)
         os.makedirs(scratch, exist_ok=True)
         checks: List[Check] = []
-        for scenario in (scenario_order, scenario_legacy, scenario_gate, scenario_beeond):
+        for scenario in (scenario_order, scenario_legacy, scenario_gate, scenario_beeond, scenario_stager,
+                         scenario_checkpoint, scenario_traversal, scenario_dry):
             print("== %s" % scenario.__name__, flush=True)
             checks.extend(scenario(scratch, args.partition))
     failed = 0
