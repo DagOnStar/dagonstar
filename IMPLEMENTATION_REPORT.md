@@ -1,10 +1,10 @@
 # Implementation report: scheduler-aware pre-staging
 
-- **Branch:** `feature/scheduler-aware-prestaging`, based on `development` at `d8da197`. Not pushed, not merged, no PR.
+- **Branch:** `feature/scheduler-aware-prestaging`, based on `development` at `d8da197`. Pushed to `origin` at `14b8698` with the user's approval; the second-repeat-audit commits listed in [section 12](#12-commit-history) are local only. Not merged, no PR.
 - **Inputs:** `DAGonStar_Claude_Code_Implementation_Plan.md` (the plan) and `AGENTS.md`. There is no `CLAUDE.md` in the repository. Prepared for review against `DAGonStar_Codex_Independent_Audit_Plan.md`.
-- **Audit remediation:** the first independent audit (verdict FAIL at `2d0d69a`) reported six findings, F-001 to F-006, addressed in [section 2](#2-audit-remediation). The repeat audit (`AUDIT_REPORT_SCHEDULER_PRESTAGING.md`, verdict FAIL) confirmed F-001 to F-005 resolved and F-006 substantially resolved, and reported three new findings, R-001 to R-003, addressed in [section 3](#3-repeat-audit-remediation).
+- **Audit remediation:** the first independent audit (verdict FAIL at `2d0d69a`) reported six findings, F-001 to F-006, addressed in [section 2](#2-audit-remediation). The repeat audit (`AUDIT_REPORT_SCHEDULER_PRESTAGING.md`, verdict FAIL) confirmed F-001 to F-005 resolved and F-006 substantially resolved, and reported three new findings, R-001 to R-003, addressed in [section 3](#3-repeat-audit-remediation). The second repeat audit (verdict NEEDS-EVIDENCE at `14b8698`) confirmed R-001 to R-003 resolved and left one medium finding, M-001, and one failed CI job (Windows / Python 3.10). Both are addressed in [section 3](#second-repeat-audit-m-001-and-ci).
 - **Environment:** macOS 26.6.2 (arm64), Python 3.12.10, GNU bash 3.2.57, ruff 0.17.3, mypy 2.4.1.
-- **Real-cluster validation: one manual run on one production cluster.** At the user's request, the final code was run on a production Slurm 23.11.3 cluster (RHEL 8 family, login node plus CPU compute nodes, `/home` on NFS shared by all nodes, partition `norm-wn`, Python 3.11 in a dedicated virtual environment). The 41-check harness `tools/ci_prestage_slurm.py`, `pre_stage_local.py` in both lifecycles, and `pre_stage_remote.py` over real SSH from this workstation all passed, and the 84 pre-staging unit tests passed on the cluster's Linux login node (details in [section 7](#7-test-results)). That is evidence for one site and Slurm release, with small inputs on a nearly idle partition, not a general guarantee. The CI `beeond-slurm` job has not run yet, because the branch is not pushed.
+- **Real-cluster validation: one manual run on one production cluster.** At the user's request, the final code was run on a production Slurm 23.11.3 cluster (RHEL 8 family, login node plus CPU compute nodes, `/home` on NFS shared by all nodes, partition `norm-wn`, Python 3.11 in a dedicated virtual environment). After the M-001 fix, the 44-check harness `tools/ci_prestage_slurm.py`, `pre_stage_local.py` in both lifecycles, and `pre_stage_remote.py` over real SSH from this workstation all passed again, and the 86 pre-staging unit tests passed on the cluster's Linux login node (details in [section 7](#7-test-results)). That is evidence for one site and Slurm release, with small inputs on a nearly idle partition, not a general guarantee. In CI run 43549373340 (commit `14b8698`), the emulated-Slurm job passed; the fixes since then have not been through CI yet, because they are not pushed.
 
 ## 1. Implementation summary
 
@@ -26,7 +26,7 @@ create scratch -> checkpoint record -> context.sh -> stage plan -> stage_in.sh o
 - **Configuration.** `Workflow(pre_stage=False)` sets the default. `Slurm/RemoteSlurm(pre_stage=None|True|False)` inherits or overrides it. Values must be strict booleans.
 - **Gate.** No scheduler submission of any kind happens before stage-in has succeeded. In particular, `sbatch` is never called when stage-in fails or cannot be confirmed, and `StagerMover.SLURM`, which submits copy jobs, is ineligible. A submission is treated as completed only when `sbatch --parsable` printed a job identifier.
 - **Integrity.** For inputs whose source is readable on the submission host (same-host `COPY` and `LINK`), the staged tree is compared with the source file by file (names, POSIX `cksum` CRC, and size). Other movers are checked for existence only at stage-in, and this is stated as such. For every input, the compute launcher re-checks the staged content against the listing recorded at stage-in before the command runs, so a change while the job is queued stops the job.
-- **Concurrency.** Tasks of one workflow that share a fixed working directory are ineligible. A token-owned lock (`.dagon/stage-in.lock`, created atomically with `mkdir`) is held from stage-in until `sbatch` returns, so a concurrent run in another process cannot replace the inputs.
+- **Concurrency.** Tasks of one workflow that share a fixed working directory are ineligible. A token-owned lock (`.dagon/stage-in.lock`, created atomically with `mkdir`) is held from stage-in until `sbatch` returns, so a concurrent run in another process cannot replace the inputs. Taking it is fail-atomic: if the owner token cannot be written and read back, `stage_in.sh` removes the new lock and exits 1 before it removes or transfers anything.
 - **Checkpoints.** A completed pre-staged task is reused only after the content identity of its inputs has been recomputed from the producers' current outputs and found unchanged.
 - **Typed failures.** Errors are `StageInFailedError`, `SchedulerSubmissionError`, `ScheduledExecutionError`, and `PreStageConfigurationError`, and `task.failure_phase` records the phase. Submission and execution failures are told apart by the job identifier printed by `sbatch --parsable`.
 - **Ineligible tasks.** BeeOND, parallel-mode, and `StagerMover.SLURM` tasks are ineligible. An explicit request raises; an inherited workflow default falls back to the legacy lifecycle with a warning. Other task types keep their legacy behaviour.
@@ -65,6 +65,13 @@ Real-cluster observations relevant to these fixes:
 
 - Slurm accounting storage is disabled on the cluster (`AccountingStorageType = (null)`), so `sacct` could not list jobs.
 - Instead, the job output files were counted. Every task that reached `sbatch` left exactly one `slurm-<id>.out`. The refused tasks (the `gate`, `traversal`, and `lock` scenarios) left none, and no output file mentions a `stagein` copy job.
+
+### Second repeat audit (M-001 and CI)
+
+| ID | Severity | Finding | Resolution | Regression evidence |
+|---|---|---|---|---|
+| M-001 | Medium | After the atomic `mkdir` that takes the stage-in lock, `echo <token> > owner` was unchecked. The script has no `set -e`, so a failed write let staging continue and left an ownerless lock that the token-checked release could never remove | `PreparedTask.stage_in_script` now writes the token and reads it back (`head -n 1`). If either fails, it removes the lock directory it has just created, prints "could not record the stage-in lock owner … nothing was staged", and exits 1. This happens before the marker, records, or earlier inputs are removed and before any transfer. The task fails in the `staging` phase, `stage_in_lock_busy` stays unset, and `sbatch` is never called | `test_lock_owner_write_failure_gives_the_lock_back_before_staging` (local: earlier inputs and marker survive, no lock left, no submission) and `test_remote_lock_owner_write_failure_stops_before_sbatch` (over the SSH double: no `sbatch`, no lock). The failure is injected by prepending `umask 0277` to the generated script, so `mkdir` succeeds but the owner write is refused. Both tests fail against the unguarded script and pass with the guard. They are skipped on Windows and as root, where file permissions do not bind. New harness scenario `owner` (3 checks) |
+| CI | Required platform | Run 43549373340 at `14b8698`: `Windows / Python 3.10` failed in `test_inputs_are_staged_before_submission` with `AssertionError: 3 != 2` (252 tests, 1 failure, 29 skipped). The emulated-Slurm job and the other 11 jobs passed, including `Windows / Python 3.13` on the same commit | The assertion counts the mock `sbatch` log. Concurrent mock-`sbatch` processes appended to one JSON-lines file, and on Windows concurrent appends can lose a record. That is a race in the test double, not in DAGonStar. `examples/dataflow/slurm/mock_scheduler.py` now writes each record to its own file in `<log>.d/` with an atomic `os.replace`, and `read_log` reads them back in time order. The production code did not change for this | Local full suite and `pre_stage_mock.py` pass. Confirming the fix on Windows requires a new CI run, which needs the branch pushed |
 
 ## 4. Files
 
@@ -147,12 +154,12 @@ Real-cluster observations relevant to these fixes:
 
 ## 7. Test results
 
-Commands were run after the repeat-audit fixes. The first block ran on this workstation; the second ran on the production cluster.
+Commands were run after the second-repeat-audit fixes (M-001 and the mock-log race). The first block ran on this workstation; the second ran on the production cluster.
 
 | Command | Result |
 |---|---|
 | Baseline before any change: `python3 -m unittest discover -s tests` | 168 tests, OK |
-| `python3 -m unittest discover -s tests -v` | **252 tests, OK, 0 skipped** on macOS (168 existing + 84 pre-staging) |
+| `python3 -m unittest discover -s tests -v` | **254 tests, OK, 0 skipped** on macOS (168 existing + 86 pre-staging), after the M-001 fix |
 | `python3 tools/run_local_examples.py` (with `PYTHONPATH=$PWD`) | 18/18 examples passed, including `pre_stage_mock.py` |
 | `python3 tools/validate_tutorial.py`; notebook JSON load | Validated 19 canonical lessons and internal tutorial links; notebook is valid JSON |
 | `python3 -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py dagon/stager/*.py` | OK |
@@ -161,19 +168,19 @@ Commands were run after the repeat-audit fixes. The first block ran on this work
 | `ruff check --select F` on `dagon/task.py`, `dagon/batch.py`, `dagon/stager/base.py` (outside the CI targets) | 6 findings, all pre-existing in `development`; none introduced by this work |
 | `git diff --check` (working tree) | Clean |
 | `git diff --check development...HEAD` | Five trailing-whitespace lines, all in `tests/fixtures/legacy_slurm_launcher.sh`, intentional (byte-identical legacy launcher) |
-| `tools/ci_prestage_slurm.py` against the mock `sbatch` (scratch script, not CI) | 41 passed, 0 failed (10 scenarios) |
+| `tools/ci_prestage_slurm.py` against the mock `sbatch` (scratch script, not CI) | 44 passed, 0 failed (11 scenarios) |
 
 On the production cluster (Slurm 23.11.3, partition `norm-wn`, scratch under the NFS-shared `/home`, Python 3.11.7 venv with the base dependencies, code synced from this working tree):
 
 | Command | Result |
 |---|---|
-| `python tools/ci_prestage_slurm.py --scratch <home>/... --partition norm-wn` (real `sbatch`) | **41 passed, 0 failed**: order (including `--parsable` job identifier and content verification), legacy, gate, beeond, stager, checkpoint (unchanged reused, changed rerun), traversal, dry, mutation (guard fired on the compute node; command never ran), lock |
+| `python tools/ci_prestage_slurm.py --scratch <home>/... --partition norm-wn` (real `sbatch`) | **44 passed, 0 failed**: order (including `--parsable` job identifier and content verification), legacy, gate, beeond, stager, checkpoint (unchanged reused, changed rerun), traversal, dry, mutation (guard fired on the compute node; command never ran), lock, and owner (on NFS, the injected owner-write failure produced the new message, left no lock, kept the earlier inputs, and submitted nothing). Run as an unprivileged user. The earlier run at `14b8698` passed the first 41 checks |
 | `pre_stage_local.py --scratch <home>/... --partition norm-wn --cores 2` and `--legacy` | Both `Verification: ok`; stage-in finished 1 s before the allocation started the launcher; job identifier recorded |
 | `pre_stage_remote.py --host <cluster> --user <user> --key <key> --remote-scratch <home>/... --partition norm-wn`, run from this workstation over real SSH (paramiko) | `Verification: ok`; stage-in on the login host completed before the remote `sbatch --parsable`; `inputs_content_verified: 2` |
-| `python -m unittest tests.test_scheduler_prestaging tests.test_remote_scheduler_prestaging` on the Linux login node | 84 tests, OK |
-| Job-output census of the harness scratch directory | 14 `slurm-*.out` files for 17 task directories: one per submitted task, none for the three refused tasks, none for a `stagein` copy job |
+| `python -m unittest tests.test_scheduler_prestaging tests.test_remote_scheduler_prestaging` on the Linux login node | 86 tests, OK |
+| Job-output census of the harness scratch directory (run at `14b8698`) | 14 `slurm-*.out` files for 17 task directories: one per submitted task, none for the three refused tasks, none for a `stagein` copy job |
 
-After the cluster harness ran, two cosmetic changes were made: the `ScheduledExecutionError` message (it now names the job identifier and its `slurm-<id>.out`) and the test import layout. They were re-synced, and the 84 unit tests were rerun on the cluster. The live harness was not rerun after these cosmetic changes.
+All cluster rows above were run on the code as committed for the second repeat audit, synced from this working tree; the remote example recorded job identifier 18931.
 
 Expected skips on other platforms: `tests/test_remote_scheduler_prestaging.py` (the loopback SSH host is POSIX) and the metacharacter-path test are skipped on Windows, and the symbolic-link part of `test_copy_link_and_corruption` is skipped there. All other new tests are cross-platform.
 
@@ -186,7 +193,7 @@ Expected skips on other platforms: `tests/test_remote_scheduler_prestaging.py` (
 | Invalid values, positional API | `test_invalid_values_are_rejected`, `test_positional_api_is_unchanged` |
 | Success without job identifier (T04) | `test_success_without_a_job_identifier_is_never_completed`, `test_remote_success_without_job_identifier_fails` |
 | Queue-time changes (T16 by source trace) and node-local scratch (T08) | `test_staged_input_changed_while_queued_never_reaches_the_command`, real-cluster `mutation` scenario; a different copy at the same path is now caught if its content differs from what was staged |
-| Same-destination concurrency (T15) | `test_shared_working_directory_is_not_eligible`, `test_another_runs_lock_blocks_stage_in_without_touching_its_data`, `test_lock_is_released_when_staging_fails`, `test_stage_in_lock_is_released_after_the_job`, `test_remote_lock_is_released_over_ssh`, real-cluster `lock` scenario |
+| Same-destination concurrency (T15) | `test_shared_working_directory_is_not_eligible`, `test_another_runs_lock_blocks_stage_in_without_touching_its_data`, `test_lock_is_released_when_staging_fails`, `test_stage_in_lock_is_released_after_the_job`, `test_remote_lock_is_released_over_ssh`, `test_lock_owner_write_failure_gives_the_lock_back_before_staging`, `test_remote_lock_owner_write_failure_stops_before_sbatch`, real-cluster `lock` and `owner` scenarios |
 | Order relative to `sbatch`; no scheduler use during stage-in | `LifecycleOrderTests` (call sequence), `test_inputs_are_staged_before_submission` (event time before mock-`sbatch` time; marker and inputs present at submission), `test_stage_in_runs_over_ssh_before_remote_sbatch`, `test_scheduler_stager_mover_is_rejected` |
 | Failed staging (T01), missing input, later input fails (T02) | `test_failed_staging_never_submits`, `test_missing_input_fails_staging_without_submission`, `test_failure_of_a_later_input_stops_staging_and_submission`, `test_remote_staging_failure_never_submits`, `StrictStagerTests` |
 | Corrupted or partial content | `test_corrupted_transfer_is_not_marked_complete`, `test_copy_link_and_corruption` |
@@ -207,18 +214,19 @@ Expected skips on other platforms: `tests/test_remote_scheduler_prestaging.py` (
 
 ## 8. Documentation and tutorial updates
 
-The guide is `docs/scheduler_prestaging.md`, linked from `README.md`, `docs/README.md`, and each affected guide. For the audit fixes it gained a "Verification and integrity" section. The eligibility, generated-files, failure, checkpoint, dry-run, metrics, security, and evidence sections were rewritten to match the new behaviour. `checkpoints.md`, `tasktype_interoperability.md`, `user_guide.md`, `configuration.md`, `developer_guide.md`, `architecture.md`, `fair_principles.md`, `platform_support.md`, `README.md` (including the project-status assessment), `AGENTS.md`, the Slurm example README, Lesson 14, the notebook's pre-staging cells, and the troubleshooting table were updated accordingly. For the repeat audit, the guide gained "Changes while the job is queued" and "Concurrent runs" sections, new rows for the destination record, the lock, the lock-busy failure, and a successful exit without a job identifier, and a record of the production-cluster evidence. `AGENTS.md`, `developer_guide.md` (`release_stage_lock`), `architecture.md`, `platform_support.md`, `user_guide.md`, `README.md`, Lesson 14, the troubleshooting table, and the Slurm example README were updated to match. The validator's 19-lesson structure is unchanged. The repository has no changelog convention, so none was added.
+The guide is `docs/scheduler_prestaging.md`, linked from `README.md`, `docs/README.md`, and each affected guide. For the audit fixes it gained a "Verification and integrity" section. The eligibility, generated-files, failure, checkpoint, dry-run, metrics, security, and evidence sections were rewritten to match the new behaviour. `checkpoints.md`, `tasktype_interoperability.md`, `user_guide.md`, `configuration.md`, `developer_guide.md`, `architecture.md`, `fair_principles.md`, `platform_support.md`, `README.md` (including the project-status assessment), `AGENTS.md`, the Slurm example README, Lesson 14, the notebook's pre-staging cells, and the troubleshooting table were updated accordingly. For the repeat audit, the guide gained "Changes while the job is queued" and "Concurrent runs" sections, new rows for the destination record, the lock, the lock-busy failure, and a successful exit without a job identifier, and a record of the production-cluster evidence. `AGENTS.md`, `developer_guide.md` (`release_stage_lock`), `architecture.md`, `platform_support.md`, `user_guide.md`, `README.md`, Lesson 14, the troubleshooting table, and the Slurm example README were updated to match. For the second repeat audit, the guide's "Concurrent runs" section, its generated-files and failure tables, and its evidence table describe the fail-atomic lock; `AGENTS.md` gained the matching rule; Lesson 14, the troubleshooting table, and the README status section name the new message. The validator's 19-lesson structure is unchanged. The repository has no changelog convention, so none was added.
 
 ## 9. CI/CD changes
 
 - `quality`: ruff and mypy cover `dagon/prestage.py`, `tools/ci_prestage_slurm.py`, and the new examples.
 - `test`, `rocky-linux`, `raspberry-pi`: the new test modules run through the existing `unittest discover`, and `pre_stage_mock.py` runs through `tools/run_local_examples.py`.
-- `beeond-slurm`, renamed in display to "BeeOND and pre-staging on Slurm (emulated site)" (the job id is unchanged, so `needs:` still works): it runs the pre-staging unit tests, `tools/ci_prestage_slurm.py --partition ci`, and `pre_stage_local.py --partition ci`. On failure it collects the stage-in scripts and markers. The harness now also covers `--parsable` job identifiers, content verification, the `StagerMover.SLURM` rejection, changed-input checkpoint invalidation, `..` refusal, the side-effect-free dry run, a change while queued (`mutation`), and the stage-in lock (`lock`): 10 scenarios, 41 checks.
+- `beeond-slurm`, renamed in display to "BeeOND and pre-staging on Slurm (emulated site)" (the job id is unchanged, so `needs:` still works): it runs the pre-staging unit tests, `tools/ci_prestage_slurm.py --partition ci`, and `pre_stage_local.py --partition ci`. On failure it collects the stage-in scripts and markers. The harness now also covers `--parsable` job identifiers, content verification, the `StagerMover.SLURM` rejection, changed-input checkpoint invalidation, `..` refusal, the side-effect-free dry run, a change while queued (`mutation`), the stage-in lock (`lock`), and a failed lock-owner write (`owner`, skipped as root; the CI job runs as the unprivileged runner user): 11 scenarios, 44 checks.
 - No jobs were removed. `development` is still a trigger. Release automation is untouched.
+- Run [43549373340](https://github.com/DagOnStar/dagonstar/actions/runs/43549373340) (`workflow_dispatch` at `14b8698`): 12 of 13 jobs passed, including "BeeOND and pre-staging on Slurm (emulated site)" (pre-staging unit tests, 41-check harness, `pre_stage_local.py`). `Windows / Python 3.10` failed on the mock-log race described in [section 3](#second-repeat-audit-m-001-and-ci). The fix has not been through CI yet; a new run after pushing is required before the audit's CI condition is met.
 
 ## 10. Known limitations
 
-1. **Limited production validation.** One manual run on one production cluster (Slurm 23.11.3, NFS-shared `/home`) with small inputs on a nearly idle partition. There is no evidence for long queue waits, production-scale transfers, other Slurm releases, site `sbatch` wrappers, or parallel file systems such as Lustre or GPFS. The CI job has not run, because the branch is not pushed.
+1. **Limited production validation.** One manual run on one production cluster (Slurm 23.11.3, NFS-shared `/home`) with small inputs on a nearly idle partition. There is no evidence for long queue waits, production-scale transfers, other Slurm releases, site `sbatch` wrappers, or parallel file systems such as Lustre or GPFS. The CI single-node Slurm job passed at `14b8698`, not yet on the current commits.
 2. **`--parsable` with `-W`** printed the job identifier on the first line and then waited, on Slurm 23.11.3. Other releases and site wrappers are not verified.
 3. **Integrity is CRC-based and partial.** `cksum` detects accidental corruption, not tampering. `SCP`, `GRIDFTP`, and `SKYCDS` inputs are existence-only. Content verification and checkpoint re-verification read every input once more on the submission host (I/O proportional to input size).
 4. **Checkpoint reuse is conservative.** A completed task with any existence-only input is never reused: it is staged and submitted again on resume. Checkpoints written before policy version 2 are not reused. Legacy (non-pre-staged) checkpoints are still reused without input validation, as before.
@@ -227,13 +235,13 @@ The guide is `docs/scheduler_prestaging.md`, linked from `README.md`, `docs/READ
 7. **The legacy lifecycle keeps historical weaknesses**, intentionally byte-identical: an unquoted `cd` in the launcher, transfer failures not reflected in `code`, `eval` of expanded paths, and an unchecked `workflow://` parser that accepts `..` (F-004 is fixed for pre-staging only). Only `context.sh` was fixed in both modes.
 8. **BeeOND, parallel mode, and `StagerMover.SLURM` are ineligible** (future work, if ever, under a separately designed contract).
 9. **Dry-run plans are approximate.** Because a pre-staged dry run skips context discovery, it shows placeholders for unassigned directories and does not report the mover or integrity levels.
-10. **Locks and cancellation.** A run killed during stage-in or while its job is queued leaves `.dagon/stage-in.lock` behind; a later run then fails in staging until the lock is removed by hand (the message says so). Cancellation during stage-in is not otherwise handled or tested. Shared working directories are detected within one workflow and between processes on the same file system, but the lock relies on atomic `mkdir`, which is not atomic on every network file system configuration.
+10. **Locks and cancellation.** A run killed during stage-in or while its job is queued leaves `.dagon/stage-in.lock` behind (a failed owner write no longer does); a later run then fails in staging until the lock is removed by hand (the message says so). Cancellation during stage-in is not otherwise handled or tested. Shared working directories are detected within one workflow and between processes on the same file system, but the lock relies on atomic `mkdir`, which is not atomic on every network file system configuration.
 11. **Timing.** `allocation_wait_seconds` and `execution_seconds` have one-second resolution and rely on synchronised clocks between the submission host and the compute nodes. `scheduler_wall_seconds` includes the queue wait.
 12. **Pre-existing, not caused by this change.** A full-suite run once left untracked `ssh_key`/`ssh_key.pub` files in the repository root (created by an existing test's context script); I moved them to the scratchpad. Ruff reports pre-existing issues in `dagon/stager/base.py`, `dagon/task.py`, `dagon/batch.py`, and the legacy Slurm demos, all outside the CI ruff targets.
 
 ## 11. Remaining HPC-cluster validation
 
-- Push the branch and confirm that the `beeond-slurm` CI job passes, especially `tools/ci_prestage_slurm.py` (all ten scenarios) and `pre_stage_local.py` with real `sbatch`.
+- Push the second-repeat-audit commits and confirm a fully green CI run, in particular `Windows / Python 3.10` (mock-log race fix) and the `beeond-slurm` job with all eleven harness scenarios.
 - Done once, on one production cluster: the harness, `pre_stage_local.py` in both lifecycles, and `pre_stage_remote.py` over real SSH (default port). Still open: representative input sizes, a busy partition with a real queue wait, a site with Slurm accounting enabled (to confirm with `sacct` that no job other than the compute job ran), a non-default SSH port, checkpoint re-verification over real SSH, and multi-node jobs.
 - Confirm the shared, persistent scratch assumption for each site's file systems. Test a deliberately node-local path to observe the compute-side failure message.
 - Measure the cost of content verification for representative input sizes on the login node, and exercise the SCP and GridFTP movers (existence-only) in pre-staged mode where they are used.
@@ -241,7 +249,10 @@ The guide is `docs/scheduler_prestaging.md`, linked from `README.md`, `docs/READ
 ## 12. Commit history
 
 ```text
-(this commit) Record the repeat-audit commits in the implementation report
+(this commit) Update the implementation report for the second repeat audit
+d78d9a8 Make taking the stage-in lock fail-atomic (M-001)
+674590b Make the mock sbatch log safe for concurrent writers
+14b8698 Record the repeat-audit commits in the implementation report
 fc840d1 Fix the repeat-audit findings R-001 to R-003 and record cluster evidence
 22881f6 Check queue-time changes and the stage-in lock in the Slurm harness
 1e3893d Fix the repeat-audit findings in scheduler-aware pre-staging
