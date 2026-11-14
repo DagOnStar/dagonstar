@@ -618,7 +618,8 @@ class ContentIdentityTests(unittest.TestCase):
                                     invoke="", resolved_command="", inputs=inputs)
             Path(directory, "work", ".dagon").mkdir(parents=True)
             script = Path(directory, "work", ".dagon", "stage_in.sh")
-            script.write_text(prepared.stage_in_script(), encoding="utf-8", newline="\n")
+            with open(script, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(prepared.stage_in_script())
             completed = subprocess.run([bash_executable(), str(script)], capture_output=True, text=True)
             self.assertEqual(0, completed.returncode, completed.stderr)
             recorded_identity = Path(directory, "work", ".dagon", IDENTITY_NAME).read_text(encoding="utf-8")
