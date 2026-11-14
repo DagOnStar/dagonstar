@@ -23,7 +23,12 @@ The CI job ``beeond-slurm`` runs it on the single-node Slurm cluster set up by
   changed after the checkpoint was written;
 * ``traversal``: a ``workflow://`` reference with a ``..`` component fails in
   the staging phase without any transfer or submission;
-* ``dry``: a dry run creates no scratch directory and submits nothing.
+* ``dry``: a dry run creates no scratch directory and submits nothing;
+* ``mutation``: a staged input changed after stage-in but before the job
+  starts is detected by the compute launcher, and the command never runs;
+* ``lock``: a stage-in lock held by another run blocks stage-in and
+  submission without touching that run's data, and a finished run releases
+  its own lock.
 
 A single-node cluster cannot show queue-time effects; this is ordering and
 gating evidence only.  The script exits non-zero when any check fails.
@@ -42,6 +47,8 @@ sys.path.insert(0, ROOT)
 
 from dagon import Workflow  # noqa: E402
 from dagon.prestage import PreStageConfigurationError  # noqa: E402
+from dagon.batch import Slurm  # noqa: E402
+from dagon.prestage import LOCK_NAME  # noqa: E402
 from dagon.stager.base import StagerMover  # noqa: E402
 from dagon.task import DagonTask, TaskType  # noqa: E402
 
@@ -250,6 +257,62 @@ def scenario_dry(scratch: str, partition: Optional[str]) -> List[Check]:
     ]
 
 
+def scenario_mutation(scratch: str, partition: Optional[str]) -> List[Check]:
+    workflow, _producer, consumer = two_tasks("ci-prestage-mutation", scratch, partition, True, "seq 1 7 > data.txt")
+    original = Slurm.on_execute
+
+    def change_while_queued(task, script, script_name):
+        if task is consumer and script_name == "launcher.sh":
+            # Stage-in has verified and recorded the input; change it before sbatch.
+            staged = os.path.join(task.working_dir, ".dagon", "inputs", workflow.name, "produce", "data.txt")
+            with open(staged, "w", encoding="utf-8", newline="\n") as stream:
+                stream.write("".join("%d\n" % number for number in range(1, 8)).replace("7", "8"))
+        return original(task, script, script_name)
+
+    Slurm.on_execute = change_while_queued  # type: ignore[assignment]
+    try:
+        run(workflow)
+    finally:
+        Slurm.on_execute = original  # type: ignore[assignment]
+    metadata = consumer.get_execution_metadata().get("pre_stage", {})
+    return [
+        ("mutation: consumer failed in execution",
+         consumer.status.name == "FAILED" and consumer.failure_phase == "execution",
+         "%s %s" % (consumer.status.name, consumer.failure_phase)),
+        ("mutation: the job was accepted (job identifier)", str(metadata.get("scheduler_job_id") or "").isdigit(),
+         json.dumps(metadata)),
+        ("mutation: the command never ran", read(consumer.working_dir, "job_started_at") is None, ""),
+    ]
+
+
+def scenario_lock(scratch: str, partition: Optional[str]) -> List[Check]:
+    held_dir = os.path.join(scratch, "ci-prestage-lock-held")
+    lock = os.path.join(held_dir, ".dagon", LOCK_NAME)
+    os.makedirs(lock, exist_ok=True)
+    with open(os.path.join(lock, "owner"), "w", encoding="utf-8", newline="\n") as stream:
+        stream.write("another-run\n")
+    workflow = Workflow("ci-prestage-lock", config=site_config(scratch, partition), pre_stage=True)
+    producer = DagonTask(TaskType.SLURM, "produce", "seq 1 7 > data.txt", partition=partition, ntasks=1)
+    blocked = DagonTask(TaskType.SLURM, "consume", JOB, partition=partition, ntasks=1, working_dir=held_dir)
+    workflow.add_task(producer)
+    workflow.add_task(blocked)
+    run(workflow)
+    released_workflow, _producer, finished = two_tasks("ci-prestage-lock-free", scratch, partition, True,
+                                                       "seq 1 7 > data.txt")
+    error = run(released_workflow)
+    return [
+        ("lock: blocked task failed in staging",
+         blocked.status.name == "FAILED" and blocked.failure_phase == "staging",
+         "%s %s" % (blocked.status.name, blocked.failure_phase)),
+        ("lock: no compute launcher was submitted", read(held_dir, ".dagon", "launcher.sh") is None, ""),
+        ("lock: the other run's lock was left in place", (read(lock, "owner") or "").strip() == "another-run", ""),
+        ("lock: a finished run released its own lock",
+         error is None and finished.status.name == "FINISHED"
+         and not os.path.exists(os.path.join(str(finished.working_dir), ".dagon", LOCK_NAME)),
+         "%r %s" % (error, finished.status.name)),
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--scratch", help="shared scratch directory (default: temporary)")
@@ -260,7 +323,7 @@ def main() -> int:
         os.makedirs(scratch, exist_ok=True)
         checks: List[Check] = []
         for scenario in (scenario_order, scenario_legacy, scenario_gate, scenario_beeond, scenario_stager,
-                         scenario_checkpoint, scenario_traversal, scenario_dry):
+                         scenario_checkpoint, scenario_traversal, scenario_dry, scenario_mutation, scenario_lock):
             print("== %s" % scenario.__name__, flush=True)
             checks.extend(scenario(scratch, args.partition))
     failed = 0
