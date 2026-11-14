@@ -120,6 +120,16 @@ configuration validation separately from live integration behavior.
   `pre_stage_unsupported_reason()`), never through the task type name.
   Allocation-dependent storage such as BeeOND stays ineligible until a
   dedicated design exists.
+- No scheduler submission of any kind, including `StagerMover.SLURM` copy
+  jobs, may happen before stage-in has succeeded; keep that mover ineligible.
+- Verify staged content wherever the source is readable on the submission host,
+  and never claim content verification for existence-only movers.
+- A completed pre-staged checkpoint is reused only after its recorded input
+  identity has been re-verified; never relax this to directory accessibility.
+- Pre-staged dry runs must stay side-effect free (no scratch, scripts, SSH, or
+  scheduler calls), and `..` references must be refused before any transfer.
+- Classify submission versus execution failures from the `sbatch --parsable`
+  job identifier, never from display text.
 - Stage-in markers and metadata must never contain credentials, and
   `execution.pre_stage` must stay path-free. A marker is never a skip token.
 - Changes require the local and remote pre-staging tests,

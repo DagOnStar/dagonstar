@@ -92,7 +92,10 @@ connection. If storage has disappeared, the task runs normally.
 Checkpoint identity is currently the workflow and task name. Changing behavior
 without renaming the task can reuse an older checkpoint; use a new task name or
 checkpoint file when changing the experiment. FaaS additionally checks a
-portable-specification digest. Pre-staged Slurm tasks follow the same rule. A
+portable-specification digest. A completed pre-staged Slurm task is reused
+only if the content identity of its inputs (POSIX `cksum` of every file,
+recomputed on the submission host from the producers' current outputs)
+matches the identity recorded after its stage-in; otherwise it runs again. A
 failed task, including a staging or submission failure, is staged again and
 resubmitted on resume. The stage-in completion marker is never a skip token.
 IoT additionally validates schema version, declared outputs, and SHA-256 evidence.

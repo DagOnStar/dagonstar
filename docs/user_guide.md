@@ -174,8 +174,11 @@ summary = DagonTask(TaskType.SLURM, "summary", "./summarise workflow:///simulate
 
 The scratch directory must be on a file system that the submission host and
 the compute nodes share at the same path, and that persists while the job is
-queued. If stage-in fails, the job is never submitted, and the task fails with
-`failure_phase == "staging"`. BeeOND tasks are not eligible. Other task types
+queued. If stage-in fails, or a staged input's content differs from its
+source, the job is never submitted, and the task fails with
+`failure_phase == "staging"`. BeeOND tasks and tasks using
+`StagerMover.SLURM` are not eligible. A completed pre-staged task is reused on
+resume only if its inputs are unchanged. Other task types
 ignore the workflow default. See [Scheduler-aware pre-staging](scheduler_prestaging.md)
 for eligibility, filesystem requirements, failure handling, and metrics, and
 `examples/dataflow/slurm/pre_stage_mock.py` for a run without Slurm.
@@ -260,8 +263,9 @@ workflow.set_dry(True)
 
 Dry mode prevents task execution after launcher generation. It is useful when
 inspecting dependency resolution and generated scripts. A pre-staged Slurm task
-in dry mode also skips stage-in and logs its planned order (stage-in, verify,
-marker, submit).
+in dry mode has no side effects at all: it creates no scratch directory, runs
+no script (not even `context.sh`), sends nothing over SSH, and only logs its
+planned order (stage-in, verify, marker, submit).
 
 ## Function-as-a-Service tasks
 

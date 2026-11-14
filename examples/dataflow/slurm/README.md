@@ -176,8 +176,9 @@ BeeOND site; you can run that script on your own cluster with
 By default, a Slurm job stages its `workflow://` inputs after the scheduler
 has allocated its resources. With `Workflow(pre_stage=True)`, or with
 `pre_stage=True` on a Slurm task, DAGonStar stages and verifies the inputs on
-the submission host first, writes `.dagon/stage-in-complete.json`, and only
-then calls `sbatch`. If stage-in fails, no job is submitted. See
+the submission host first (comparing content with the source when the source
+is readable there), writes `.dagon/stage-in-complete.json`, and only then calls
+`sbatch --parsable`. If stage-in fails, no job is submitted. See
 [Scheduler-aware pre-staging](../../../docs/scheduler_prestaging.md).
 
 All three demos run the same coastal-forecast workflow. `forcing` writes 24

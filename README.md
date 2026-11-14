@@ -148,7 +148,7 @@ The full documentation set is available in `docs/`:
   `pre_stage=True` per Slurm task). Slurm and RemoteSlurm tasks stage and verify
   their `workflow://` inputs on the submission host before `sbatch`, so
   allocated cores do not sit idle during transfers. A failed stage-in never
-  submits the job. BeeOND tasks are not eligible.
+  submits the job. BeeOND tasks and `StagerMover.SLURM` are not eligible.
 - Docker tasks, locally or over SSH.
 - Cloud-backed tasks through Apache Libcloud providers.
 - OpenAI-compatible LLM tasks with JSON prompts and `workflow://` text inputs.
@@ -198,10 +198,14 @@ BeeOND site (Slurm 23.11.3) passed the same checks and the live example in both
 scopes.
 Scheduler-aware pre-staging is opt-in and leaves the default lifecycle
 unchanged: the legacy launcher is guarded by a byte-for-byte fixture. Its
-ordering, `sbatch` gate, typed failure phases, retries, checkpoint resume,
-dry run, and RemoteSlurm path are tested with a mock `sbatch` and a loopback
-SSH double. The `beeond-slurm` CI job also checks ordering, the gate, and the
-BeeOND rejection with real `sbatch` on its single-node cluster. Pre-staging has
+ordering, `sbatch` gate, typed failure phases (from `sbatch --parsable` job
+identifiers), retries, content verification of same-host transfers,
+changed-input checkpoint invalidation, side-effect-free dry run, rejection of
+`..` references and of `StagerMover.SLURM`, and RemoteSlurm path are tested
+with a mock `sbatch` and a loopback SSH double. The `beeond-slurm` CI job runs
+the same scenarios with real `sbatch` on its single-node cluster, once the
+branch is pushed. Inputs moved by `SCP`, `GRIDFTP`, or `SKYCDS` are checked
+for existence only, not content. Pre-staging has
 not been validated on a production multi-node cluster. Shared-scratch
 visibility cannot always be detected automatically. Rewritten `workflow://`
 arguments in user commands remain unquoted, as before, so scratch paths with

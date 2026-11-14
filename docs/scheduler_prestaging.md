@@ -46,8 +46,9 @@ Pre-staged (`pre_stage=True`, eligible task):
 ```text
 create scratch -> checkpoint record -> context.sh (submission host)
     -> stage plan -> stage_in.sh (submission host) -> verify staged inputs
-    -> .dagon/stage-in-complete.json -> launcher.sh (compute only) -> sbatch -W
-    -> queue -> allocation -> compute -> downstream references
+    (content, where the source is readable) -> .dagon/stage-in-identity.txt
+    -> .dagon/stage-in-complete.json -> launcher.sh (compute only)
+    -> sbatch --parsable -W -> queue -> allocation -> compute -> downstream references
 ```
 
 No stage-out step is added. Downstream tasks read producer outputs through
@@ -77,8 +78,8 @@ analyse = DagonTask(TaskType.SLURM, "analyse", "...", pre_stage=False)  # explic
 | `False` | `True` | **pre-staged** | rejected (`PreStageConfigurationError`) |
 | `True` | `None` | **pre-staged** | legacy, unchanged |
 | `True` | `False` | legacy | legacy |
-| any | `True` on a BeeOND or parallel-mode task | rejected | — |
-| `True` | `None` on a BeeOND or parallel-mode task | legacy, with a warning | — |
+| any | `True` on a BeeOND, parallel-mode, or `StagerMover.SLURM` task | rejected | — |
+| `True` | `None` on a BeeOND, parallel-mode, or `StagerMover.SLURM` task | legacy, with a warning | — |
 
 Rules:
 
@@ -119,6 +120,12 @@ Per-task conditions that make an eligible backend ineligible:
   is not supported. It would need a dedicated design and is future work.
 - **Parallel mode** (`task.set_mode("parallel")`), which rewrites the graph
   while it plans staging.
+- **`StagerMover.SLURM`** (set on the task or inherited from the workflow).
+  This stager mover submits a small copy job for every transfer, so it would
+  request scheduler resources before stage-in had succeeded. That contradicts
+  the pre-staging contract, so the combination is refused. `StagerMover.NORMAL`
+  and `StagerMover.PARALLEL` (GNU `parallel` on the submission host) are
+  eligible.
 
 Portable emulation (`Workflow(portable_emulation=True)`) ignores `pre_stage`,
 because it never stages or submits.
@@ -182,8 +189,9 @@ Each pre-staged task writes these files in `<working_dir>/.dagon/`:
 | File | Written by | Content |
 |---|---|---|
 | `context.sh` | DAGonStar | host and protocol discovery (unchanged) |
-| `stage_in.sh` | DAGonStar | removes a stale marker, runs the planned transfers, stops at the first failure, checks that every staged input exists, exits non-zero on any failure; never runs the task command or the allocation prologue |
-| `stage-in-complete.json` | DAGonStar, after `stage_in.sh` exits 0 | marker: task identity, input manifest, movers, policy version, timestamps; no credentials |
+| `stage_in.sh` | DAGonStar | removes a stale marker, identity record, and previously staged inputs; runs the planned transfers; stops at the first failure; checks that every staged input exists and, where the source is readable on the submission host, that its content matches the source; records the source identity; exits non-zero on any failure; never runs the task command or the allocation prologue |
+| `stage-in-identity.txt` | `stage_in.sh`, after successful verification | one `<name> <CRC> <size>` line per file of every content-verified source (POSIX `cksum`); its SHA-256 is stored in the marker and the checkpoint |
+| `stage-in-complete.json` | DAGonStar, after `stage_in.sh` exits 0 | marker (schema `dagonstar.stage-in-marker/2`): task identity, input manifest with each input's integrity level, movers, policy version, timestamps, `source_identity_sha256`; no credentials |
 | `launcher.sh` | DAGonStar | compute-only launcher: no transfers; records `allocation_started_at`, checks that the marker and staged inputs are visible on the compute node, then runs the prologue and the command |
 | `allocation_started_at` | the job | epoch seconds at which the allocation started running the launcher |
 
@@ -199,9 +207,24 @@ transfers run in `stage_in.sh`. Movers that already transferred data while
 DAGonStar planned staging continue to do so: `SCP` from a local source to a
 remote destination, `GRIDFTP`, and `SKYCDS`. Planning happens before
 submission, so these transfers also finish before `sbatch`.
-`StagerMover.SLURM` submits its own small copy jobs and waits for them to leave
-the queue. Their exit status is not checked, so the final verification step is
-what catches a failed copy.
+`StagerMover.SLURM` is not eligible (see above).
+
+## Verification and integrity
+
+Every input has an integrity level, recorded in the marker:
+
+| Level | When | What `stage_in.sh` checks |
+|---|---|---|
+| `content` | the context discovery chose a same-host `COPY` or `LINK` transfer, so the source is readable where `stage_in.sh` runs | every staged path exists, and the staged tree matches the source tree file by file: same relative names, same POSIX `cksum` CRC and size (links are followed) |
+| `existence` | any other mover (`SCP`, `GRIDFTP`, `SKYCDS`, ...), whose source is on another host | every staged path exists (unmatched globs and dangling links fail) |
+
+A transfer that exits 0 but writes wrong, truncated, or missing content is
+therefore caught for `content` inputs, and the scheduler is not contacted.
+For `existence` inputs DAGonStar does **not** claim corruption detection: it
+relies on the mover's own exit status and checks only that the data arrived.
+`cksum` is a CRC, which detects accidental corruption, not deliberate
+tampering. Content verification reads every staged input and its source once
+more on the submission host, so it adds I/O proportional to the input size.
 
 ## Failure handling
 
@@ -213,9 +236,18 @@ success cannot be confirmed.**
 | context discovery or planning fails | `StageInFailedError` (`staging`) | `staging` | no | absent |
 | a transfer fails, or an input is missing (verification) | `StageInFailedError` (`staging`) | `staging` | no | absent (a stale one is removed first) |
 | writing `stage_in.sh` or the marker fails, or SSH drops | `StageInFailedError` (`staging`) | `staging` | no | absent |
-| `sbatch` exits non-zero without `Submitted batch job` | `SchedulerSubmissionError` (`submission`) | `submission` | rejected | kept |
-| the job ran and failed, including staged data not visible on the compute node | `ScheduledExecutionError` (`execution`) | `execution` | yes | kept |
+| staged content differs from its source (`content` inputs) | `StageInFailedError` (`staging`) | `staging` | no | absent |
+| a `workflow://` reference with a `..` component, an empty or `..` task name, or naming a whole scratch directory | `StageInFailedError` (`staging`), wrapping `PreStageConfigurationError` | `staging` | no | absent |
+| `sbatch` exits non-zero and printed no job identifier | `SchedulerSubmissionError` (`submission`) | `submission` | rejected | kept |
+| `sbatch` printed a job identifier and the job failed, including staged data not visible on the compute node | `ScheduledExecutionError` (`execution`) | `execution` | yes | kept |
 | explicit unsupported request | `PreStageConfigurationError` (`configuration`) | — | no | — |
+
+Pre-staged submissions add `--parsable` to `sbatch`, so its first output line
+is the job identifier (`<id>` or `<id>;<cluster>`). The failure phase is
+decided from that identifier (`dagon.task.parsable_job_id`), never from
+display text such as `Submitted batch job`. The identifier is recorded as
+`scheduler_job_id`. Legacy submissions are unchanged and do not use
+`--parsable`.
 
 The task status becomes `FAILED`, downstream tasks do not run, and the error
 is logged as for any failed task. Staged inputs and the scratch directory are
@@ -228,24 +260,48 @@ mode instead (`Stager.stage_in(..., strict=True)`).
 
 ## Retries, restarts, and checkpoints
 
-- A completed task (checkpoint `code == 0` and an accessible working
-  directory) is reused on resume as before: nothing is staged or submitted
-  again.
+- A completed pre-staged task (checkpoint `code == 0` and an accessible
+  working directory) is reused on resume **only if its inputs are unchanged**.
+  Before reuse, DAGonStar resolves every recorded input against the
+  producer's *current* scratch directory, recomputes the source identity on
+  the submission host (locally, or over SSH for RemoteSlurm, without writing a
+  file), and compares its SHA-256 with the one recorded after the successful
+  stage-in. If they differ, a warning is logged and the task runs again: it
+  stages the new inputs and is submitted again.
+- A completed checkpoint is also **not** reused, and the task runs again, when
+  an input has the `existence` integrity level (its source cannot be re-read on
+  the submission host), when a producer cannot be found, or when the
+  checkpoint has no identity for the current policy version (for example, one
+  written before policy version 2). Rerunning is the safe choice in each case.
+- Identity covers content (names, CRCs, sizes), not timestamps. A producer
+  that runs again and writes identical content does not invalidate its
+  consumers.
 - A task that failed in any phase has no successful checkpoint, so a rerun
-  starts the whole lifecycle again. With a fixed `working_dir`, `stage_in.sh`
-  first removes the old marker. A partial transfer can never be reported as
-  complete, and copies overwrite partial files.
+  starts the whole lifecycle again. `stage_in.sh` first removes the old
+  marker, the identity record, and everything under `.dagon/inputs`, so data
+  from an earlier attempt is never trusted, and a partial transfer can never be
+  reported as complete.
 - The marker is provenance, not a skip token. DAGonStar never skips stage-in
-  because a marker exists, because upstream outputs may have changed since.
+  because a marker exists.
 - The checkpoint entry gains
-  `"pre_stage": {"effective": true, "staged": <bool>, "stage_in_code": <int>, "marker": ".dagon/stage-in-complete.json"}`.
+  `"pre_stage": {"effective": true, "staged": <bool>, "stage_in_code": <int>, "marker": ".dagon/stage-in-complete.json", "policy_version": 2, "source_identity_sha256": <hex>, "inputs": [{"reference", "workflow", "task", "local_path", "integrity"}]}`.
+  These are references and relative paths. No credentials are stored.
+- Legacy (non-pre-staged) checkpoints keep their historical behaviour: they
+  are reused without input validation.
 
 ## Dry runs
 
-With `workflow.set_dry(True)`, a pre-staged task discovers its context and
-builds the plan, as the legacy dry run does. It then logs the planned order
-(`task.prepared_task.planned_order()`) and stops: it neither writes nor runs
-`stage_in.sh`, and it does not submit.
+With `workflow.set_dry(True)`, a pre-staged task has no side effects. It
+creates no scratch directory and no checkpoint entry. It writes and runs no
+script (including `context.sh`), and for RemoteSlurm it sends nothing over
+SSH. It transfers nothing and does not contact the scheduler. It parses and
+checks the `workflow://` references, logs the planned order
+(`task.prepared_task.planned_order()`), and records `"dry_run": true` in its
+metadata. Directories that would only be created at run time appear as
+placeholders such as `<scratch of C>`. Because context discovery is skipped,
+the dry run does not choose a data mover and does not report integrity levels.
+The legacy dry run is unchanged; it still creates scratch directories and runs
+`context.sh`.
 
 ## Events and metrics
 
@@ -262,9 +318,12 @@ paths or credentials:
 | Key | Meaning |
 |---|---|
 | `pre_stage_effective` | whether the task was pre-staged (also `false` when configured but not effective) |
-| `policy_version` | pre-staging policy version (`1`) |
+| `policy_version` | pre-staging policy version (`2`) |
 | `phase` | last internal phase |
 | `inputs` | number of `workflow://` inputs |
+| `inputs_content_verified` | how many inputs had their staged content compared with the source |
+| `scheduler_job_id` | job identifier printed by `sbatch --parsable`, or `null` when none was printed |
+| `dry_run` | `true` for a dry run |
 | `staging_started_at`, `staging_finished_at`, `staging_seconds` | submission-host stage-in timing |
 | `requested_cores`, `estimated_allocated_core_hours_saved` | `ntasks` (or `nodes x ntasks_per_node`) and `cores x staging_seconds / 3600` |
 | `submission_started_at`, `scheduler_returned_at`, `scheduler_wall_seconds` | `sbatch -W` call; the wall time includes the queue wait |
@@ -298,6 +357,14 @@ annotated, and the export stays standards-valid.
   user command, although staging succeeds. Use scratch paths without spaces,
   or reference inputs through a shell variable:
   `f=workflow:///A/out.txt ; cat "$f"`.
+- In pre-staged mode a `workflow://` reference whose task name is empty or
+  `..`, whose workflow name is `..`, whose path contains a `..` component, or
+  whose path names the whole producer scratch directory is refused before any
+  transfer. Such a reference could otherwise address files outside the
+  producer's scratch directory or write outside `.dagon/inputs`. Symbolic links
+  inside the producer's scratch directory are not resolved; they are producer
+  outputs. The legacy lifecycle keeps its historical, unchecked parser; this
+  hardening is not applied there.
 - Markers and metadata contain no credentials. The marker lives in the task
   scratch directory and lists scratch paths, so treat it like the other
   `.dagon` files.
@@ -308,9 +375,9 @@ annotated, and the export stays standards-valid.
 | Evidence | Where |
 |---|---|
 | Legacy launcher unchanged byte for byte | `tests/test_scheduler_prestaging.py`, fixture captured before the refactor |
-| Ordering, gate, failures, retries, checkpoint resume, dry run, spaces, JSON, CWL, FAIR | `tests/test_scheduler_prestaging.py` (mock `sbatch`) |
-| RemoteSlurm over SSH, disconnects, failed script creation, failed remote `sbatch`, non-default port | `tests/test_remote_scheduler_prestaging.py` (loopback SSH double) |
-| Stage-in finished before the job started, the job saw its inputs at start, failed stage-in never reached `sbatch`, BeeOND rejected | `tools/ci_prestage_slurm.py` on the CI single-node Slurm cluster |
+| Ordering, gate, failures, retries, checkpoint resume and changed-input invalidation, side-effect-free dry run, content verification and corruption, `..` references, `StagerMover.SLURM` rejection, `--parsable` classification, spaces, JSON, CWL, FAIR | `tests/test_scheduler_prestaging.py` (mock `sbatch`) |
+| RemoteSlurm over SSH, disconnects, failed script creation, failed remote `sbatch`, non-default port, dry run without SSH traffic, changed-input invalidation over SSH | `tests/test_remote_scheduler_prestaging.py` (loopback SSH double) |
+| Stage-in finished before the job started, the job saw its inputs at start, content verified, job identifier from `--parsable`, failed stage-in never reached `sbatch`, BeeOND and `StagerMover.SLURM` rejected, changed input invalidates a checkpoint, `..` reference refused, dry run creates nothing | `tools/ci_prestage_slurm.py` on the CI single-node Slurm cluster |
 
 A single-node CI cluster with an empty queue cannot show queue-time
 behaviour, multi-node file-system visibility, or production-scale transfers.

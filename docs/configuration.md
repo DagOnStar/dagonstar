@@ -153,7 +153,9 @@ task = DagonTask(
 
 Scheduler-aware pre-staging is configured in Python, not in `dagon.ini`.
 Use `Workflow(..., pre_stage=False)` (the default) for the workflow and
-`pre_stage=None|True|False` for each Slurm task. When you enable it, set
+`pre_stage=None|True|False` for each Slurm task. Keep `StagerMover.NORMAL` or
+`StagerMover.PARALLEL`: `StagerMover.SLURM` submits copy jobs and is not
+eligible. When you enable it, set
 `[batch] scratch_dir_base` (or the task `working_dir`) to a directory that is
 
 - visible at the same absolute path from the submission host and every compute

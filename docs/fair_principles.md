@@ -89,8 +89,9 @@ declared outputs.
 
 Slurm tasks for which scheduler-aware pre-staging is configured add
 `execution.pre_stage`. It holds whether pre-staging was effective, the policy
-version, the last phase, the input count, the stage-in and submission
-timestamps, the requested cores, and the estimated allocated core-hours not
+version, the last phase, the input count, how many inputs had their staged
+content compared with the source, the scheduler job identifier, the stage-in
+and submission timestamps, the requested cores, and the estimated allocated core-hours not
 held during stage-in. It contains no paths and no credentials. Allocation wait
 and execution time are included only when the job's start stamp can be read;
 they have one-second resolution. In pre-staged mode the `staging` record of a

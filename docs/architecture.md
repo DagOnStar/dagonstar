@@ -112,8 +112,9 @@ stages inputs and then runs the command in one script, so for Slurm tasks the
 staging in step 12 happens inside the allocation. When scheduler-aware
 pre-staging is effective (`Workflow(pre_stage=True)` or `Slurm(...,
 pre_stage=True)`), steps 12 and 13 split. `stage_in.sh` runs on the submission
-host and is verified, `.dagon/stage-in-complete.json` is written, and only then
-is a compute-only launcher submitted. A failed stage-in never reaches the
+host and is verified (content is compared with the source when the source is
+readable there), `.dagon/stage-in-complete.json` is written, and only then is a
+compute-only launcher submitted with `sbatch --parsable`. A failed stage-in never reaches the
 scheduler. See [Scheduler-aware pre-staging](scheduler_prestaging.md).
 
 ## Status model

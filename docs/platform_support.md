@@ -66,8 +66,15 @@ with real `sbatch`. The script checks that:
   before the job started, and the job saw its input at start;
 - the same task without pre-staging stages inside the job and gives the same
   result;
+- the staged content was compared with its source, and the job identifier
+  came from `sbatch --parsable`;
 - a failed stage-in never wrote or submitted a compute launcher;
-- an explicit `pre_stage=True` with BeeOND is rejected.
+- an explicit `pre_stage=True` with BeeOND or with `StagerMover.SLURM` is
+  rejected;
+- a completed task is reused when its input is unchanged and runs again when
+  the producer's output changed;
+- a `workflow://` reference with `..` fails in staging without a transfer or
+  submission, and a dry run creates no scratch directory.
 
 Finally, the job runs `examples/dataflow/slurm/pre_stage_local.py` on the
 cluster. A single node with an empty queue shows ordering and gating only, not
