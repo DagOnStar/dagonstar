@@ -241,7 +241,10 @@ The guide is `docs/scheduler_prestaging.md`, linked from `README.md`, `docs/READ
 ## 12. Commit history
 
 ```text
-(this commit) Fix the repeat-audit findings R-001 to R-003 and record cluster evidence
+(this commit) Record the repeat-audit commits in the implementation report
+fc840d1 Fix the repeat-audit findings R-001 to R-003 and record cluster evidence
+22881f6 Check queue-time changes and the stage-in lock in the Slurm harness
+1e3893d Fix the repeat-audit findings in scheduler-aware pre-staging
 fb4b8d6 Record the audit-fix commits in the implementation report
 aac6d5c Document the pre-staging audit fixes and update the report
 c6b9761 Cover the audit fixes in the real-Slurm pre-staging harness
