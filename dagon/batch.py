@@ -7,6 +7,7 @@ from dagon.remote import RemoteTask
 from subprocess import Popen, PIPE, STDOUT
 from dagon.shell import join_command, quote
 from dagon.platform_support import bash_executable, launcher_environment
+from dagon.prestage import MARKER_NAME, STAGE_SCRIPT_NAME, validate_pre_stage
 
 
 class Batch(Task):
@@ -228,7 +229,13 @@ class Slurm(Batch):
     :vartype beeond: bool, str, dict, :class:`dagon.beeond.BeeONDConfig` or
         :class:`dagon.beeond.BeeONDVolume`
 
+    :ivar pre_stage: scheduler-aware pre-staging override (see :mod:`dagon.prestage`);
+        ``None`` inherits :attr:`dagon.Workflow.pre_stage`
+    :vartype pre_stage: bool or None
+
     """
+
+    pre_stage_capable = True
 
     def __init__(
             self,
@@ -245,7 +252,8 @@ class Slurm(Batch):
             globusendpoint: Optional[str] = None,
             nodelist: Optional[str] = None,
             sbatch_options: Optional[List[str]] = None,
-            beeond: Any = None) -> None:
+            beeond: Any = None,
+            pre_stage: Optional[bool] = None) -> None:
         """
         :param name: name of the task
         :type name: str
@@ -290,6 +298,12 @@ class Slurm(Batch):
             ``"workflow"``/``"workflow:<name>"`` for a per-workflow volume, a
             dict of :class:`dagon.beeond.BeeONDConfig` options, a config, or a
             :class:`dagon.beeond.BeeONDVolume`. ``None`` disables BeeOND.
+
+        :param pre_stage: ``True`` stages the ``workflow://`` inputs on the
+            submission host before ``sbatch``; ``False`` keeps stage-in inside
+            the allocation; ``None`` (default) inherits the workflow setting.
+            See ``docs/scheduler_prestaging.md``.
+        :type pre_stage: bool or None
         """
 
         Batch.__init__(self, name, command, working_dir, globusendpoint=globusendpoint)
@@ -305,6 +319,7 @@ class Slurm(Batch):
         self.beeond = beeond
         self._beeond_resolved: Any = None
         self._beeond_is_resolved = False
+        self.pre_stage = validate_pre_stage(pre_stage)
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         """Create a Slurm task local or remote
@@ -382,15 +397,9 @@ class Slurm(Batch):
         :rtype: dict() with the execution output (str) and code (int)
         """
 
-        super(Batch, self).on_execute(script, script_name)
-
         if script_name == "context.sh":
-            return Batch.execute_command(
-                join_command((
-                    bash_executable(),
-                    self.working_dir + "/.dagon/" + script_name,
-                ))
-            )
+            return self.run_on_submission_host(script, script_name)
+        super(Batch, self).on_execute(script, script_name)
         volume = self.beeond_volume()
         if volume is not None:
             from dagon.beeond import LocalHost
@@ -403,6 +412,53 @@ class Slurm(Batch):
         result = Batch.execute_command(command)
         return result
 
+
+    # -- Scheduler-aware pre-staging (see dagon.prestage) -----------------
+
+    def run_on_submission_host(self, script: str, script_name: str) -> ExecutionResult:
+        """Write *script* to ``.dagon`` and run it with bash outside any allocation.
+
+        This is the route ``context.sh`` has always taken; ``stage_in.sh`` takes
+        the same one, so pre-staging never consumes scheduler resources.
+        """
+        super(Batch, self).on_execute(script, script_name)
+        return Batch.execute_command(join_command((bash_executable(), self.working_dir + "/.dagon/" + script_name)))
+
+    def run_stage_in(self, script: str) -> ExecutionResult:
+        return self.run_on_submission_host(script, STAGE_SCRIPT_NAME)
+
+    def write_stage_marker(self, content: str) -> None:
+        """Write the marker through a temporary file and an atomic rename."""
+        target = self.working_dir + "/.dagon/" + MARKER_NAME
+        temporary = target + ".tmp"
+        with open(temporary, "w", encoding="utf-8", newline="\n") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, target)
+
+    def read_scratch_file(self, filepath: str) -> Optional[str]:
+        if not os.path.isfile(filepath):
+            return None
+        with open(filepath, encoding="utf-8") as stream:
+            return stream.read()
+
+    def requested_cores(self) -> Optional[int]:
+        """Return ``ntasks``, or ``nodes * ntasks_per_node``, when requested."""
+        if self.ntasks is not None:
+            return int(self.ntasks)
+        if self.nodes is not None and self.ntasks_per_node is not None:
+            return int(self.nodes) * int(self.ntasks_per_node)
+        return None
+
+    def pre_stage_unsupported_reason(self) -> Optional[str]:
+        reason = super().pre_stage_unsupported_reason()
+        if reason is not None:
+            return reason
+        if self.beeond is not None and self.beeond is not False:
+            return ("pre-staging is not supported together with BeeOND: BeeOND volumes exist only inside "
+                    "a scheduler allocation (task scope) or a holder job (workflow scope)")
+        return None
 
     # -- BeeOND support -------------------------------------------------
 
@@ -514,6 +570,9 @@ class Slurm(Batch):
             beeond = None
         if beeond is not None:
             metadata["beeond"] = beeond
+        pre_stage = self.pre_stage_metadata()
+        if pre_stage is not None:
+            metadata["pre_stage"] = pre_stage
         return metadata
 
     def portable_command(self) -> str:
@@ -555,6 +614,8 @@ class Slurm(Batch):
             elif isinstance(spec, dict):
                 spec = dict(spec)
             json_task["beeond"] = spec
+        if self.pre_stage is not None:
+            json_task["pre_stage"] = self.pre_stage
         return json_task
 
 
@@ -582,7 +643,8 @@ class RemoteSlurm(RemoteTask, Slurm):
             nodelist: Optional[str] = None,
             sbatch_options: Optional[List[str]] = None,
             beeond: Any = None,
-            ssh_port: int = 22) -> None:
+            ssh_port: int = 22,
+            pre_stage: Optional[bool] = None) -> None:
         """
         :param name: name of the task
         :type name: str
@@ -617,11 +679,15 @@ class RemoteSlurm(RemoteTask, Slurm):
         :param ssh_port: SSH port of the remote login node (default: 22)
         :type ssh_port: int
 
+        :param pre_stage: same meaning as in :class:`Slurm`; stage-in runs on the
+            remote login (submission) host over SSH
+        :type pre_stage: bool or None
+
         """
         Slurm.__init__(self, name, command, comment=comment, working_dir=working_dir, partition=partition,
                        ntasks=ntasks, memory=memory, time=time, nodes=nodes, ntasks_per_node=ntasks_per_node,
                        globusendpoint=globusendpoint, nodelist=nodelist, sbatch_options=sbatch_options,
-                       beeond=beeond)
+                       beeond=beeond, pre_stage=pre_stage)
         RemoteTask.__init__(
             self,
             name,
@@ -648,10 +714,9 @@ class RemoteSlurm(RemoteTask, Slurm):
         :rtype: dict() with the execution output (str) and code (int)
         """
 
-        RemoteTask.on_execute(self, script, script_name)
         if script_name == "context.sh":
-            return self.ssh_connection.execute_command(
-                join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
+            return self.run_on_submission_host(script, script_name)
+        RemoteTask.on_execute(self, script, script_name)
 
         volume = self.beeond_volume()
         if volume is not None:
@@ -664,3 +729,22 @@ class RemoteSlurm(RemoteTask, Slurm):
         # Execute the bash command
         result = self.ssh_connection.execute_command(command)
         return result
+
+    def run_on_submission_host(self, script: str, script_name: str) -> ExecutionResult:
+        """Write *script* on the remote login host and run it there with bash over SSH."""
+        RemoteTask.on_execute(self, script, script_name)
+        return self.ssh_connection.execute_command(
+            join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
+
+    def write_stage_marker(self, content: str) -> None:
+        """Write the marker on the remote host through a temporary file and ``mv``."""
+        target = self.working_dir + "/.dagon/" + MARKER_NAME
+        temporary = target + ".tmp"
+        self.ssh_connection.create_file(temporary, content)
+        result = self.ssh_connection.execute_command(join_command(("mv", "-f", temporary, target)))
+        if result.get("code"):
+            raise IOError("cannot move the stage-in marker into place: %s" % result.get("message"))
+
+    def read_scratch_file(self, filepath: str) -> Optional[str]:
+        result = self.ssh_connection.execute_command(join_command(("cat", filepath)))
+        return None if result.get("code") else result.get("output")

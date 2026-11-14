@@ -127,7 +127,8 @@ class Workflow(object):
             max_threads: int = 10,
             jsonload: Optional[Dict[str, Any]] = None,
             checkpoint_file: Optional[str] = None,
-            portable_emulation: bool = False):
+            portable_emulation: bool = False,
+            pre_stage: bool = False):
         """
         Create a workflow
 
@@ -139,7 +140,17 @@ class Workflow(object):
 
         :param config_file: Path to the configuration file of the workflow. By default, try to loads 'dagon.ini'
         :type config_file: str
+
+        :param pre_stage: default scheduler-aware pre-staging policy of the
+            workflow's tasks (``False`` by default).  When ``True``, eligible
+            scheduler tasks (Slurm, RemoteSlurm) whose own ``pre_stage`` is
+            ``None`` stage their ``workflow://`` inputs before requesting
+            resources; every other task keeps its usual lifecycle.  See
+            ``docs/scheduler_prestaging.md``.
+        :type pre_stage: bool
         """
+        from dagon.prestage import validate_pre_stage
+        self.pre_stage = validate_pre_stage(pre_stage, allow_none=False)
 
         if config is not None:
             self.cfg = config
@@ -314,6 +325,11 @@ class Workflow(object):
             task.set_data_mover(self.data_mover)
         if task.stager_mover is None:
             task.set_stager_mover(self.stager_mover)
+        # Fail fast on an invalid or unsupported explicit pre_stage override;
+        # the effective value is resolved again when the task executes.
+        validate_pre_stage = getattr(task, "validate_pre_stage_declaration", None)
+        if validate_pre_stage is not None:
+            validate_pre_stage()
 
         self.tasks.append(task)
         task.set_workflow(self)
@@ -452,6 +468,9 @@ class Workflow(object):
         """
 
         jsonWorkflow = {"tasks": {}, "name": self.name, "id": self.workflow_id, "host": self.ftpAtt.get("host", "localhost")}
+        if self.pre_stage:
+            # Only present when enabled, so default JSON documents are unchanged.
+            jsonWorkflow["pre_stage"] = True
         for task in self.tasks:
             jsonWorkflow['tasks'][task.name] = task.as_json()
         return jsonWorkflow
@@ -700,8 +719,11 @@ class Workflow(object):
 
     def load_json(self, Json_data):
         from dagon.task import DagonTask, TaskType
+        from dagon.prestage import validate_pre_stage
         self.name = Json_data['name']
         self.workflow_id = Json_data['id']
+        if 'pre_stage' in Json_data:
+            self.pre_stage = validate_pre_stage(Json_data['pre_stage'], allow_none=False)
         for task in Json_data['tasks']:
             temp = Json_data['tasks'][task]
             options = {}
@@ -712,6 +734,8 @@ class Workflow(object):
                 options['output_file'] = temp.get('output_file', 'response.json')
             if temp['type'].upper() == 'SLURM' and temp.get('beeond') is not None:
                 options['beeond'] = temp['beeond']
+            if temp['type'].upper() == 'SLURM' and temp.get('pre_stage') is not None:
+                options['pre_stage'] = temp['pre_stage']
             if temp['type'].upper() == 'NATIVE':
                 tk = DagonTask(TaskType.NATIVE, temp['name'], temp['function'],
                                inputs=temp.get('inputs'), outputs=temp.get('outputs'),
