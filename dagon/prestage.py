@@ -20,7 +20,9 @@ setting :attr:`dagon.task.Task.pre_stage_capable` and implementing the
 submission-host helpers (see :class:`dagon.batch.Slurm`).
 """
 
+import hashlib
 import json
+import posixpath
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -29,7 +31,7 @@ from typing import Any, Dict, List, Optional
 from dagon.shell import quote
 
 #: Version of the pre-staging policy recorded in markers and metadata.
-PRE_STAGE_POLICY_VERSION = 1
+PRE_STAGE_POLICY_VERSION = 2
 
 #: Name of the generated stage-in script inside ``<working_dir>/.dagon``.
 STAGE_SCRIPT_NAME = "stage_in.sh"
@@ -41,7 +43,19 @@ MARKER_NAME = "stage-in-complete.json"
 ALLOCATION_STARTED_NAME = "allocation_started_at"
 
 #: Schema identifier of the completion marker.
-MARKER_SCHEMA = "dagonstar.stage-in-marker/1"
+MARKER_SCHEMA = "dagonstar.stage-in-marker/2"
+
+#: File, inside ``<working_dir>/.dagon``, in which the stage-in script records the
+#: content identity of every source it could verify (see :func:`identity_script`).
+IDENTITY_NAME = "stage-in-identity.txt"
+
+#: Integrity level of an input whose staged content was compared with its
+#: source on the submission host (local ``COPY`` and ``LINK`` transfers).
+INTEGRITY_CONTENT = "content"
+
+#: Integrity level of an input whose source is not readable on the submission
+#: host (for example ``SCP``): only the existence of the staged path is checked.
+INTEGRITY_EXISTENCE = "existence"
 
 
 class TaskPhase(Enum):
@@ -145,10 +159,42 @@ class StageInput:
     local_path: str
     source: str
     destination: str
+    #: :data:`INTEGRITY_CONTENT` or :data:`INTEGRITY_EXISTENCE`
+    integrity: str = INTEGRITY_EXISTENCE
 
     def as_dict(self) -> Dict[str, str]:
         return {"reference": self.reference, "workflow": self.workflow, "task": self.task,
-                "local_path": self.local_path, "source": self.source, "destination": self.destination}
+                "local_path": self.local_path, "source": self.source, "destination": self.destination,
+                "integrity": self.integrity}
+
+
+def validate_reference_path(workflow_name: str, task_name: str, local_path: str) -> None:
+    """Reject a ``workflow://`` reference that could leave its staging roots.
+
+    The producer path ``<producer scratch>/<local_path>`` and the destination
+    ``<consumer>/.dagon/inputs/<workflow>/<task>/<local_path>`` are built by
+    string concatenation, so a ``..`` component in any part of the reference
+    could address files outside the producer's scratch directory or outside the
+    consumer's staging area.  Pre-staging runs these transfers on the
+    submission host, so such references are refused before anything runs.
+    Symbolic links inside the producer's scratch directory are not resolved:
+    they are producer outputs and are copied or linked as such.
+
+    :raises PreStageConfigurationError: for an unsafe reference
+    """
+    if not task_name or task_name in (".", ".."):
+        raise PreStageConfigurationError("workflow:// reference has an invalid task name %r" % task_name)
+    if workflow_name in (".", "..") or "\\" in workflow_name or "\\" in task_name:
+        raise PreStageConfigurationError("workflow:// reference has an invalid workflow name %r" % workflow_name)
+    parts = local_path.replace("\\", "/").split("/")
+    if ".." in parts:
+        raise PreStageConfigurationError(
+            "workflow:// reference %r contains a '..' component; references must stay inside the "
+            "producer's scratch directory" % ("/" + workflow_name + "/" + task_name + local_path))
+    if posixpath.normpath("/" + local_path.lstrip("/")) == "/":
+        raise PreStageConfigurationError(
+            "workflow:// reference to %s/%s names the whole scratch directory, not a file in it"
+            % (workflow_name, task_name))
 
 
 # Bash helper used by stage-in scripts to confirm that every staged input
@@ -175,6 +221,67 @@ _VERIFY_FUNCTION = r"""dagon_verify_staged() {
   return 0
 }
 """
+
+# Bash helpers that print a deterministic content listing of every file
+# matched by a pattern: one ``<relative name> <CRC> <size>`` line per file, as
+# printed by POSIX ``cksum``.  Names are relative to the directory containing
+# each match, so a source and its staged copy produce the same listing.
+# Symbolic links are followed (``find -L``), so a ``LINK`` transfer is
+# compared by the content it points to; an unreadable or dangling entry is
+# listed as ``unreadable`` and never matches readable content.
+_DIGEST_FUNCTIONS = r"""dagon_tree_digest() {
+  local LC_ALL=C
+  local dagon_pattern="$1" dagon_item dagon_entry dagon_saved_ifs="$IFS"
+  IFS='
+'
+  for dagon_item in $dagon_pattern; do
+    IFS="$dagon_saved_ifs"
+    (
+      cd "$(dirname "$dagon_item")" || exit 1
+      find -L "$(basename "$dagon_item")" \( -type f -o -type l \) -print | sort | while IFS= read -r dagon_entry; do
+        printf '%s ' "$dagon_entry"
+        cksum < "$dagon_entry" 2>/dev/null || echo unreadable
+      done
+    ) || echo "$dagon_item unreadable"
+  done
+  IFS="$dagon_saved_ifs"
+}
+dagon_compare_staged() {
+  if [ "$(dagon_tree_digest "$1")" != "$(dagon_tree_digest "$2")" ]; then
+    echo "DAGonStar: staged content differs from its source: $2" >&2
+    return 1
+  fi
+  return 0
+}
+"""
+
+
+def identity_body(inputs: List[StageInput]) -> str:
+    """Return shell commands printing the content identity of the verifiable sources."""
+    body = ""
+    for item in inputs:
+        if item.integrity != INTEGRITY_CONTENT:
+            continue
+        body += "echo " + quote("== " + item.reference) + "\n"
+        body += "dagon_tree_digest " + quote(item.source) + "\n"
+    return body
+
+
+def identity_script(inputs: List[StageInput]) -> str:
+    """Return a bash script that prints the current content identity of *inputs*.
+
+    Used when resuming from a checkpoint: its output is hashed with
+    :func:`identity_digest` and compared with the digest recorded after the
+    successful stage-in.  Only inputs with :data:`INTEGRITY_CONTENT` take part.
+    """
+    return "#! /bin/bash\n" + _DIGEST_FUNCTIONS + identity_body(inputs)
+
+
+def identity_digest(listing: Optional[str]) -> Optional[str]:
+    """Return the SHA-256 of an identity listing, or ``None`` when there is none."""
+    if listing is None:
+        return None
+    return hashlib.sha256(listing.encode("utf-8")).hexdigest()
 
 
 @dataclass
@@ -240,19 +347,27 @@ class PreparedTask:
     def stage_in_script(self) -> str:
         """Return the stage-in script that runs on the submission host.
 
-        The script removes a stale completion marker first, stops at the first
-        failed transfer, verifies every staged input, and exits non-zero on any
-        failure.  It never runs the task command or the allocation prologue.
+        The script removes a stale completion marker, identity record, and
+        previously staged inputs first, stops at the first failed transfer,
+        verifies every staged input, and exits non-zero on any failure.  Inputs
+        whose source is readable on the submission host
+        (:data:`INTEGRITY_CONTENT`) are compared file by file with their source;
+        the others are only checked for existence.  On success it records the
+        content identity of the compared sources in ``.dagon/stage-in-identity.txt``.
+        It never runs the task command or the allocation prologue.
         """
         marker = self.working_dir + "/.dagon/" + MARKER_NAME
+        identity = self.working_dir + "/.dagon/" + IDENTITY_NAME
         script = ("#! /bin/bash\n"
                   "export PATH=\"$HOME/.local/bin:$PATH\"\n"
                   "# This is the DagOn stage-in script (scheduler-aware pre-staging).\n"
                   "# It runs on the submission host before the scheduler job is requested.\n\n"
                   "code=0\n"
-                  "rm -f " + quote(marker) + "\n"
+                  "rm -f " + quote(marker) + " " + quote(identity) + "\n"
+                  "# Inputs are always staged again: nothing from an earlier attempt is trusted\n"
+                  "rm -rf " + quote(self.working_dir + "/.dagon/inputs") + "\n"
                   "cd " + quote(self.working_dir) + " || exit 1\n\n"
-                  + _VERIFY_FUNCTION + "\n")
+                  + _VERIFY_FUNCTION + _DIGEST_FUNCTIONS + "\n")
         if not self.stage_blocks:
             script += "# This task has no workflow:// inputs to stage\n"
         for number, block in enumerate(self.stage_blocks, 1):
@@ -265,6 +380,20 @@ class PreparedTask:
             script += "\n# Verify every staged input before the scheduler job is requested\n"
             for item in self.inputs:
                 script += "dagon_verify_staged " + quote(item.destination) + " || code=1\n"
+            if any(item.integrity == INTEGRITY_CONTENT for item in self.inputs):
+                script += ("\n# Compare staged content with its source (inputs readable on this host)\n"
+                           "if [ \"$code\" -eq 0 ]; then\n")
+                for item in self.inputs:
+                    if item.integrity == INTEGRITY_CONTENT:
+                        script += ("  dagon_compare_staged " + quote(item.source) + " "
+                                   + quote(item.destination) + " || code=1\n")
+                script += "fi\n"
+        script += ("\n# Record the content identity of the compared sources (checkpoint validation)\n"
+                   "if [ \"$code\" -eq 0 ]; then\n"
+                   "  { :\n" + "".join("  " + line + "\n" for line in identity_body(self.inputs).splitlines())
+                   + "  } > " + quote(identity + ".tmp") + " && mv -f " + quote(identity + ".tmp") + " "
+                   + quote(identity) + " || code=1\n"
+                   "fi\n")
         script += "\nexit $code\n"
         return script
 
@@ -275,19 +404,20 @@ class PreparedTask:
             steps += ["stage-in " + item.reference + " -> " + item.destination for item in self.inputs]
         else:
             steps.append("stage-in: no workflow:// inputs")
-        steps += ["verify staged inputs and write .dagon/" + MARKER_NAME,
+        steps += ["verify staged inputs (content where the source is readable) and write .dagon/" + MARKER_NAME,
                   "submit compute-only launcher to the scheduler"]
         return steps
 
 
 def marker_document(task: Any, prepared: PreparedTask, started_at: str, finished_at: str,
-                    staging_seconds: float) -> str:
+                    staging_seconds: float, source_identity: Optional[str] = None) -> str:
     """Return the JSON content of the stage-in completion marker.
 
     The marker is local provenance written only after a verified successful
     stage-in.  It records task identity, the input manifest, the mover, the
-    policy version, and timestamps; it never contains credentials.  It is not a
-    skip token: a rerun always stages again.
+    policy version, timestamps, the integrity level of every input, and the
+    SHA-256 of the identity listing of the content-verified sources; it never
+    contains credentials.  It is not a skip token: a rerun always stages again.
     """
     document = {
         "schema": MARKER_SCHEMA,
@@ -301,5 +431,6 @@ def marker_document(task: Any, prepared: PreparedTask, started_at: str, finished
         "staging_started_at": started_at,
         "staging_finished_at": finished_at,
         "staging_seconds": round(staging_seconds, 3),
+        "source_identity_sha256": source_identity,
     }
     return json.dumps(document, indent=2, sort_keys=True) + "\n"

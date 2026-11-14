@@ -1,4 +1,5 @@
 import logging
+import re
 import shutil
 import glob
 import os
@@ -16,10 +17,30 @@ import dagon
 from dagon.shell import quote
 from dagon.platform_support import bash_executable, launcher_environment, shell_path
 from dagon.prestage import (
-    ALLOCATION_STARTED_NAME, MARKER_NAME, PRE_STAGE_POLICY_VERSION, PreparedTask, PreStageConfigurationError,
-    ScheduledExecutionError, SchedulerSubmissionError, StageInFailedError, StageInput, TaskPhase,
-    estimated_core_hours_saved, marker_document, utc_now, validate_pre_stage,
+    ALLOCATION_STARTED_NAME, IDENTITY_NAME, INTEGRITY_CONTENT, INTEGRITY_EXISTENCE, MARKER_NAME,
+    PRE_STAGE_POLICY_VERSION, PreparedTask, PreStageConfigurationError, ScheduledExecutionError,
+    SchedulerSubmissionError, StageInFailedError, StageInput, TaskPhase, estimated_core_hours_saved,
+    identity_digest, identity_script, marker_document, utc_now, validate_pre_stage, validate_reference_path,
 )
+
+# ``sbatch --parsable`` prints ``<job id>`` or ``<job id>;<cluster>`` on its first line.
+_PARSABLE_JOB_ID = re.compile(r"^(\d+(?:_\d+)?)(?:;\S+)?$")
+
+
+def parsable_job_id(output: Any) -> Optional[str]:
+    """Return the job identifier printed by ``sbatch --parsable``, or ``None``.
+
+    Only the first non-empty output line is inspected, and only a bare numeric
+    identifier (optionally followed by ``;<cluster>``) is accepted, so display
+    text such as ``Submitted batch job 42`` or an error message never counts as
+    evidence that the scheduler accepted the job.
+    """
+    for line in str(output or "").splitlines():
+        line = line.strip()
+        if line:
+            match = _PARSABLE_JOB_ID.match(line)
+            return match.group(1) if match else None
+    return None
 
 
 class TaskType(Enum):
@@ -210,6 +231,8 @@ class Task(Thread):
         self.pre_stage_phase: Optional[TaskPhase] = None
         self.pre_stage_metrics: Dict[str, Any] = {}
         self.prepared_task: Optional[PreparedTask] = None
+        # True only while a pre-staged compute launcher is being submitted.
+        self.pre_stage_submission = False
         self.failure_phase: Optional[str] = None
 
 
@@ -245,6 +268,12 @@ class Task(Thread):
                     "only Slurm and RemoteSlurm tasks do" % type(self).__name__)
         if self.mode == "parallel":
             return "pre-staging is not supported for tasks in parallel mode"
+        stager_mover = self.stager_mover
+        if stager_mover is not None and \
+                dagon.stager.base.StagerMover(stager_mover) == dagon.stager.base.StagerMover.SLURM:
+            return ("pre-staging is not supported with StagerMover.SLURM: its copy jobs are scheduler "
+                    "submissions, and pre-staging must not request scheduler resources before stage-in "
+                    "has succeeded")
         return None
 
     def validate_pre_stage_declaration(self) -> None:
@@ -304,6 +333,13 @@ class Task(Thread):
         """Return the content of a scratch file, or ``None`` (backend specific)."""
         return None
 
+    def run_identity_check(self, script: str) -> ExecutionResult:
+        """Run a read-only identity script on the submission host (backend specific).
+
+        Used only to validate a pre-staged checkpoint before it is reused.
+        """
+        raise PreStageConfigurationError("%s cannot validate pre-staged inputs" % type(self).__name__)
+
     def requested_cores(self) -> Optional[int]:
         """Return the number of cores requested from the scheduler, when known."""
         return None
@@ -342,24 +378,25 @@ class Task(Thread):
                 raise StageInFailedError("%s: stage-in planning failed: %s" % (self.name, exc)) from exc
             self.prepared_task = prepared
             metrics["inputs"] = len(prepared.inputs)
-            if self.workflow.dry is True:
-                metrics["dry_run"] = True
-                self.workflow.logger.info("%s: dry run, planned pre-staged order: %s",
-                                          self.name, " -> ".join(prepared.planned_order()))
-            else:
-                self._run_stage_in(prepared, key)
+            metrics["inputs_content_verified"] = sum(
+                1 for item in prepared.inputs if item.integrity == INTEGRITY_CONTENT)
+            self._run_stage_in(prepared, key)
         finally:
             self.workflow._fire_event("on_task_staging_in_end", self)
 
         launcher_script = self.post_process_command(prepared.compute_launcher())
         self.workflow._fire_event("on_task_execute_start", self)
-        if self.workflow.dry is not False:
-            return
 
         self._set_pre_stage_phase(TaskPhase.SUBMITTED)
         metrics["submission_started_at"] = utc_now()
         submitted = time()
-        self.result = self.on_execute(launcher_script, "launcher.sh")
+        # Submit with ``--parsable`` so acceptance is judged from the job
+        # identifier, not from display text (see :func:`parsable_job_id`).
+        self.pre_stage_submission = True
+        try:
+            self.result = self.on_execute(launcher_script, "launcher.sh")
+        finally:
+            self.pre_stage_submission = False
         returned = time()
         self.completetion_time = returned - submitted
         metrics["scheduler_returned_at"] = utc_now()
@@ -368,10 +405,11 @@ class Task(Thread):
         self.workflow.logger.debug("%s Completed in %s seconds ---" % (self.name, self.completetion_time))
         self._record_allocation_timing(submitted, returned)
         checkpoint["code"] = self.result['code']
+        job_id = parsable_job_id(self.result.get("output"))
+        metrics["scheduler_job_id"] = job_id
         if self.result['code']:
             self._set_pre_stage_phase(TaskPhase.FAILED)
-            output = str(self.result.get("output") or "")
-            if "Submitted batch job" in output:
+            if job_id is not None:
                 self.failure_phase = "execution"
                 raise ScheduledExecutionError(
                     "%s: scheduler job failed after pre-staging: %s" % (self.name, self.result.get('message')))
@@ -380,6 +418,65 @@ class Task(Thread):
                 "%s: scheduler submission failed after successful pre-staging (staged inputs kept): %s"
                 % (self.name, self.result.get('message')))
         self._set_pre_stage_phase(TaskPhase.COMPLETED)
+
+    def plan_pre_staged_dry_run(self) -> PreparedTask:
+        """Plan a pre-staged task without any side effect (dry run).
+
+        The ``workflow://`` references are parsed and checked
+        (:func:`dagon.prestage.validate_reference_path`), and the planned order
+        is logged.  No scratch directory is created and nothing runs on the
+        submission host, so the data mover, which context discovery would
+        choose, is not resolved, and integrity levels are not decided.
+        Directories that do not exist yet are shown as placeholders.
+        """
+        metrics = self.pre_stage_metrics
+        metrics.clear()
+        metrics.update({"pre_stage_effective": True, "policy_version": PRE_STAGE_POLICY_VERSION,
+                        "dry_run": True})
+        self._set_pre_stage_phase(TaskPhase.PREPARING)
+        working_dir = self.working_dir or "<scratch of %s>" % self.name
+        inputs: List[StageInput] = []
+        self.workflow._fire_event("on_task_staging_in_start", self)
+        try:
+            command = self.command
+            pos = 0
+            while True:
+                pos1 = command.find(dagon.Workflow.SCHEMA, pos)
+                if pos1 == -1:
+                    break
+                pos2 = command.find(" ", pos1)
+                if pos2 == -1:
+                    pos2 = len(command)
+                arg = command[pos1:pos2].replace(dagon.Workflow.SCHEMA, "")
+                elements = arg.split("/")
+                workflow_name = elements[0] or self.workflow.name
+                task_name = elements[1] if len(elements) > 1 else ""
+                local_path = "/" + "/".join(elements[2:])
+                try:
+                    validate_reference_path(workflow_name, task_name, local_path)
+                except PreStageConfigurationError as exc:
+                    self.failure_phase = "staging"
+                    self._set_pre_stage_phase(TaskPhase.FAILED)
+                    raise StageInFailedError("%s: stage-in planning failed: %s" % (self.name, exc)) from exc
+                producer = self.workflow.find_task_by_name(workflow_name, task_name)
+                source_root = (producer.working_dir if producer is not None and producer.working_dir
+                               else "<scratch of %s>" % task_name)
+                destination = working_dir + "/.dagon/inputs/" + workflow_name + "/" + task_name
+                inputs.append(StageInput(reference=dagon.Workflow.SCHEMA + arg, workflow=workflow_name,
+                                         task=task_name, local_path=local_path,
+                                         source=source_root + "/" + local_path,
+                                         destination=destination + "/" + local_path))
+                pos = pos2
+            prepared = PreparedTask(working_dir=working_dir, header="", prologue="", stage_blocks=[], invoke="",
+                                    resolved_command=command, inputs=inputs)
+            self.prepared_task = prepared
+            metrics["inputs"] = len(inputs)
+            self.workflow.logger.info("%s: dry run, planned pre-staged order: %s",
+                                      self.name, " -> ".join(prepared.planned_order()))
+        finally:
+            self.workflow._fire_event("on_task_staging_in_end", self)
+        self.workflow._fire_event("on_task_execute_start", self)
+        return prepared
 
     def _run_stage_in(self, prepared: PreparedTask, key: str) -> None:
         metrics = self.pre_stage_metrics
@@ -402,14 +499,26 @@ class Task(Thread):
                 "%s: stage-in failed on the submission host; no scheduler job was submitted: %s"
                 % (self.name, (result.get("message") or result.get("output") or "").strip()))
         try:
-            self.write_stage_marker(marker_document(self, prepared, started_at, finished_at, staging_seconds))
+            listing = self.read_scratch_file(self.working_dir + "/.dagon/" + IDENTITY_NAME)
+            if listing is None:
+                raise IOError("the stage-in identity record .dagon/%s is missing" % IDENTITY_NAME)
+            source_identity = identity_digest(listing)
+            self.write_stage_marker(marker_document(self, prepared, started_at, finished_at, staging_seconds,
+                                                    source_identity))
         except Exception as exc:
             self.failure_phase = "staging"
             self._set_pre_stage_phase(TaskPhase.FAILED)
             raise StageInFailedError("%s: could not record stage-in completion; no scheduler job was "
                                      "submitted: %s" % (self.name, exc)) from exc
+        # The checkpoint keeps what is needed to re-verify the inputs before a
+        # completed result is reused (see :meth:`validate_pre_staged_checkpoint`).
         self.workflow.checkpoints[key]["pre_stage"].update(
-            {"staged": True, "marker": ".dagon/" + MARKER_NAME})
+            {"staged": True, "marker": ".dagon/" + MARKER_NAME,
+             "policy_version": PRE_STAGE_POLICY_VERSION,
+             "source_identity_sha256": source_identity,
+             "inputs": [{"reference": item.reference, "workflow": item.workflow, "task": item.task,
+                         "local_path": item.local_path, "integrity": item.integrity}
+                        for item in prepared.inputs]})
         cores = self.requested_cores()
         metrics["requested_cores"] = cores
         metrics["estimated_allocated_core_hours_saved"] = estimated_core_hours_saved(cores, staging_seconds)
@@ -460,9 +569,58 @@ class Task(Thread):
             accessible = bool(self.exists_dir(working_dir))
         if not accessible:
             return False
+        pre_stage = checkpoint.get("pre_stage")
+        if isinstance(pre_stage, dict) and pre_stage.get("effective"):
+            reason = self.validate_pre_staged_checkpoint(pre_stage)
+            if reason is not None:
+                self.workflow.logger.warning(
+                    "%s: completed pre-staged checkpoint not reused, the task runs again: %s", self.name, reason)
+                return False
         self.working_dir = working_dir
         self.fair_checkpoint_reused = True
         return True
+
+    def validate_pre_staged_checkpoint(self, record: Dict[str, Any]) -> Optional[str]:
+        """Return why a completed pre-staged checkpoint must not be reused, or ``None``.
+
+        A completed checkpoint is reused only when the content of every input
+        can be re-read on the submission host and still matches the identity
+        recorded after the successful stage-in.  Inputs are resolved against the
+        producers' *current* scratch directories, so a producer that ran again
+        with different output invalidates the consumer.  Inputs whose source
+        was not readable on the submission host (for example ``SCP``) cannot be
+        re-verified, so such a checkpoint is never reused.  The stage-in
+        marker is never consulted: it is provenance, not a skip token.
+        """
+        if record.get("policy_version") != PRE_STAGE_POLICY_VERSION or "source_identity_sha256" not in record:
+            return "the checkpoint has no input identity for this pre-staging policy version"
+        entries = record.get("inputs")
+        if not isinstance(entries, list):
+            return "the checkpoint has no input manifest"
+        inputs = []
+        for entry in entries:
+            if not isinstance(entry, dict) or entry.get("integrity") != INTEGRITY_CONTENT:
+                return "input %s cannot be re-verified on the submission host" % (
+                    entry.get("reference") if isinstance(entry, dict) else entry)
+            producer = self.workflow.find_task_by_name(entry.get("workflow"), entry.get("task"))
+            if producer is None or not producer.working_dir:
+                return "the producer of %s is not available" % entry.get("reference")
+            inputs.append(StageInput(
+                reference=str(entry.get("reference")), workflow=str(entry.get("workflow")),
+                task=str(entry.get("task")), local_path=str(entry.get("local_path")),
+                source=str(producer.working_dir) + "/" + str(entry.get("local_path")),
+                destination="", integrity=INTEGRITY_CONTENT))
+        if not inputs:
+            return None
+        try:
+            result = self.run_identity_check(identity_script(inputs))
+        except Exception as exc:
+            return "the inputs could not be re-verified: %s" % exc
+        if result.get("code"):
+            return "the inputs could not be re-verified: %s" % (result.get("message") or "").strip()
+        if identity_digest(result.get("output") or "") != record.get("source_identity_sha256"):
+            return "the content of at least one input changed since the checkpoint was written"
+        return None
 
     def initialize_checkpoint(self) -> Dict[str, Any]:
         """Create the common checkpoint record after a working directory exists."""
@@ -1031,6 +1189,10 @@ class Task(Thread):
 
             # Check if the referenced task is consistent
             if task is not None:
+                if strict_staging:
+                    # Pre-staging runs these transfers on the submission host:
+                    # refuse references that could leave the staging roots.
+                    validate_reference_path(workflow_name, task_name, local_path)
                 # Evaluate the destination path
                 dst_path = self.working_dir + "/.dagon/inputs/" + workflow_name + "/" + task_name
 
@@ -1042,10 +1204,16 @@ class Task(Thread):
                 block = block + \
                     stager.stage_in(self, task, dst_path, local_path, strict=strict_staging)
                 blocks.append(block)
+                # The source is readable where the stage-in script runs only
+                # for same-host COPY and LINK transfers.
+                mover = getattr(stager, "last_data_mover", None)
+                integrity = (INTEGRITY_CONTENT if mover in (dagon.stager.base.DataMover.COPY,
+                                                            dagon.stager.base.DataMover.LINK)
+                             else INTEGRITY_EXISTENCE)
                 inputs.append(StageInput(
                     reference=dagon.Workflow.SCHEMA + arg, workflow=workflow_name, task=task_name,
                     local_path=local_path, source=str(task.get_scratch_dir()) + "/" + local_path,
-                    destination=dst_path + "/" + local_path))
+                    destination=dst_path + "/" + local_path, integrity=integrity))
 
                 if self.mode == "parallel":
                     files = glob.glob(
@@ -1374,12 +1542,18 @@ class Task(Thread):
             # Resolve before creating scratch so configuration errors leave no
             # partial state behind.
             pre_stage = self.resolve_pre_stage()
-            self.create_working_dir()
-            self.initialize_checkpoint()
-
-            if pre_stage:
+            if pre_stage and self.workflow.dry is not False:
+                # A dry run of a pre-staged task is side-effect free: no
+                # scratch directory, checkpoint entry, context discovery,
+                # remote command, transfer, or scheduler call.
+                self.plan_pre_staged_dry_run()
+            elif pre_stage:
+                self.create_working_dir()
+                self.initialize_checkpoint()
                 self.execute_pre_staged(key)
             else:
+                self.create_working_dir()
+                self.initialize_checkpoint()
                 if self.pre_stage_requested():
                     self.pre_stage_metrics = {"pre_stage_effective": False, "policy_version": PRE_STAGE_POLICY_VERSION}
                 self.execute_legacy(key)

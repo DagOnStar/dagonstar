@@ -353,7 +353,9 @@ class Slurm(Batch):
         :rtype: dict() with the execution output (str) and code (int)
         """
 
-        options = []
+        # A pre-staged submission prints only the job identifier, so acceptance
+        # is judged from structured output (dagon.task.parsable_job_id).
+        options = ["--parsable"] if getattr(self, "pre_stage_submission", False) else []
         comments: List[str] = []
         if self.comment is not None:
             comments = [self.comment] if isinstance(self.comment, str) else list(self.comment)
@@ -426,6 +428,10 @@ class Slurm(Batch):
 
     def run_stage_in(self, script: str) -> ExecutionResult:
         return self.run_on_submission_host(script, STAGE_SCRIPT_NAME)
+
+    def run_identity_check(self, script: str) -> ExecutionResult:
+        """Run a read-only identity script with the local bash, writing no file."""
+        return Batch.execute_command(join_command((bash_executable(), "-c", script)))
 
     def write_stage_marker(self, content: str) -> None:
         """Write the marker through a temporary file and an atomic rename."""
@@ -735,6 +741,10 @@ class RemoteSlurm(RemoteTask, Slurm):
         RemoteTask.on_execute(self, script, script_name)
         return self.ssh_connection.execute_command(
             join_command(("bash", self.working_dir + "/.dagon/" + script_name)))
+
+    def run_identity_check(self, script: str) -> ExecutionResult:
+        """Run a read-only identity script on the remote login host, writing no file."""
+        return self.ssh_connection.execute_command(join_command(("bash", "-c", script)))
 
     def write_stage_marker(self, content: str) -> None:
         """Write the marker on the remote host through a temporary file and ``mv``."""

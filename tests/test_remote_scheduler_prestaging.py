@@ -63,7 +63,8 @@ class LoopbackSSH:
             if self.reject_sbatch:
                 return {"code": 1, "output": "", "message": "sbatch: error: invalid account"}
             completed = subprocess.run([bash_executable(), script], cwd=directory, capture_output=True, text=True)
-            return {"code": completed.returncode, "output": "Submitted batch job 77\n" + completed.stdout,
+            banner = "77\n" if "--parsable" in argv else "Submitted batch job 77\n"
+            return {"code": completed.returncode, "output": banner + completed.stdout,
                     "message": completed.stderr}
         if argv and argv[0] == "bash":
             self.events.append(("bash", os.path.basename(argv[-1])))
@@ -202,6 +203,47 @@ class RemoteSlurmPreStageTests(unittest.TestCase):
         with self.assertRaises(SchedulerSubmissionError):
             consumer.execute()
 
+    def test_dry_run_never_contacts_the_remote_host(self):
+        workflow, producer, consumer = self.build()
+        workflow.set_dry(True)
+        with self.assertLogs(level="INFO"):
+            self.run_workflow(workflow)
+        for task in (producer, consumer):
+            self.assertEqual([], task.ssh_connection.events)  # no file, command, or sbatch over SSH
+        self.assertFalse(os.path.exists(self.remote))
+        self.assertEqual(4, len(consumer.prepared_task.planned_order()))
+
+    def test_changed_remote_input_invalidates_a_successful_checkpoint(self):
+        checkpoint = os.path.join(self.tmp.name, "checkpoint.json")
+
+        def build():
+            workflow, producer, consumer = self.build()
+            workflow.checkpoint_file = checkpoint
+            return workflow, producer, consumer
+
+        workflow, producer, consumer = build()
+        self.run_workflow(workflow)
+        self.assertEqual("alpha\n", Path(consumer.working_dir, "c.txt").read_text())
+
+        workflow, producer, consumer = build()  # unchanged input: reused, re-verified over SSH
+        workflow.run(resume_checkpoint_file=checkpoint)
+        self.assertTrue(consumer.fair_checkpoint_reused)
+        self.assertNotIn("sbatch", [kind for kind, _detail in consumer.ssh_connection.events])
+
+        Path(producer.working_dir, "a.txt").write_text("omega\n")
+        workflow, producer, consumer = build()
+        with self.assertLogs(level="WARNING") as logs:
+            workflow.run(resume_checkpoint_file=checkpoint)
+        self.assertIn("content of at least one input changed", "\n".join(logs.output))
+        self.assertFalse(consumer.fair_checkpoint_reused)
+        self.assertIn("sbatch", [kind for kind, _detail in consumer.ssh_connection.events])
+        self.assertEqual("omega\n", Path(consumer.working_dir, "c.txt").read_text())
+
+    def test_remote_submission_uses_parsable_output(self):
+        workflow, _producer, consumer = self.build()
+        self.run_workflow(workflow)
+        self.assertIn("--parsable", self.events(consumer)[-1][1]["options"])
+        self.assertEqual("77", consumer.get_execution_metadata()["pre_stage"]["scheduler_job_id"])
 
     def test_remote_example_with_loopback_ssh(self):
         import importlib

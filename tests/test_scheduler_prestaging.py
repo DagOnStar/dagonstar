@@ -8,6 +8,7 @@ the tests need no network access.
 """
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import time
@@ -19,12 +20,13 @@ from dagon import Workflow
 from dagon.batch import Batch, Slurm
 from dagon.platform_support import bash_executable
 from dagon.prestage import (
-    MARKER_NAME, PreparedTask, PreStageConfigurationError, SchedulerSubmissionError,
-    ScheduledExecutionError, StageInFailedError, StageInput, TaskPhase, estimated_core_hours_saved,
-    validate_pre_stage,
+    IDENTITY_NAME, INTEGRITY_CONTENT, INTEGRITY_EXISTENCE, MARKER_NAME, PRE_STAGE_POLICY_VERSION, PreparedTask,
+    PreStageConfigurationError, SchedulerSubmissionError, ScheduledExecutionError, StageInFailedError, StageInput,
+    TaskPhase, estimated_core_hours_saved, identity_digest, identity_script, validate_pre_stage,
+    validate_reference_path,
 )
 from dagon.stager.base import DataMover, Stager, StagerMover
-from dagon.task import DagonTask, Task, TaskType
+from dagon.task import DagonTask, Task, TaskType, parsable_job_id
 
 from tests.helpers import (
     CANNED_CONTEXT_INFO, canned_context_script, load_mock_scheduler, make_workflow, minimal_config,
@@ -119,6 +121,39 @@ class ConfigurationTests(unittest.TestCase):
         with self.assertLogs(level="WARNING") as logs:
             self.assertFalse(task.resolve_pre_stage())
         self.assertIn("BeeOND", "\n".join(logs.output))
+
+    def test_scheduler_stager_mover_is_rejected(self):
+        # StagerMover.SLURM submits copy jobs: that would request scheduler
+        # resources before stage-in has succeeded.
+        workflow = make_workflow()
+        task = Slurm("t", "true", pre_stage=True)
+        task.set_stager_mover(StagerMover.SLURM)
+        with self.assertRaisesRegex(PreStageConfigurationError, "StagerMover.SLURM"):
+            workflow.add_task(task)
+        workflow = Workflow("w", config=minimal_config(), pre_stage=True)
+        workflow.set_stager_mover(StagerMover.SLURM)
+        inherited = Slurm("t", "true")
+        workflow.add_task(inherited)
+        with self.assertLogs(level="WARNING") as logs:
+            self.assertFalse(inherited.resolve_pre_stage())
+        self.assertIn("StagerMover.SLURM", "\n".join(logs.output))
+        for mover in (StagerMover.NORMAL, StagerMover.PARALLEL, StagerMover.NORMAL.value):
+            with self.subTest(mover=mover):
+                eligible = Slurm("t", "true", pre_stage=True)
+                eligible.set_stager_mover(mover)
+                make_workflow().add_task(eligible)
+                self.assertTrue(eligible.resolve_pre_stage())
+
+    def test_unsafe_references_are_rejected(self):
+        for workflow_name, task_name, local_path in (("wf", "A", "/../outside"), ("wf", "A", "/x/../../y"),
+                                                     ("..", "A", "/a.txt"), ("wf", "..", "/a.txt"),
+                                                     ("wf", "", "/a.txt"), ("wf", "A", "/"),
+                                                     ("wf", "A", "/x\\..\\y")):
+            with self.subTest(reference=(workflow_name, task_name, local_path)):
+                with self.assertRaises(PreStageConfigurationError):
+                    validate_reference_path(workflow_name, task_name, local_path)
+        for local_path in ("/a.txt", "/dir/a*.txt", "//a.txt", "/./a.txt", "/a..b.txt"):
+            validate_reference_path("wf", "A", local_path)
 
     def test_parallel_mode_is_not_eligible(self):
         workflow = make_workflow()
@@ -277,7 +312,7 @@ class LifecycleOrderTests(unittest.TestCase):
             calls.append(("on_execute", script_name, script))
             if script_name == "context.sh":
                 return {"code": 0, "output": CONTEXT_OUTPUT, "message": ""}
-            return submit_result or {"code": 0, "output": "Submitted batch job 7\n", "message": ""}
+            return submit_result or {"code": 0, "output": "7\n", "message": ""}
 
         def run_stage_in(task, script):
             calls.append(("stage_in", "stage_in.sh", script))
@@ -286,9 +321,13 @@ class LifecycleOrderTests(unittest.TestCase):
         def write_marker(task, content):
             calls.append(("marker", MARKER_NAME, content))
 
+        def read_scratch_file(task, filepath):
+            return "" if filepath.endswith(IDENTITY_NAME) else None
+
         with mock.patch.object(Slurm, "on_execute", on_execute), \
                 mock.patch.object(Slurm, "run_stage_in", run_stage_in), \
-                mock.patch.object(Slurm, "write_stage_marker", write_marker):
+                mock.patch.object(Slurm, "write_stage_marker", write_marker), \
+                mock.patch.object(Slurm, "read_scratch_file", read_scratch_file):
             try:
                 consumer.execute()
                 error = None
@@ -310,7 +349,7 @@ class LifecycleOrderTests(unittest.TestCase):
         self.assertIsNone(error)
         self.assertEqual(["context.sh", "launcher.sh"], [call[1] for call in calls])
         self.assertIn("cp -r", calls[-1][2])
-        self.assertEqual({"pre_stage_effective": False, "policy_version": 1},
+        self.assertEqual({"pre_stage_effective": False, "policy_version": PRE_STAGE_POLICY_VERSION},
                          consumer.get_execution_metadata()["pre_stage"])
 
     def test_inherited_and_explicit_pre_stage_stage_before_submission(self):
@@ -342,10 +381,39 @@ class LifecycleOrderTests(unittest.TestCase):
         self.assertIsInstance(error, SchedulerSubmissionError)
         self.assertEqual("submission", error.phase)
         self.assertIn(MARKER_NAME, [call[1] for call in calls])  # staged data is kept
-        _consumer, _calls, error = self.run_consumer(
-            True, None, submit_result={"code": 3, "output": "Submitted batch job 9\n", "message": ""})
+        consumer, calls, error = self.run_consumer(
+            True, None, submit_result={"code": 3, "output": "9\n", "message": ""})
         self.assertIsInstance(error, ScheduledExecutionError)
         self.assertEqual("execution", error.phase)
+        self.assertEqual("9", consumer.get_execution_metadata()["pre_stage"]["scheduler_job_id"])
+
+    def test_pre_staged_submission_uses_parsable_output(self):
+        consumer, calls, error = self.run_consumer(True, None)
+        self.assertIsNone(error)
+        consumer.pre_stage_submission = True
+        self.assertTrue(consumer.generate_command("launcher.sh").startswith("sbatch --parsable "))
+        consumer.pre_stage_submission = False
+        self.assertNotIn("--parsable", consumer.generate_command("launcher.sh"))  # legacy submission unchanged
+        self.assertEqual("7", consumer.get_execution_metadata()["pre_stage"]["scheduler_job_id"])
+
+    def test_failure_phase_does_not_depend_on_display_text(self):
+        for output, expected in (("Submitted batch job 9\n", SchedulerSubmissionError),
+                                 ("sbatch: error: Submitted batch job 9 is a lie\n", SchedulerSubmissionError),
+                                 ("", SchedulerSubmissionError),
+                                 ("12;cluster-a\n", ScheduledExecutionError),
+                                 ("12_3\nslurmstepd: error\n", ScheduledExecutionError)):
+            with self.subTest(output=output):
+                _consumer, _calls, error = self.run_consumer(
+                    True, None, submit_result={"code": 1, "output": output, "message": "failed"})
+                self.assertIsInstance(error, expected)
+
+    def test_parsable_job_id(self):
+        self.assertEqual("42", parsable_job_id("42\n"))
+        self.assertEqual("42", parsable_job_id("\n42;cluster\n"))
+        self.assertEqual("42_7", parsable_job_id("42_7"))
+        self.assertIsNone(parsable_job_id("Submitted batch job 42"))
+        self.assertIsNone(parsable_job_id("sbatch: error: 42"))
+        self.assertIsNone(parsable_job_id(None))
 
     def test_context_failure_is_a_staging_failure_without_submission(self):
         workflow, _a, _b, consumer = three_task_workflow(self.tmp.name, workflow_pre_stage=True)
@@ -395,6 +463,58 @@ class StrictStagerTests(unittest.TestCase):
                                                     target.replace("\\", "/")))
 
 
+class ContentIdentityTests(unittest.TestCase):
+    """The bash helpers that compare staged content and record source identity."""
+
+    def run_bash(self, body):
+        from dagon.prestage import _DIGEST_FUNCTIONS
+        return subprocess.run([bash_executable(), "-c", _DIGEST_FUNCTIONS + body], capture_output=True, text=True)
+
+    def test_copy_link_and_corruption(self):
+        with tempfile.TemporaryDirectory(prefix="dagon digest ") as directory:
+            root = directory.replace("\\", "/")
+            os.makedirs(os.path.join(directory, "src dir", "sub"))
+            Path(directory, "src dir", "a.txt").write_text("alpha", encoding="utf-8")
+            Path(directory, "src dir", "sub", "b.txt").write_text("beta", encoding="utf-8")
+            shutil.copytree(os.path.join(directory, "src dir"), os.path.join(directory, "copy", "src dir"))
+            compare = 'dagon_compare_staged "%s/src dir" "%s/copy/src dir"; echo "rc=$?"' % (root, root)
+            self.assertIn("rc=0", self.run_bash(compare).stdout)
+            Path(directory, "copy", "src dir", "sub", "b.txt").write_text("BETA", encoding="utf-8")  # same size
+            result = self.run_bash(compare)
+            self.assertIn("rc=1", result.stdout)
+            self.assertIn("differs from its source", result.stderr)
+            Path(directory, "copy", "src dir", "sub", "b.txt").unlink()  # partial transfer
+            self.assertIn("rc=1", self.run_bash(compare).stdout)
+            if os.name != "nt":
+                os.makedirs(os.path.join(directory, "link"))
+                os.symlink(os.path.join(directory, "src dir"), os.path.join(directory, "link", "src dir"))
+                linked = 'dagon_compare_staged "%s/src dir" "%s/link/src dir"; echo "rc=$?"' % (root, root)
+                self.assertIn("rc=0", self.run_bash(linked).stdout)
+
+    def test_identity_changes_with_content_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory, "a.txt")
+            source.write_text("alpha", encoding="utf-8")
+            item = StageInput("workflow:///A/a.txt", "wf", "A", "/a.txt", directory.replace("\\", "/") + "//a.txt",
+                              "", integrity=INTEGRITY_CONTENT)
+            remote = StageInput("workflow:///B/b.txt", "wf", "B", "/b.txt", "/elsewhere/b.txt", "",
+                                integrity=INTEGRITY_EXISTENCE)
+            script = identity_script([item, remote])
+            self.assertNotIn("/elsewhere", script)  # existence-only inputs take no part
+
+            def digest():
+                completed = subprocess.run([bash_executable(), "-c", script], capture_output=True, text=True)
+                self.assertEqual(0, completed.returncode, completed.stderr)
+                return identity_digest(completed.stdout)
+
+            first = digest()
+            self.assertEqual(first, digest())
+            os.utime(source, (0, 0))  # timestamps are not part of the identity
+            self.assertEqual(first, digest())
+            source.write_text("omega", encoding="utf-8")
+            self.assertNotEqual(first, digest())
+
+
 class LocalMockSchedulerTests(unittest.TestCase):
     """Real launchers and stage-in scripts with a mock ``sbatch -W``."""
 
@@ -429,7 +549,12 @@ class LocalMockSchedulerTests(unittest.TestCase):
         self.assertEqual("C", marker["task"])
         self.assertEqual(["workflow:///A/a.txt", "workflow:///B/b.txt"],
                          [item["reference"] for item in marker["inputs"]])
+        self.assertEqual([INTEGRITY_CONTENT] * 2, [item["integrity"] for item in marker["inputs"]])
+        self.assertEqual(64, len(marker["source_identity_sha256"]))
         metadata = consumer.get_execution_metadata()["pre_stage"]
+        self.assertEqual(2, metadata["inputs_content_verified"])
+        self.assertEqual("4242", metadata["scheduler_job_id"])
+        self.assertTrue(submission["parsable"])
         self.assertTrue(metadata["pre_stage_effective"])
         self.assertEqual("COMPLETED", metadata["phase"])
         self.assertEqual(2, metadata["inputs"])
@@ -501,7 +626,8 @@ class LocalMockSchedulerTests(unittest.TestCase):
         self.run_workflow(workflow, fails=True)
         self.assertEqual("staging", consumer.failure_phase)
         self.assertFalse(stale.exists())  # removed before the transfer started
-        self.assertTrue(Path(consumer_dir, ".dagon", "inputs", "wf", "A", "partial.txt").exists())
+        # Data staged by an earlier attempt is discarded, never trusted.
+        self.assertFalse(Path(consumer_dir, ".dagon", "inputs", "wf", "A", "partial.txt").exists())
 
         workflow, consumer = build("echo fixed > a.txt")
         self.run_workflow(workflow)
@@ -533,15 +659,114 @@ class LocalMockSchedulerTests(unittest.TestCase):
         self.assertEqual(2, len(mock_scheduler.read_log(self.log)))  # nothing resubmitted
         self.assertTrue(consumer.fair_checkpoint_reused)
 
+    def resumable_run(self, checkpoint):
+        def build():
+            workflow = Workflow("wf", config=scratch_config(self.scratch), pre_stage=True,
+                                checkpoint_file=checkpoint)
+            producer = Slurm("A", "echo alpha > a.txt")
+            consumer = Slurm("C", "cat workflow:///A/a.txt > c.txt")
+            workflow.add_task(producer)
+            workflow.add_task(consumer)
+            return workflow, producer, consumer
+
+        workflow, producer, consumer = build()
+        self.run_workflow(workflow)
+        self.assertEqual(2, len(mock_scheduler.read_log(self.log)))
+        return build, producer, consumer
+
+    def resume(self, workflow, checkpoint):
+        with no_network_context(), mock_scheduler.mock_sbatch(self.log), self.assertLogs(level="WARNING") as logs:
+            workflow.run(resume_checkpoint_file=checkpoint)
+        return "\n".join(logs.output)
+
+    def test_changed_input_invalidates_a_successful_checkpoint(self):
+        checkpoint = os.path.join(self.tmp.name, "checkpoint.json")
+        build, producer, first_consumer = self.resumable_run(checkpoint)
+        # Change the producer's output after the consumer completed (same size).
+        Path(producer.working_dir, "a.txt").write_text("omega\n", encoding="utf-8")
+        workflow, _producer, consumer = build()
+        logs = self.resume(workflow, checkpoint)
+        self.assertIn("content of at least one input changed", logs)
+        self.assertEqual("FINISHED", consumer.status.name)
+        self.assertFalse(consumer.fair_checkpoint_reused)
+        self.assertEqual(["A", "C", "C"], [item["job_name"] for item in mock_scheduler.read_log(self.log)])
+        self.assertNotEqual(first_consumer.working_dir, consumer.working_dir)
+        self.assertEqual("omega\n", Path(consumer.working_dir, "c.txt").read_text(encoding="utf-8"))
+
+    def test_checkpoint_that_cannot_be_reverified_is_not_reused(self):
+        checkpoint = os.path.join(self.tmp.name, "checkpoint.json")
+        build, _producer, _consumer = self.resumable_run(checkpoint)
+        saved = json.loads(Path(checkpoint).read_text(encoding="utf-8"))
+        saved["wf.C"]["pre_stage"]["inputs"][0]["integrity"] = INTEGRITY_EXISTENCE  # e.g. an SCP transfer
+        Path(checkpoint).write_text(json.dumps(saved), encoding="utf-8")
+        workflow, _producer, consumer = build()
+        logs = self.resume(workflow, checkpoint)
+        self.assertIn("cannot be re-verified", logs)
+        self.assertEqual(3, len(mock_scheduler.read_log(self.log)))
+        self.assertEqual("FINISHED", consumer.status.name)
+
+    def test_checkpoint_without_identity_is_not_reused(self):
+        checkpoint = os.path.join(self.tmp.name, "checkpoint.json")
+        build, _producer, _consumer = self.resumable_run(checkpoint)
+        saved = json.loads(Path(checkpoint).read_text(encoding="utf-8"))
+        del saved["wf.C"]["pre_stage"]["source_identity_sha256"]  # e.g. written by an older policy
+        Path(checkpoint).write_text(json.dumps(saved), encoding="utf-8")
+        workflow, _producer, consumer = build()
+        self.assertIn("no input identity", self.resume(workflow, checkpoint))
+        self.assertEqual(3, len(mock_scheduler.read_log(self.log)))
+
     def test_dry_run_neither_stages_nor_submits(self):
         workflow, _first, _second, consumer = three_task_workflow(self.scratch, workflow_pre_stage=True)
         workflow.set_dry(True)
-        with self.assertLogs(level="INFO") as logs:
+        with mock.patch.object(Slurm, "on_execute", side_effect=AssertionError("dry run executed a script")), \
+                mock.patch.object(Batch, "execute_command", side_effect=AssertionError("dry run ran a command")), \
+                self.assertLogs(level="INFO") as logs:
             self.run_workflow(workflow)
         self.assertEqual([], mock_scheduler.read_log(self.log))
-        self.assertFalse(Path(consumer.working_dir, ".dagon", "stage_in.sh").exists())
+        self.assertIsNone(consumer.working_dir)  # no scratch directory was assigned or created
+        self.assertFalse(os.path.exists(self.scratch))
+        self.assertNotIn(consumer.checkpoint_key(), workflow.checkpoints)
         self.assertIn("planned pre-staged order", "\n".join(logs.output))
         self.assertEqual(5, len(consumer.prepared_task.planned_order()))  # scratch, 2 inputs, verify, submit
+        self.assertTrue(consumer.get_execution_metadata()["pre_stage"]["dry_run"])
+        self.assertEqual(["FINISHED"] * 3, [task.status.name for task in workflow.tasks])
+
+    def test_dry_run_rejects_unsafe_references(self):
+        workflow, _first, _second, consumer = three_task_workflow(
+            self.scratch, workflow_pre_stage=True, command="cat workflow:///A/../../etc/passwd")
+        workflow.set_dry(True)
+        self.run_workflow(workflow, fails=True)
+        self.assertEqual("FAILED", consumer.status.name)
+        self.assertEqual("staging", consumer.failure_phase)
+        self.assertFalse(os.path.exists(self.scratch))
+
+    def test_traversal_reference_is_refused_before_any_transfer(self):
+        outside = os.path.join(self.tmp.name, "outside.txt")
+        Path(outside).write_text("secret", encoding="utf-8")
+        workflow, _first, _second, consumer = three_task_workflow(
+            self.scratch, workflow_pre_stage=True, command="cat workflow:///A/../../outside.txt > c.txt")
+        self.run_workflow(workflow, fails=True)
+        self.assertEqual("FAILED", consumer.status.name)
+        self.assertEqual("staging", consumer.failure_phase)
+        self.assertIsNone(mock_scheduler.submission_for(self.log, "C"))
+        self.assertFalse(Path(consumer.working_dir, ".dagon", "stage_in.sh").exists())
+        self.assertFalse(Path(consumer.working_dir, ".dagon", "inputs").exists())
+
+    def test_corrupted_transfer_is_not_marked_complete(self):
+        original = Stager.generate_command
+
+        def corrupting(stager, src, dst, cmd, mode, strict=False):
+            # A mover that "succeeds" while writing the wrong bytes.
+            return original(stager, src, dst, 'printf corrupted > "$dst/$(basename "$file")"', mode, strict=strict)
+
+        workflow, _first, _second, consumer = three_task_workflow(self.scratch, workflow_pre_stage=True)
+        with mock.patch.object(Stager, "generate_command", corrupting):
+            self.run_workflow(workflow, fails=True)
+        self.assertEqual("FAILED", consumer.status.name)
+        self.assertEqual("staging", consumer.failure_phase)
+        self.assertIsNone(mock_scheduler.submission_for(self.log, "C"))
+        self.assertFalse(Path(consumer.working_dir, ".dagon", MARKER_NAME).exists())
+        self.assertFalse(Path(consumer.working_dir, ".dagon", IDENTITY_NAME).exists())
 
     def test_stage_in_handles_spaces_in_scratch_paths(self):
         scratch = os.path.join(self.tmp.name, "scratch with spaces")

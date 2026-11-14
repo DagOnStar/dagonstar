@@ -21,6 +21,9 @@ Usage::
 Run as a script, it behaves as the fake ``sbatch`` itself::
 
     python mock_scheduler.py LOG [--reject] [sbatch options] -D DIR -W SCRIPT
+
+With ``--parsable`` (used for pre-staged submissions) it prints only the job
+identifier, as ``sbatch --parsable`` does.
 """
 import contextlib
 import json
@@ -53,13 +56,15 @@ def main(argv: List[str]) -> int:
         "event": "sbatch", "time": time.time(), "job_name": name, "script": os.path.basename(script),
         "marker_present": os.path.isfile(os.path.join(directory, MARKER)),
         "inputs_populated": _inputs_populated(directory), "rejected": reject,
+        "parsable": "--parsable" in arguments,
     }
     with open(log_path, "a", encoding="utf-8") as stream:
         stream.write(json.dumps(record) + "\n")
     if reject:
         sys.stderr.write("sbatch: error: Batch job submission failed: Invalid partition name specified\n")
         return 1
-    sys.stdout.write("Submitted batch job 4242\n")
+    # ``--parsable`` prints only the job identifier, like the real sbatch.
+    sys.stdout.write("4242\n" if "--parsable" in arguments else "Submitted batch job 4242\n")
     sys.stdout.flush()
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
     from dagon.platform_support import bash_executable

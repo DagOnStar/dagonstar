@@ -2,7 +2,7 @@ from enum import Enum
 import os
 import posixpath
 import logging
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 
 from dagon.batch import Batch
 from dagon.batch import Slurm
@@ -89,6 +89,7 @@ class Stager(object):
         self.data_mover = data_mover
         self.stager_mover = stager_mover
         self.cfg = cfg
+        self.last_data_mover: Optional[DataMover] = None
         self.logger = logging.getLogger()
 
     def stage_in(self, dst_task: Any, src_task: Any, dst_path: str, local_path: str,
@@ -144,6 +145,10 @@ class Stager(object):
         else:  # best effort (SCP)
             data_mover = self.data_mover
 
+
+        # Recorded for scheduler-aware pre-staging, which compares the staged
+        # content with its source only for same-host COPY and LINK transfers.
+        self.last_data_mover = data_mover
 
         src = src_task.get_scratch_dir() + "/" + local_path
 
