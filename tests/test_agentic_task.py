@@ -322,6 +322,9 @@ class WorkflowIntegrationTests(unittest.TestCase):
             add_producer(workflow, scratch)
             task = agent_task(working_dir=str(Path(scratch, "fixed")))
             workflow.add_task(task)
+            audit = DagonTask(TaskType.BATCH, "audit", "true")
+            workflow.add_task(audit)
+            audit.add_dependency_to(task)
             document = workflow.as_json()
             encoded = json.dumps(document)
             self.assertIn(SOURCE, encoded)
@@ -330,6 +333,9 @@ class WorkflowIntegrationTests(unittest.TestCase):
             again = [item for item in restored.tasks if item.name == "quality_control"][0]
             self.assertIsInstance(again, AgenticTask)
             self.assertEqual(again.contract, task.contract)
+            restored.make_dependencies()
+            restored_audit = [item for item in restored.tasks if item.name == "audit"][0]
+            self.assertEqual(restored_audit.prevs, [again])
 
     def test_dry_run_has_no_side_effects(self):
         with tempfile.TemporaryDirectory() as scratch:

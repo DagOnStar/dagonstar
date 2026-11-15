@@ -73,6 +73,8 @@ every edge added with `add_dependency_to`, without duplicating an edge that is
 also discovered from a reference. `workflow.run()` calls it when it has not run
 yet, so explicit edges added before `run()` are kept. Use
 `task.remove_dependency_to(other)` to remove an explicit edge permanently.
+Explicit edges are saved in the workflow JSON as `explicit_prevs` and restored
+by `Workflow(..., jsonload=...)`.
 
 ## Dataflow dependencies
 

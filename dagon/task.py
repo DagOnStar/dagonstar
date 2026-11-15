@@ -915,6 +915,8 @@ class Task(Thread):
             json_task['nexts'].append(t.name)
         for t in self.prevs:
             json_task['prevs'].append(t.name)
+        # Edges added with add_dependency_to; prevs also holds discovered ones.
+        json_task['explicit_prevs'] = [t.name for t in self.__dict__.get("explicit_prevs", [])]
         return json_task
 
     def set_workflow(self, workflow: Any) -> None:

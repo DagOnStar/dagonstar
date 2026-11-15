@@ -36,9 +36,15 @@ with tempfile.TemporaryDirectory(prefix="dagon-tutorial-31-") as scratch:
     assert post.call_args_list[1].args[0].endswith("/add_task/7")
 
     offline = Workflow("Ops31Offline", config=config(scratch))
-    offline.add_task(DagonTask(TaskType.BATCH, "hello", "echo hello > hello.txt"))
-    restored = Workflow("placeholder", config=config(scratch), jsonload=offline.as_json())
-    assert [task.name for task in restored.tasks] == ["hello"], "JSON round trip keeps the graph"
+    hello = DagonTask(TaskType.BATCH, "hello", "echo hello > hello.txt")
+    report = DagonTask(TaskType.BATCH, "report", "true")
+    offline.add_task(hello)
+    offline.add_task(report)
+    report.add_dependency_to(hello)  # an explicit edge, not a workflow:// reference
+    restored = Workflow("placeholder", config=config(scratch), jsonload=json.loads(json.dumps(offline.as_json())))
+    assert [task.name for task in restored.tasks] == ["hello", "report"], "JSON round trip keeps the tasks"
+    restored.make_dependencies()
+    assert [task.name for task in restored.tasks[1].prevs] == ["hello"], "JSON round trip keeps explicit edges"
 
 environment = runner_environment({"DAGON_EXAMPLE": "1"}, base={"PYTHONPATH": "/site/first"})
 assert environment["PYTHONPATH"].split(os.pathsep) == ["/site/first", PACKAGE_ROOT]

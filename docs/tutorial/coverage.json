@@ -535,7 +535,8 @@
       "category": "interoperability",
       "task_types": [],
       "source_paths": [
-        "dagon/__init__.py"
+        "dagon/__init__.py",
+        "dagon/task.py"
       ],
       "lessons": [
         31
@@ -544,10 +545,11 @@
         "examples/tutorial/lesson_31_operations.py"
       ],
       "test_targets": [
-        "tests.test_workflow_core.WorkflowCoreTests.test_load_json_recreates_task_instances"
+        "tests.test_workflow_core.WorkflowCoreTests.test_load_json_recreates_task_instances",
+        "tests.test_explicit_dependencies.ExplicitDependencyJsonTests"
       ],
       "evidence_level": "local-executed",
-      "limitations": "Round trips cover registered task types; runtime state is not serialized."
+      "limitations": "Round trips cover registered task types and explicit edges; runtime state is not serialized."
     },
     {
       "feature_id": "agentic.profiles",

@@ -71,7 +71,11 @@ Selected methods:
 - `as_json()`: serialize workflow metadata.
 - `saveAsCWL(filename)`: save a self-contained CWL v1.2 JSON document. See
   [Exporting workflows to CWL](cwl_export.md) for semantics and limitations.
-- `load_json(Json_data)`: load tasks from JSON-like data.
+- `load_json(Json_data)`: load tasks from JSON-like data, then restore each
+  task's `explicit_prevs` edges. An unknown name, a self-dependency, or a cycle
+  is rejected. JSON written before `explicit_prevs` existed restores the
+  same-workflow names in `prevs`; names of tasks in other workflows are left to
+  `workflow://` discovery.
 - `Validate_WF()`: reject cycles.
 
 ## `dagon.Status`
@@ -142,6 +146,8 @@ Important attributes:
 - `working_dir`
 - `nexts`
 - `prevs`
+- `explicit_prevs`: edges added with `add_dependency_to`; serialized by
+  `as_json()` and restored by `Workflow.load_json()`
 - `reference_count`
 - `workflow`
 - `status`

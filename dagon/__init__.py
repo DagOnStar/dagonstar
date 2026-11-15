@@ -374,13 +374,47 @@ class Workflow(object):
         finally:
             self._discovering_dependencies = False
         for task, previous in explicit_edges:
-            if previous not in task.prevs:
-                task.prevs.append(previous)
-            if task not in previous.nexts:
-                previous.nexts.append(task)
+            self._restore_explicit_edge(task, previous)
         self.Validate_WF()
         self._dependencies_made = True
         self._fire_event("on_dependencies_made", self)
+
+    @staticmethod
+    def _restore_explicit_edge(task: Any, previous: Any) -> None:
+        """Add the explicit edge previous -> task once, without service calls."""
+        if previous not in task.prevs:
+            task.prevs.append(previous)
+        if task not in previous.nexts:
+            previous.nexts.append(task)
+        explicit = task.__dict__.setdefault("explicit_prevs", [])
+        if previous not in explicit:
+            explicit.append(previous)
+
+    def _load_explicit_edges(self, tasks_data: Dict[str, Any]) -> None:
+        """Restore serialized explicit edges after every task has been built.
+
+        ``explicit_prevs`` names must be tasks of this workflow. JSON written
+        before that field existed only has ``prevs``, which also lists edges
+        discovered from ``workflow://`` references, including tasks of other
+        workflows; its same-workflow names are restored as explicit edges and
+        the others are left to discovery.
+        """
+        by_name = {task.name: task for task in self.tasks}
+        for key, data in tasks_data.items():
+            task = by_name[data.get('name', key)]
+            if 'explicit_prevs' in data:
+                names = data['explicit_prevs']
+                unknown = [name for name in names if name not in by_name]
+                if unknown:
+                    raise ValueError("task %r has explicit dependencies on unknown tasks: %s"
+                                     % (task.name, ", ".join(map(str, unknown))))
+            else:
+                names = [name for name in data.get('prevs', []) if name in by_name]
+            for name in names:
+                if by_name[name] is task:
+                    raise ValueError("task %r cannot depend on itself" % task.name)
+                self._restore_explicit_edge(task, by_name[name])
+        self.Validate_WF()
 
     def enable_fair(self, profile: Any) -> Any:
         """Enable optional FAIR-by-design recording for this workflow.
@@ -877,7 +911,7 @@ class Workflow(object):
             else:
                 tk = DagonTask(TaskType[temp['type'].upper()], temp['name'], temp['command'], **options)
             self.add_task(tk)
-        # self.make_dependencies()
+        self._load_explicit_edges(Json_data['tasks'])
 
     def Validate_WF(self):
         """

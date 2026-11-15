@@ -6,7 +6,7 @@ follows it unchanged.
 
 - **Branch:** `development`. Commit `3c6fffa` added the agentic work and the audit fixes. `e0844b3` fixed the two problems its first CI run exposed, `f516d44` fixed a race in the Lesson 24 script that the second run exposed, and `81704d5` and `f3cefb7` fixed the wheel smoke test that the third and fourth runs exposed. All were pushed to `origin/development` at the user's request. No tag, release, or PyPI publication was made, and `main` is untouched.
 - **Inputs:** `DAGonStar_AgenticTask_Claude_Code_Implementation_Plan.md` (the plan), `AGENTS.md`, and the independent audit `AUDIT_REPORT_AGENTIC_TASK_2026-11-14.md` (verdict **FAIL**: F1 and F2 medium, F3 low). The two audit reports in the repository root are left untracked.
-- **Audit remediation:** F1 to F3 are fixed in [A2](#a2-audit-remediation-f1-to-f3). The fixes have not been independently audited.
+- **Audit remediation:** F1 to F3 are fixed in [A2](#a2-audit-remediation-f1-to-f3). The re-audit of `597b475` (same file name, dated 2026-11-15, verdict **FAIL**) found a new high finding, also numbered F1, fixed in [A9](#a9-re-audit-remediation-explicit-edges-in-workflow-json). The fixes have not been independently audited.
 - **Environments:** workstation macOS 26.6.2 (arm64), Python 3.12.10; production cluster Rocky Linux 8.10 login node, Slurm 23.11.3, Python 3.11.7 in a dedicated virtual environment, `/home` on NFSv4, partition `norm-wn`.
 - **CI:** run [43713271895](https://github.com/DagOnStar/dagonstar/actions/runs/43713271895) on `f3cefb7` passed every job.
   - Tests: Ubuntu (3.8, 3.10, 3.12, 3.13), macOS, Windows, Rocky Linux 9 (3.9, 3.12), Debian bookworm arm64.
@@ -128,6 +128,39 @@ e0844b3 Fix the first CI run of the agentic work
 - **Verification:** the full unit suite passed locally (macOS, 375 tests) and on the Rocky 8.10 cluster (Python 3.11.7, 375 tests); `tools/run_local_examples.py` passed 46 of 46 examples; Lesson 24 passed on the cluster; the CI-scoped ruff and mypy checks and both tutorial validators passed.
 
 ---
+
+## A9. Re-audit remediation: explicit edges in workflow JSON
+
+The re-audit of `597b475` reported one new high finding (re-audit F1, acceptance requirement A10): `Workflow.load_json()` ignored the serialized `prevs`, so explicit `add_dependency_to` edges were lost on a JSON round trip and a restored consumer could run before its producer. The re-audit classed this as a baseline defect; the loader had never read `prevs`. Historical findings H1 to H3 were confirmed resolved.
+
+- **Serialization.** `Task.as_json()` now also writes `explicit_prevs`, the names of edges added with `add_dependency_to`. `prevs` is unchanged and still lists discovered edges as well.
+- **Loading.** After building every task, `Workflow.load_json()` restores the explicit edges and runs `Validate_WF()`. It rejects an unknown name and a self-dependency with `ValueError`, and a cycle with the existing cycle error. Restoration does not call the DAGon service API.
+- **Older JSON.** A document without `explicit_prevs` restores the names in `prevs` that are tasks of the same workflow. Other names, such as the cross-workflow `A` and `C` in `examples/transversal/wf2-transversal-demo.json`, come from `workflow://` references and are left to discovery, so such documents still load.
+- **Tests.** `tests/test_explicit_dependencies.py::ExplicitDependencyJsonTests` covers:
+  - the reproduction from the re-audit;
+  - execution order after reload;
+  - discovered edges serialized only in `prevs`;
+  - older JSON;
+  - unknown names, self-dependencies, and cycles;
+  - Native, Web, FaaS, IoT, and LLM consumers.
+
+  `tests/test_agentic_task.py` checks an explicit edge from an agentic task through JSON.
+- **Documentation.** Updated `docs/reference_guide.md`, `docs/architecture.md`, `docs/user_guide.md`, Lesson 31 (script and text: the round trip now carries an explicit edge), and the `workflow.json-roundtrip` entry in `docs/tutorial/coverage.json`.
+- **CWL and FAIR.** CWL and FAIR export are unchanged: they read the in-memory graph, which already kept explicit edges.
+- **Verification:**
+  - Full unit suite: 383 tests passed locally (macOS) and on the Rocky 8.10 cluster (Python 3.11.7).
+  - `tools/run_local_examples.py` passed 46 of 46 examples.
+  - Lessons 24 and 31 passed on the cluster.
+  - The CI-scoped ruff and mypy checks, both tutorial validators, and the notebook JSON check passed.
+  - CI is recorded in [A10](#a10-commit-history-after-a7).
+- **Not independently re-audited.** The re-audit's verdict stays FAIL until an independent retest of this fix.
+
+## A10. Commit history after A7
+
+```text
+(this commit) Restore explicit dependency edges when loading workflow JSON
+597b475 Keep explicit dependency edges when make_dependencies rebuilds the graph
+```
 
 # Implementation report: scheduler-aware pre-staging
 

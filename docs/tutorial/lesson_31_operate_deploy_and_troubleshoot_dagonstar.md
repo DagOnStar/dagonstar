@@ -43,7 +43,7 @@ python tools/run_local_examples.py
 
 ## Expected result
 
-The mocked service assigns workflow id 7, the JSON round trip keeps the graph, the runner environment keeps user entries first, and the console script answers `--help` when installed. The example runner reports every listed example as `ok`.
+The mocked service assigns workflow id 7, the JSON round trip keeps the tasks and the explicit `hello → report` edge, the runner environment keeps user entries first, and the console script answers `--help` when installed. The example runner reports every listed example as `ok`.
 
 ## Verify
 

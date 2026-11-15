@@ -153,6 +153,8 @@ consumer.add_dependency_to(producer)
 Explicit edges are also recorded in `explicit_prevs`, so
 `Workflow.make_dependencies()` restores them after it rebuilds the graph from
 `workflow://` references; `remove_dependency_to` removes one permanently.
+`Task.as_json()` writes them as `explicit_prevs` (task names), and
+`Workflow.load_json()` restores them after all tasks are built.
 
 Implicit dependencies are created by parsing:
 
