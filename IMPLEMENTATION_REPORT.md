@@ -1,3 +1,124 @@
+# Implementation report: agentic tasks (`TaskType.AGENTIC`)
+
+This part covers the agentic-task work and its audit remediation. The earlier
+[scheduler-aware pre-staging report](#implementation-report-scheduler-aware-pre-staging)
+follows it unchanged.
+
+- **Branch:** `development`. Commit `3c6fffa` added the agentic work and the audit fixes. `e0844b3` fixed the two problems its first CI run exposed, `f516d44` fixed a race in the Lesson 24 script that the second run exposed, and `81704d5` and `f3cefb7` fixed the wheel smoke test that the third and fourth runs exposed. All were pushed to `origin/development` at the user's request. No tag, release, or PyPI publication was made, and `main` is untouched.
+- **Inputs:** `DAGonStar_AgenticTask_Claude_Code_Implementation_Plan.md` (the plan), `AGENTS.md`, and the independent audit `AUDIT_REPORT_AGENTIC_TASK_2026-11-14.md` (verdict **FAIL**: F1 and F2 medium, F3 low). The two audit reports in the repository root are left untracked.
+- **Audit remediation:** F1 to F3 are fixed in [A2](#a2-audit-remediation-f1-to-f3). The fixes have not been independently audited.
+- **Environments:** workstation macOS 26.6.2 (arm64), Python 3.12.10; production cluster Rocky Linux 8.10 login node, Slurm 23.11.3, Python 3.11.7 in a dedicated virtual environment, `/home` on NFSv4, partition `norm-wn`.
+- **CI:** run [43713271895](https://github.com/DagOnStar/dagonstar/actions/runs/43713271895) on `f3cefb7` passed every job.
+  - Tests: Ubuntu (3.8, 3.10, 3.12, 3.13), macOS, Windows, Rocky Linux 9 (3.9, 3.12), Debian bookworm arm64.
+  - Other jobs: quality, the new `agentic-contract` and `notebook` jobs, the emulated-Slurm BeeOND and pre-staging job, and `build`.
+  - `release` and `publish-pypi` were skipped, as they run only on `v*` tags.
+  - Four earlier runs failed and are explained in [A2](#found-during-remediation).
+
+## A1. Implementation summary
+
+- **Task type and contract.** `DagonTask(TaskType.AGENTIC, name, agent=..., specification=..., inputs=..., requirements=..., evaluation=..., outputs=..., tools=..., guardrails=..., budgets=...)` creates `dagon.agentic.AgenticTask`. The contract is validated at construction (`AgenticValidationError`), and the profile when the task is added to a workflow (`AgenticConfigurationError`), before any input is staged.
+- **Configuration in `dagon.ini`.** `[agent.<profile>]` resolves to `[agent_provider.<name>]` (`mock` or `builtin`, OpenAI-compatible) and, for `builtin`, to `[llm.<name>]`. The profile is the maximum authority: tasks may narrow tools and budgets and add guardrails, never widen them. The key comes only from the environment variable named by `api_key_env`.
+- **Bounded execution.** Steps, tool calls, attempts, wall-clock time, tokens, and trace size are bounded. Cancellation stops the run.
+- **Tools and guardrails.** Tools are registered with argument and result schemas, a side-effect class, a timeout, and an output bound. Runtime checks refuse undeclared tools, invalid arguments, path escapes, and injected `workflow://` references. Registered guardrails run at four stages, outside the agent, and fail closed.
+- **Independent evaluation.** Registered evaluators score every candidate. The result fit is a weighted mean (`math.fsum`), and acceptance also needs the threshold, mandatory, and hard gates. Agent self-reports are ignored.
+- **Publication and checkpoints.** Only an accepted candidate is published, atomically, with `commit.json` written last. A rejected or failed run fails the task, so no dependant runs. A checkpoint is reused only after the contract, profile, registered versions, input content hashes, and published output hashes are re-verified.
+- **Interoperability.** JSON round trip, FAIR artifacts, portable emulation (always the mock adapter), and an executable CWL step (`dagon-agent-runner run`, with a workflow-level `dagon_config: File` input).
+- **Curriculum and coverage.** 33 lessons (00–32), each with a script and a notebook section; `docs/tutorial/coverage.json` plus `tools/validate_tutorial_coverage.py`, which takes the task types from `TaskType` at run time (14 types, 40 required features, 54 entries, 4 documented exclusions, 0 unmatched).
+
+## A2. Audit remediation (F1 to F3)
+
+| Finding | Fix | Evidence |
+|---|---|---|
+| **F1** (medium): a timed-out inline adapter, evaluator, or guardrail kept running and could act after the supervisor returned | Adapters, custom evaluators, and custom guardrails now run in supervised worker processes by default. An adapter's worker (`dagon/agentic/adapter_worker.py`, `sandbox.ProcessAdapter`) lives for the whole run. On a deadline, cancellation, or protocol error the worker's whole process group is killed (`taskkill /T` on Windows). `isolation="inline"` is refused at registration unless the component is declared `side_effect="none"`, as tools already required. Built-in evaluators and guardrails that compute only over in-memory JSON stay inline; `reference_match`, which reads a file, and both built-in adapters run in processes. | `tests/test_agentic_containment.py` (11 tests). A timed-out evaluator, guardrail, and adapter, a cancelled evaluator, and descendants spawned by an evaluator and an adapter: each test first proves the component started, then waits past the moment it would have written its marker and checks that no marker, result, or commit appeared and the evaluation report did not change. Registration tests cover inline refusal, importable references, and the built-in components. Reproduction: the audit's late evaluator run inline still writes its marker after returning; the same evaluator under process isolation does not. |
+| **F2** (medium): agentic profiles accepted an inline `api_key` | `resolve_profile` and `resolve_api_key` refuse an `[llm.*]` section that an agent profile selects if it contains `api_key`, without repeating the value, and require `api_key_env`. The key is resolved in the supervisor only to check it exists and to redact it. It is never sent over the worker pipe: the worker reads the environment variable itself. `LLMTask` keeps its documented `api_key` compatibility. | `test_inline_api_keys_are_refused_without_echoing_them`, `test_a_present_credential_is_never_sent_to_the_adapter_worker` |
+| **F3** (low): no test injected a synthetic task type | Added `test_a_newly_registered_task_type_without_coverage_fails`, which patches the derived inventory with `synthetic-audit-type` and expects the missing-coverage error. | `tests/test_tutorial_coverage.py` |
+
+### Found during remediation
+
+- **Adapter start-up on NFS (cluster).** The first cluster run failed one new test: starting the adapter worker from an NFS-mounted installation took longer than the test profile's 1-second budget. Start-up also happened before the engine, so it raised without an evaluation report. The engine now starts the adapter inside the run (`providers.prepare_adapter` returns a starter). Start-up counts against `timeout_seconds`, and a deadline that expires during start-up ends as `timeout_seconds_exhausted` with a report whose `execution.determinism` is `adapter_not_started` (test `test_adapter_start_up_counts_against_the_deadline_and_is_reported`). The containment tests were made timing-independent: each component records its start, and the waits are measured from it.
+- **First CI run (`3c6fffa`).** Two problems, one in a test helper and one in the CI configuration, fixed in `e0844b3`. The Rocky Linux 9 and Debian arm64 container jobs reported a killed grandchild as alive: inside those containers init does not reap orphans and `ps` is not installed, so the test helper counted a zombie as running. It now reads `/proc/<pid>/stat`. The new `agentic-contract` job installed only the base package, while the all-type interoperability tests import the Docker adapter; it now installs `.[docker,kubernetes]`, like the other jobs.
+- **Second CI run (`e0844b3`).** Every job passed except Rocky Linux 9 / Python 3.9, where the Lesson 24 script failed once. The unit tests passed there.
+  - Cause: the script added an explicit `stage → use` edge before `make_dependencies()`. `Workflow.run()` calls that method when it has not run yet, and it rebuilds the graph and discards earlier edges. The two tasks therefore ran concurrently, and the reader occasionally ran first: 1 of 25 local runs failed the same way.
+  - Fix (`f516d44`): the lesson adds the edge after `make_dependencies()` and asserts it is present; 40 of 40 local runs passed. The user guide now states the required order.
+  - The core behaviour itself is pre-existing and unchanged; see [A6](#a6-known-limitations).
+- **Third CI run (`f516d44`).** Every test job passed, including Rocky Linux 9 / Python 3.9. The `build` job failed in its new wheel smoke step: an earlier line of the step changes to `/tmp`, so the relative copy of the agentic example found nothing. `81704d5` copies from `$GITHUB_WORKSPACE`. The same smoke test had passed on the workstation.
+- **Fourth CI run (`81704d5`).** Only `build` failed. The example helper added `parents[2]` of its own path to `sys.path`, which raises for a file directly under `/tmp`; on the workstation the scratch path was deep enough to hide this. In `f3cefb7` the helper adds the checkout only when one exists, and CI copies the example into `/tmp/wheel-smoke`. Re-checked locally with a freshly built wheel: `dagon` was imported from the wheel and the run was accepted.
+
+## A3. Test results
+
+| Where | Command | Result |
+|---|---|---|
+| Workstation, at `3c6fffa` | `python3 -m unittest discover -s tests` | **369 tests, OK** (the baseline before the agentic work was 260) |
+| Workstation, at `3c6fffa` | `python3 tools/run_local_examples.py` | 46/46 passed |
+| Workstation | `tools/validate_tutorial.py`; `tools/validate_tutorial_coverage.py` | 33 lessons and links; 14 types, 40 features, 54 entries, 0 unmatched |
+| Workstation | `tools/run_notebook_smoke.py` (before the remediation) | 37 code cells executed |
+| Workstation | CI ruff and mypy targets with the pinned ruff 0.6.9 and mypy 1.13.0; AGENTS.md `py_compile`; `git diff --check` | all passed |
+| Workstation | `python -m build`; `twine check --strict`; wheel installed in a clean environment outside the checkout (before the remediation) | passed; `import dagon.agentic`, `dagon-agent-runner --help`, and a mock agentic run all succeeded |
+| Cluster login node, at `3c6fffa` | `python -m unittest discover -s tests` (cwltool 3.3 installed, so the CWL execution tests ran) | **369 tests, OK**, none skipped |
+| Cluster | manual Slurm check (below) | **9 passed, 0 failed** |
+| Cluster login node, at `f3cefb7` | `python -m unittest discover -s tests`; `python tools/run_local_examples.py` | **369 tests, OK**; **46/46 examples passed** |
+| GitHub Actions, at `f3cefb7` | run 43713271895 | every job passed |
+
+The manual Slurm check ran on partition `norm-wn` with scratch on the shared NFS `/home`. It was a scratch script, not added to the repository.
+
+- Workflow: Slurm producer → agentic quality control (mock adapter, on the login node) → Slurm consumer.
+- Accepted case: the producer and the consumer ran on compute node `wn01`. The agent's result was accepted with a commit manifest, and the consumer received the repaired four-record table, about 12 s end to end.
+- Adversarial case (`undeclared_tool` scenario): the run ended `guardrail_blocked`, no result was published, and the consumer was never submitted (no working directory and no job output).
+
+This is evidence for one site and Slurm release with the deterministic mock adapter, not for a live model.
+
+## A4. CI/CD changes
+
+- `quality`:
+  - installs the package (the coverage validator derives `TaskType` from it);
+  - adds `dagon/agentic`, `examples/agentic`, the coverage validator, and lessons 00 and 12–32 to ruff, and `dagon/agentic/*.py` to mypy;
+  - runs `tools/validate_tutorial_coverage.py`.
+- `agentic-contract` (new): agentic and interoperability tests, the agentic examples and Lessons 14–16, and `cwltool` validation and execution of the agentic CWL export. On failure it uploads only small allowlisted reports and traces, never configuration.
+- `notebook` (new): runs the notebook's code cells with `tools/run_notebook_smoke.py`.
+- `build`: now depends on both new jobs. It imports `dagon.agentic` from the wheel outside the checkout, runs `dagon-agent-runner --help` and a mock agentic example, and checks that the sdist contains `dagon/agentic/`.
+- `release` and `publish-pypi` still run only on `v*` tags, so neither ran.
+
+## A5. Files
+
+- **Created:**
+  - `dagon/agentic/`: 17 modules, including `adapter_worker.py` for F1;
+  - `tests/test_agentic_*.py` (8 files, including `test_agentic_containment.py`), `tests/agentic_fixtures.py`, `tests/test_nomad_task.py`, `tests/test_tutorial_coverage.py`;
+  - `examples/agentic/` (6 examples, a shared helper, and a README);
+  - lesson scripts 00 and 12–32 and lesson pages 12–16, 18–20, 22, 24–26, 31, 32;
+  - `docs/agentic_{tasks,configuration,guardrails,evaluation}.md`, `docs/examples/agentic.md`, `docs/tutorial/coverage.json`;
+  - `tools/validate_tutorial_coverage.py`, `tools/run_notebook_smoke.py`.
+- **Modified:**
+  - code and packaging: `dagon/__init__.py` (CWL step, JSON reload), `dagon/task.py` (`TaskType.AGENTIC`), `dagon/fair/recorder.py`, `setup.cfg` (package and console script), `dagon.ini.sample`;
+  - tutorial and its tooling: renumbered lessons 17, 21, 23, 27–30, the notebook, `tools/run_local_examples.py`, `tools/validate_tutorial.py`;
+  - documentation: README, AGENTS.md, and the guides under `docs/`;
+  - CI: `.github/workflows/ci.yml`.
+
+## A6. Known limitations
+
+- **Inline code is trusted, not contained.** An inline component that falsely declares `side_effect="none"` can still act after a timeout. Process isolation bounds time and output and kills the process group, but it is not an operating-system sandbox: file-system and network access are not confined.
+- **Adapter start-up costs time.** Starting the worker counts against `timeout_seconds`. On the NFS-mounted cluster a worker took on the order of a second to start, so very small budgets can expire before the first proposal.
+- **Live models.**
+  - The builtin adapter is tested only against a loopback server.
+  - Runs are nondeterministic, and checkpoint identity does not capture drift behind an unchanged endpoint and model name.
+- **Not implemented:** cost budgets, model-based judges, `pre_stage=True` for agentic tasks, and inputs produced on remote (SSH or cloud) hosts.
+- **Pre-existing defects found but not fixed:**
+  - `NomadTask._generate_job_spec` adds a `host:container` volume twice.
+  - `Workflow.make_dependencies()`, which `run()` calls when it has not run yet, discards explicit `add_dependency_to` edges added before it. The user guide now documents the order. Several legacy examples (`examples/edge_fog/`, `examples/taskflow/`) add explicit edges without calling `make_dependencies()` first; they were left unchanged, following the conservative-fix rule.
+- **No independent audit.** F1 to F3, the start-up change, and the CI fixes have not been independently audited.
+
+## A7. Commit history
+
+```text
+(this commit) Update the implementation report for the agentic audit remediation
+f3cefb7 Run the wheel smoke example from a directory without a checkout
+81704d5 Copy the wheel smoke-test example from the checkout path
+f516d44 Add Lesson 24's explicit edge after make_dependencies
+e0844b3 Fix the first CI run of the agentic work
+3c6fffa Add TaskType.AGENTIC, the 33-lesson curriculum, and coverage validation
+```
+
+---
+
 # Implementation report: scheduler-aware pre-staging
 
 - **Branch:** `feature/scheduler-aware-prestaging`, based on `development` at `d8da197`. At the user's request, `8dec028` was pushed to `origin/feature/scheduler-aware-prestaging` and `development` was fast-forwarded to it (no merge commit; `development` had not moved since `d8da197`). No PR; `main` is untouched. The post-audit work in [section 3](#post-audit-deep-validation-d-001-and-d-002) (version 2.9.4, D-001, D-002, the deep site check) was pushed to `development` at `ab4cf0d` at the user's request. The remote feature branch has since been deleted.
