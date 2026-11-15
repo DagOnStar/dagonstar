@@ -196,7 +196,8 @@ jobs:
           python-version: "3.12"
       - name: Install package and the CWL reference runner
         run: |
-          python -m pip install -e .
+          # The all-type interoperability tests import the Docker and Kubernetes adapters.
+          python -m pip install -e ".[docker,kubernetes]"
           python -m pip install cwltool
       - name: Run agentic unit tests
         run: python -m unittest discover -s tests -p "test_agentic_*.py" -v

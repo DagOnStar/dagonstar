@@ -204,12 +204,24 @@ def late_adapter_factory(**options):
 
 
 def pid_alive(pid):
+    """True if ``pid`` is running; a killed but unreaped (zombie) process counts as stopped.
+
+    Inside containers whose init does not reap orphans, a killed grandchild stays
+    a zombie, and minimal images have no ``ps``, so Linux reads ``/proc`` directly.
+    """
     if os.name != "posix":
         return False
     try:
         os.kill(pid, 0)
     except OSError:
         return False
+    stat = Path("/proc", str(pid), "stat")
+    if Path("/proc/self/stat").exists():
+        try:
+            state = stat.read_text().rsplit(")", 1)[1].split()[0]
+        except (OSError, IndexError):
+            return False
+        return state not in ("Z", "X")
     try:
         out = subprocess.run(["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True).stdout
         return bool(out.strip()) and not out.strip().startswith("Z")
