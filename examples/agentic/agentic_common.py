@@ -7,7 +7,10 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+# Prefer the checkout when run from it; otherwise use the installed package.
+_ROOT = Path(__file__).resolve().parent.parent.parent
+if (_ROOT / "dagon").is_dir():
+    sys.path.insert(0, str(_ROOT))
 
 from dagon import Workflow  # noqa: E402
 from dagon.config import read_config  # noqa: E402

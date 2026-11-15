@@ -268,8 +268,9 @@ jobs:
           cd /tmp && /tmp/wheel-venv/bin/python -c "import dagon, dagon.web, dagon.fair, dagon.iot, dagon.agentic, dagon.stager, dagon.platform_support; print('wheel import ok')"
           /tmp/wheel-venv/bin/dagon-agent-runner --help > /dev/null
           # The import line above left the shell in /tmp; copy from the checkout explicitly.
-          cp "$GITHUB_WORKSPACE/examples/agentic/agentic_common.py" "$GITHUB_WORKSPACE/examples/agentic/tool_free.py" /tmp/
-          cd /tmp && /tmp/wheel-venv/bin/python tool_free.py
+          mkdir -p /tmp/wheel-smoke
+          cp "$GITHUB_WORKSPACE/examples/agentic/agentic_common.py" "$GITHUB_WORKSPACE/examples/agentic/tool_free.py" /tmp/wheel-smoke/
+          cd /tmp/wheel-smoke && /tmp/wheel-venv/bin/python tool_free.py
       - name: Check the sdist contents
         run: |
           tar -tzf dist/*.tar.gz | grep -q "/dagon/agentic/engine.py"
