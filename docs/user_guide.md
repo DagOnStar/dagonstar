@@ -67,6 +67,16 @@ simulation.add_dependency_to(quality_control)
 
 Read this as: `quality_control` depends on `download`.
 
+Add explicit edges after `workflow.make_dependencies()`. That method rebuilds
+the graph from `workflow://` references and discards earlier edges, and
+`workflow.run()` calls it when it has not run yet, so an explicit edge added
+before it is silently lost and the two tasks may run concurrently:
+
+```python
+workflow.make_dependencies()
+quality_control.add_dependency_to(download)
+```
+
 ## Dataflow dependencies
 
 Use `workflow://` when a task consumes a file from another task:
