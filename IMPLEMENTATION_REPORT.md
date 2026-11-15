@@ -6,7 +6,7 @@ follows it unchanged.
 
 - **Branch:** `development`. Commit `3c6fffa` added the agentic work and the audit fixes. `e0844b3` fixed the two problems its first CI run exposed, `f516d44` fixed a race in the Lesson 24 script that the second run exposed, and `81704d5` and `f3cefb7` fixed the wheel smoke test that the third and fourth runs exposed. All were pushed to `origin/development` at the user's request. No tag, release, or PyPI publication was made, and `main` is untouched.
 - **Inputs:** `DAGonStar_AgenticTask_Claude_Code_Implementation_Plan.md` (the plan), `AGENTS.md`, and the independent audit `AUDIT_REPORT_AGENTIC_TASK_2026-11-14.md` (verdict **FAIL**: F1 and F2 medium, F3 low). The two audit reports in the repository root are left untracked.
-- **Audit remediation:** F1 to F3 are fixed in [A2](#a2-audit-remediation-f1-to-f3). The re-audit of `597b475` (same file name, dated 2026-11-15, verdict **FAIL**) found a new high finding, also numbered F1, fixed in [A9](#a9-re-audit-remediation-explicit-edges-in-workflow-json). The fixes have not been independently audited.
+- **Audit remediation:** F1 to F3 are fixed in [A2](#a2-audit-remediation-f1-to-f3). The re-audit of `597b475` (same file name, dated 2026-11-15, verdict **FAIL**) found a new high finding, also numbered F1, fixed in [A9](#a9-re-audit-remediation-explicit-edges-in-workflow-json). The latest re-audit, of `01968ab`, gave the verdict **PASS** with no open finding; see [A11](#a11-independent-re-audit-at-01968ab-pass).
 - **Environments:** workstation macOS 26.6.2 (arm64), Python 3.12.10; production cluster Rocky Linux 8.10 login node, Slurm 23.11.3, Python 3.11.7 in a dedicated virtual environment, `/home` on NFSv4, partition `norm-wn`.
 - **CI:** run [43713271895](https://github.com/DagOnStar/dagonstar/actions/runs/43713271895) on `f3cefb7` passed every job.
   - Tests: Ubuntu (3.8, 3.10, 3.12, 3.13), macOS, Windows, Rocky Linux 9 (3.9, 3.12), Debian bookworm arm64.
@@ -102,7 +102,7 @@ This is evidence for one site and Slurm release with the deterministic mock adap
   - Runs are nondeterministic, and checkpoint identity does not capture drift behind an unchanged endpoint and model name.
 - **Not implemented:** cost budgets, model-based judges, `pre_stage=True` for agentic tasks, and inputs produced on remote (SSH or cloud) hosts.
 - **Pre-existing defects reported earlier:** see [A8](#a8-follow-up-explicit-edges-and-the-nomad-volume-claim). The explicit-edge defect is fixed; the Nomad claim was wrong.
-- **No independent audit.** F1 to F3, the start-up change, and the CI fixes have not been independently audited.
+- **Independent audit.** The re-audit of `01968ab` confirmed F1 to F3 (renumbered H1 to H3) and the JSON finding (H4) resolved; see [A11](#a11-independent-re-audit-at-01968ab-pass).
 
 ## A7. Commit history
 
@@ -153,23 +153,39 @@ The re-audit of `597b475` reported one new high finding (re-audit F1, acceptance
   - Lessons 24 and 31 passed on the cluster.
   - The CI-scoped ruff and mypy checks, both tutorial validators, and the notebook JSON check passed.
   - CI is recorded in [A10](#a10-commit-history-after-a7).
-- **Not independently re-audited.** The re-audit's verdict stays FAIL until an independent retest of this fix.
+- **Independently retested.** The re-audit of `01968ab` confirmed this fix (as H4) with the verdict PASS; see [A11](#a11-independent-re-audit-at-01968ab-pass).
 
 ## A10. Commit history after A7
 
 ```text
-(this commit) Record the CI run for the JSON explicit-edge fix
+(this commit) Record the PASS verdicts of the independent re-audits
+01968ab Record the CI run for the JSON explicit-edge fix
 bb75f03 Restore explicit dependency edges when loading workflow JSON
 597b475 Keep explicit dependency edges when make_dependencies rebuilds the graph
 ```
 
 - CI run [43720107464](https://github.com/DagOnStar/dagonstar/actions/runs/43720107464) on `597b475` and run [43738504207](https://github.com/DagOnStar/dagonstar/actions/runs/43738504207) on `bb75f03` passed every test, quality, notebook, Slurm/BeeOND, agentic, and build job. The GitHub release and PyPI jobs were skipped, as expected for a push without a tag.
 
+## A11. Independent re-audit at `01968ab`: PASS
+
+`AUDIT_REPORT_AGENTIC_TASK_2026-11-14.md` was rewritten for revision `01968ab` with the overall verdict **PASS**: every acceptance requirement A01 to A16 passed, and it reports no unresolved material finding.
+
+- **Resolved findings:** H1 (timed-out components kept running), H2 (inline API keys), H3 (synthetic task-type test), and H4 (explicit edges lost in workflow JSON, the former re-audit F1).
+- **No code change needed.** With no open finding, this round changes only this report.
+- **Release gates:** the audit recommends keeping the containment, configuration, coverage, and explicit-edge JSON tests as release gates. All of them are in the unit suite that CI runs.
+- **Evidence limits** stated by the audit:
+  - mock and loopback runs prove contracts, not live providers;
+  - Slurm and BeeOND ran on a single-node emulated site;
+  - Docker, Kubernetes, Apptainer, Nomad, SSH, cloud, transfer services, physical IoT, and paid LLMs were not exercised live.
+- **Re-verification of `01968ab`:**
+  - On the Rocky 8.10 cluster (Python 3.11.7), the full suite passed (383 tests), as did Lessons 24 and 31.
+  - CI runs on `bb75f03` ([43738504207](https://github.com/DagOnStar/dagonstar/actions/runs/43738504207)) and `01968ab` passed every job; the CI run for the commit that adds this section is not recorded here.
+
 # Implementation report: scheduler-aware pre-staging
 
 - **Branch:** `feature/scheduler-aware-prestaging`, based on `development` at `d8da197`. At the user's request, `8dec028` was pushed to `origin/feature/scheduler-aware-prestaging` and `development` was fast-forwarded to it (no merge commit; `development` had not moved since `d8da197`). No PR; `main` is untouched. The post-audit work in [section 3](#post-audit-deep-validation-d-001-and-d-002) (version 2.9.4, D-001, D-002, the deep site check) was pushed to `development` at `ab4cf0d` at the user's request. The remote feature branch has since been deleted.
 - **Inputs:** `DAGonStar_Claude_Code_Implementation_Plan.md` (the plan) and `AGENTS.md`. There is no `CLAUDE.md` in the repository. Prepared for review against `DAGonStar_Codex_Independent_Audit_Plan.md`.
-- **Audit remediation:** the first independent audit (verdict FAIL at `2d0d69a`) reported six findings, F-001 to F-006, addressed in [section 2](#2-audit-remediation). The repeat audit (`AUDIT_REPORT_SCHEDULER_PRESTAGING.md`, verdict FAIL) confirmed F-001 to F-005 resolved and F-006 substantially resolved, and reported three new findings, R-001 to R-003, addressed in [section 3](#3-repeat-audit-remediation). The second repeat audit (verdict NEEDS-EVIDENCE at `14b8698`) confirmed R-001 to R-003 resolved and left one medium finding, M-001, and one failed CI job (Windows / Python 3.10). Both are addressed in [section 3](#second-repeat-audit-m-001-and-ci). The third repeat audit (verdict NEEDS-EVIDENCE at `75856b3`) confirmed M-001 resolved and the Windows diagnosis consistent, and reported one low finding, L-001 (this report's file inventory still listed 41 harness checks), now corrected. Its remaining condition, a green CI run on the pushed commit, was met by run 43568759582 on `8dec028`. The fifth repeat audit, at `e887d2e`, gave the verdict **PASS** with no open findings. A deeper production-cluster test after that audit found one new high-severity defect, D-001 (a job cancelled while pending was reported as completed), and, while fixing it, an NFS visibility issue, D-002. Both are fixed and recorded in [section 3](#post-audit-deep-validation-d-001-and-d-002). CI run [43579136060](https://github.com/DagOnStar/dagonstar/actions/runs/43579136060) on `ab4cf0d` passed every job; the fixes have not been independently audited yet. The performance issues that the deep test exposed, P-001 to P-003, are fixed in [section 3](#performance-follow-up-p-001-to-p-003); that work was pushed to `development` at the user's request, and CI run [43598110185](https://github.com/DagOnStar/dagonstar/actions/runs/43598110185) on `274515c` passed every job. It has not been independently audited.
+- **Audit remediation:** the first independent audit (verdict FAIL at `2d0d69a`) reported six findings, F-001 to F-006, addressed in [section 2](#2-audit-remediation). The repeat audit (`AUDIT_REPORT_SCHEDULER_PRESTAGING.md`, verdict FAIL) confirmed F-001 to F-005 resolved and F-006 substantially resolved, and reported three new findings, R-001 to R-003, addressed in [section 3](#3-repeat-audit-remediation). The second repeat audit (verdict NEEDS-EVIDENCE at `14b8698`) confirmed R-001 to R-003 resolved and left one medium finding, M-001, and one failed CI job (Windows / Python 3.10). Both are addressed in [section 3](#second-repeat-audit-m-001-and-ci). The third repeat audit (verdict NEEDS-EVIDENCE at `75856b3`) confirmed M-001 resolved and the Windows diagnosis consistent, and reported one low finding, L-001 (this report's file inventory still listed 41 harness checks), now corrected. Its remaining condition, a green CI run on the pushed commit, was met by run 43568759582 on `8dec028`. The fifth repeat audit, at `e887d2e`, gave the verdict **PASS** with no open findings. A deeper production-cluster test after that audit found one new high-severity defect, D-001 (a job cancelled while pending was reported as completed), and, while fixing it, an NFS visibility issue, D-002. Both are fixed and recorded in [section 3](#post-audit-deep-validation-d-001-and-d-002). CI run [43579136060](https://github.com/DagOnStar/dagonstar/actions/runs/43579136060) on `ab4cf0d` passed every job. The performance issues that the deep test exposed, P-001 to P-003, are fixed in [section 3](#performance-follow-up-p-001-to-p-003); that work was pushed to `development` at the user's request, and CI run [43598110185](https://github.com/DagOnStar/dagonstar/actions/runs/43598110185) on `274515c` passed every job. The sixth repeat audit (`AUDIT_REPORT_SCHEDULER_PRESTAGING.md`, at `6a57411`) gave the verdict **PASS** with no open finding. It found D-001 and D-002 resolved and independently audited, and P-001 to P-003 resolved.
 - **Environment:** macOS 26.6.2 (arm64), Python 3.12.10, GNU bash 3.2.57, ruff 0.17.3, mypy 2.4.1.
 - **Version:** `setup.cfg` sets the package version to **2.9.4**. That is above the latest GitHub release, `v2.0.2` (whose `setup.cfg` still said 1.0.2), and the latest PyPI release, 1.0.2. No tag was created.
 - **Real-cluster validation: manual runs on one production cluster.** At the user's request, the final code was run on a production Slurm 23.11.3 cluster (RHEL 8 family, login node plus CPU compute nodes, `/home` on NFS shared by all nodes, partition `norm-wn`, Python 3.11 in a dedicated virtual environment). After the M-001 fix, the 44-check harness `tools/ci_prestage_slurm.py`, `pre_stage_local.py` in both lifecycles, and `pre_stage_remote.py` over real SSH from this workstation all passed again, and the 86 pre-staging unit tests passed on the cluster's Linux login node (details in [section 7](#7-test-results)). That is evidence for one site and Slurm release, with small inputs on a nearly idle partition, not a general guarantee. CI run [43568759582](https://github.com/DagOnStar/dagonstar/actions/runs/43568759582) on the push of `8dec028` to `development` passed every job (see [section 9](#9-cicd-changes)).
