@@ -158,9 +158,12 @@ The re-audit of `597b475` reported one new high finding (re-audit F1, acceptance
 ## A10. Commit history after A7
 
 ```text
-(this commit) Restore explicit dependency edges when loading workflow JSON
+(this commit) Record the CI run for the JSON explicit-edge fix
+bb75f03 Restore explicit dependency edges when loading workflow JSON
 597b475 Keep explicit dependency edges when make_dependencies rebuilds the graph
 ```
+
+- CI run [43720107464](https://github.com/DagOnStar/dagonstar/actions/runs/43720107464) on `597b475` and run [43738504207](https://github.com/DagOnStar/dagonstar/actions/runs/43738504207) on `bb75f03` passed every test, quality, notebook, Slurm/BeeOND, agentic, and build job. The GitHub release and PyPI jobs were skipped, as expected for a push without a tag.
 
 # Implementation report: scheduler-aware pre-staging
 
