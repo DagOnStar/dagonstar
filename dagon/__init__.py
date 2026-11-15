@@ -127,7 +127,8 @@ class Workflow(object):
             max_threads: int = 10,
             jsonload: Optional[Dict[str, Any]] = None,
             checkpoint_file: Optional[str] = None,
-            portable_emulation: bool = False):
+            portable_emulation: bool = False,
+            pre_stage: bool = False):
         """
         Create a workflow
 
@@ -139,7 +140,17 @@ class Workflow(object):
 
         :param config_file: Path to the configuration file of the workflow. By default, try to loads 'dagon.ini'
         :type config_file: str
+
+        :param pre_stage: default scheduler-aware pre-staging policy of the
+            workflow's tasks (``False`` by default).  When ``True``, eligible
+            scheduler tasks (Slurm, RemoteSlurm) whose own ``pre_stage`` is
+            ``None`` stage their ``workflow://`` inputs before requesting
+            resources; every other task keeps its usual lifecycle.  See
+            ``docs/scheduler_prestaging.md``.
+        :type pre_stage: bool
         """
+        from dagon.prestage import validate_pre_stage
+        self.pre_stage = validate_pre_stage(pre_stage, allow_none=False)
 
         if config is not None:
             self.cfg = config
@@ -314,6 +325,11 @@ class Workflow(object):
             task.set_data_mover(self.data_mover)
         if task.stager_mover is None:
             task.set_stager_mover(self.stager_mover)
+        # Fail fast on an invalid or unsupported explicit pre_stage override;
+        # the effective value is resolved again when the task executes.
+        validate_pre_stage = getattr(task, "validate_pre_stage_declaration", None)
+        if validate_pre_stage is not None:
+            validate_pre_stage(self)
 
         self.tasks.append(task)
         task.set_workflow(self)
@@ -331,9 +347,15 @@ class Workflow(object):
         self.dag_tps = DAG_tps
 
     def make_dependencies(self) -> None:
+        """Rebuild the dependency graph.
+
+        Edges are rediscovered from ``workflow://`` references; edges added
+        with :meth:`dagon.task.Task.add_dependency_to` outside discovery are
+        restored afterwards, so explicit edges survive whether they were added
+        before or after this call (``run()`` calls it when it has not run yet).
         """
-        Looks for all the dependencies between tasks
-        """
+        explicit_edges = [(task, previous) for task in self.tasks
+                          for previous in list(getattr(task, "explicit_prevs", []))]
 
         # Clean all dependencies
         for task in self.tasks:
@@ -342,14 +364,57 @@ class Workflow(object):
             task.reference_count = 0
 
         # Automatically detect dependencies
-        for task in self.tasks:
-            # Invoke pre run
-            task.set_semaphore(self.sem)
-            task.set_dag_tps(self.dag_tps)
-            task.pre_run()
+        self._discovering_dependencies = True
+        try:
+            for task in self.tasks:
+                # Invoke pre run
+                task.set_semaphore(self.sem)
+                task.set_dag_tps(self.dag_tps)
+                task.pre_run()
+        finally:
+            self._discovering_dependencies = False
+        for task, previous in explicit_edges:
+            self._restore_explicit_edge(task, previous)
         self.Validate_WF()
         self._dependencies_made = True
         self._fire_event("on_dependencies_made", self)
+
+    @staticmethod
+    def _restore_explicit_edge(task: Any, previous: Any) -> None:
+        """Add the explicit edge previous -> task once, without service calls."""
+        if previous not in task.prevs:
+            task.prevs.append(previous)
+        if task not in previous.nexts:
+            previous.nexts.append(task)
+        explicit = task.__dict__.setdefault("explicit_prevs", [])
+        if previous not in explicit:
+            explicit.append(previous)
+
+    def _load_explicit_edges(self, tasks_data: Dict[str, Any]) -> None:
+        """Restore serialized explicit edges after every task has been built.
+
+        ``explicit_prevs`` names must be tasks of this workflow. JSON written
+        before that field existed only has ``prevs``, which also lists edges
+        discovered from ``workflow://`` references, including tasks of other
+        workflows; its same-workflow names are restored as explicit edges and
+        the others are left to discovery.
+        """
+        by_name = {task.name: task for task in self.tasks}
+        for key, data in tasks_data.items():
+            task = by_name[data.get('name', key)]
+            if 'explicit_prevs' in data:
+                names = data['explicit_prevs']
+                unknown = [name for name in names if name not in by_name]
+                if unknown:
+                    raise ValueError("task %r has explicit dependencies on unknown tasks: %s"
+                                     % (task.name, ", ".join(map(str, unknown))))
+            else:
+                names = [name for name in data.get('prevs', []) if name in by_name]
+            for name in names:
+                if by_name[name] is task:
+                    raise ValueError("task %r cannot depend on itself" % task.name)
+                self._restore_explicit_edge(task, by_name[name])
+        self.Validate_WF()
 
     def enable_fair(self, profile: Any) -> Any:
         """Enable optional FAIR-by-design recording for this workflow.
@@ -452,6 +517,9 @@ class Workflow(object):
         """
 
         jsonWorkflow = {"tasks": {}, "name": self.name, "id": self.workflow_id, "host": self.ftpAtt.get("host", "localhost")}
+        if self.pre_stage:
+            # Only present when enabled, so default JSON documents are unchanged.
+            jsonWorkflow["pre_stage"] = True
         for task in self.tasks:
             jsonWorkflow['tasks'][task.name] = task.as_json()
         return jsonWorkflow
@@ -468,21 +536,9 @@ class Workflow(object):
         :raises ValueError: if a task has no command that CWL can execute
         """
         # Dependency discovery normally happens immediately before a run.  Do
-        # it here as well, while retaining any explicit edges already attached
-        # by callers (make_dependencies rebuilds the discovered graph).
+        # it here as well; make_dependencies() keeps explicit edges.
         if not self._dependencies_made:
-            explicit_edges = [
-                (previous, task)
-                for task in self.tasks
-                for previous in task.prevs
-                if previous in self.tasks
-            ]
             self.make_dependencies()
-            for previous, task in explicit_edges:
-                if previous not in task.prevs:
-                    previous.nexts.append(task)
-                    task.prevs.append(previous)
-            self.Validate_WF()
 
         def cwl_identifier(value: str, used: set) -> str:
             identifier = re.sub(r"[^A-Za-z0-9_]", "_", value)
@@ -501,6 +557,27 @@ class Workflow(object):
             task: cwl_identifier(str(task.name), used_ids)
             for task in self.tasks
         }
+        agentic_tasks = [task for task in self.tasks if type(task).__name__ == "AgenticTask"]
+        # Narrow file bindings for agentic tasks: producer -> {relative path: output id}.
+        file_outputs: Dict[Any, Dict[str, str]] = {}
+        agentic_bindings: Dict[Any, List[Any]] = {}
+        for task in agentic_tasks:
+            bindings = []
+            for reference, workflow_name, relative, producer in task._producers():
+                if workflow_name != self.name or producer not in task_ids:
+                    raise ValueError("CWL export of agentic task %s supports only producers in workflow %s: %s"
+                                     % (task.name, self.name, reference))
+                produced = file_outputs.setdefault(producer, {})
+                if type(producer).__name__ == "AgenticTask":
+                    names = {path: name for name, path in producer.outputs.items()}
+                    if relative not in names:
+                        raise ValueError("%s is not a declared output of agentic task %s" % (reference, producer.name))
+                    produced[relative] = names[relative]
+                elif relative not in produced:
+                    reserved = {"completed", "task_dir"} | set(produced.values())
+                    produced[relative] = cwl_identifier("file_" + relative, reserved)
+                bindings.append((reference, producer, relative, produced[relative]))
+            agentic_bindings[task] = bindings
         steps = {}
         for task in self.tasks:
             command = getattr(task, "command", None)
@@ -521,6 +598,27 @@ class Workflow(object):
                 input_id = "after_" + task_ids[previous]
                 tool_inputs[input_id] = "Directory" if self.portable_emulation else "boolean"
                 step_inputs[input_id] = task_ids[previous] + ("/task_dir" if self.portable_emulation else "/completed")
+
+            if type(task).__name__ == "AgenticTask":
+                steps[task_ids[task]] = self._agentic_cwl_step(task, task_ids, step_inputs, tool_inputs,
+                                                               agentic_bindings[task])
+                continue
+
+            bound_command = False
+            if not self.portable_emulation and agentic_tasks:
+                # Narrow binding: a command that reads a declared agentic output gets that File.
+                for producer in agentic_tasks:
+                    if producer not in task.prevs:
+                        continue
+                    for output_name, relative in sorted(producer.outputs.items()):
+                        for prefix in ("workflow:///%s/" % producer.name,
+                                       "workflow://%s/%s/" % (self.name, producer.name)):
+                            if prefix + relative in command:
+                                input_id = "%s_%s" % (task_ids[producer], output_name)
+                                tool_inputs[input_id] = "File"
+                                step_inputs[input_id] = task_ids[producer] + "/" + output_name
+                                command = command.replace(prefix + relative, "$(inputs.%s.path)" % input_id)
+                                bound_command = True
 
             if self.portable_emulation:
                 command_types = {"Checkpoint", "RemoteCheckpoint", "Batch", "RemoteBatch", "Slurm",
@@ -544,8 +642,9 @@ class Workflow(object):
                 "class": "CommandLineTool",
                 "label": str(task.name),
                 "requirements": {"InlineJavascriptRequirement": {}},
-                "baseCommand": ["/bin/sh", "-c"] if self.portable_emulation else ["/bin/sh", "-c", command],
-                **({"arguments": [command]} if self.portable_emulation else {}),
+                "baseCommand": ["/bin/sh", "-c"] if self.portable_emulation or bound_command
+                else ["/bin/sh", "-c", command],
+                **({"arguments": [command]} if self.portable_emulation or bound_command else {}),
                 "inputs": tool_inputs,
                 "outputs": {
                     "completed": {
@@ -600,6 +699,15 @@ class Workflow(object):
                 "run": tool,
             }
 
+        if not self.portable_emulation:
+            for producer, produced in file_outputs.items():
+                if type(producer).__name__ == "AgenticTask":
+                    continue
+                step = steps[task_ids[producer]]
+                for relative, output_id in sorted(produced.items(), key=lambda item: item[1]):
+                    step["run"]["outputs"][output_id] = {"type": "File", "outputBinding": {"glob": relative}}
+                    step["out"].append(output_id)
+
         terminal_tasks = [task for task in self.tasks if not task.nexts]
         outputs = {
             task_ids[task] + "_completed": {
@@ -608,19 +716,70 @@ class Workflow(object):
             }
             for task in terminal_tasks
         }
+        for task in agentic_tasks:
+            for output_name in ("result", "evaluation"):
+                outputs[task_ids[task] + "_" + output_name] = {
+                    "type": "File", "outputSource": task_ids[task] + "/" + output_name}
         document = {
             "cwlVersion": "v1.2",
             "class": "Workflow",
             "label": self.name,
-            "inputs": {},
+            "inputs": {"dagon_config": "File"} if agentic_tasks else {},
             "outputs": outputs,
             "steps": steps,
         }
-        if any(type(task).__name__ in {"FaaSTask", "IoTTask"} for task in self.tasks):
+        if any(type(task).__name__ in {"FaaSTask", "IoTTask", "AgenticTask"} for task in self.tasks):
             document["$namespaces"] = {"dagon": "https://dagonstar.org/cwl#"}
         with open(os.fspath(filename), "w", encoding="utf-8") as stream:
             json.dump(document, stream, indent=2, sort_keys=False)
             stream.write("\n")
+
+    def _agentic_cwl_step(self, task: Any, task_ids: Dict[Any, str], step_inputs: Dict[str, str],
+                          tool_inputs: Dict[str, Any], bindings: List[Any]) -> Dict[str, Any]:
+        """Return the executable CWL step of an agentic task (``dagon-agent-runner``).
+
+        The versioned contract is embedded; the agent profile is resolved at
+        run time from the ``dagon_config`` File input, so no endpoint,
+        credential, or scratch path is exported.
+        """
+        from dagon.agentic.models import contract_digest
+        arguments = ["--spec", "agent-task.json", "--config", "$(inputs.dagon_config.path)", "--workdir", ".",
+                     "--workflow", self.name, "--task", str(task.name)]
+        for index, (reference, producer, relative, output_id) in enumerate(bindings):
+            if self.portable_emulation:
+                arguments += ["--bind", "%s=$(inputs.after_%s.path)/%s" % (reference, task_ids[producer], relative)]
+            else:
+                input_id = "in_%d" % index
+                tool_inputs[input_id] = "File"
+                step_inputs[input_id] = "%s/%s" % (task_ids[producer], output_id)
+                arguments += ["--bind", "%s=$(inputs.%s.path)" % (reference, input_id)]
+        if self.portable_emulation:
+            arguments.append("--portable-emulation")
+        tool_inputs["dagon_config"] = "File"
+        step_inputs["dagon_config"] = "dagon_config"
+        outputs: Dict[str, Any] = {"completed": {"type": "boolean",
+                                                 "outputBinding": {"outputEval": "$(runtime.exitCode === 0)"}}}
+        for name, relative in sorted(task.outputs.items()):
+            outputs[name] = {"type": "File", "outputBinding": {"glob": relative}}
+        if self.portable_emulation:
+            outputs["task_dir"] = {"type": "Directory", "outputBinding": {"glob": "."}}
+        spec = task.portable_spec()
+        tool = {
+            "class": "CommandLineTool",
+            "label": str(task.name),
+            "requirements": {
+                "InlineJavascriptRequirement": {},
+                "InitialWorkDirRequirement": {"listing": [
+                    {"entryname": "agent-task.json", "entry": json.dumps(spec, sort_keys=True)}]},
+            },
+            "hints": {"dagon:AgenticTask": {"schema_version": spec["schema_version"], "agent_profile": spec["agent"],
+                                            "contract_sha256": contract_digest(spec)}},
+            "baseCommand": ["dagon-agent-runner", "run"],
+            "arguments": arguments,
+            "inputs": tool_inputs,
+            "outputs": outputs,
+        }
+        return {"label": str(task.name), "in": step_inputs, "out": list(outputs), "run": tool}
 
     def run(self, resume_checkpoint_file = None):
         """Run the workflow in the current thread."""
@@ -700,8 +859,11 @@ class Workflow(object):
 
     def load_json(self, Json_data):
         from dagon.task import DagonTask, TaskType
+        from dagon.prestage import validate_pre_stage
         self.name = Json_data['name']
         self.workflow_id = Json_data['id']
+        if 'pre_stage' in Json_data:
+            self.pre_stage = validate_pre_stage(Json_data['pre_stage'], allow_none=False)
         for task in Json_data['tasks']:
             temp = Json_data['tasks'][task]
             options = {}
@@ -712,6 +874,8 @@ class Workflow(object):
                 options['output_file'] = temp.get('output_file', 'response.json')
             if temp['type'].upper() == 'SLURM' and temp.get('beeond') is not None:
                 options['beeond'] = temp['beeond']
+            if temp['type'].upper() == 'SLURM' and temp.get('pre_stage') is not None:
+                options['pre_stage'] = temp['pre_stage']
             if temp['type'].upper() == 'NATIVE':
                 tk = DagonTask(TaskType.NATIVE, temp['name'], temp['function'],
                                inputs=temp.get('inputs'), outputs=temp.get('outputs'),
@@ -730,6 +894,10 @@ class Workflow(object):
                     if temp.get(key) is not None}
                 tk = DagonTask(TaskType.FAAS, temp['name'], specification,
                                working_dir=temp.get('working_dir'))
+            elif temp['type'].upper() == 'AGENTIC':
+                contract = dict(temp.get('agentic', {}))
+                contract.pop('schema_version', None)
+                tk = DagonTask(TaskType.AGENTIC, temp['name'], **contract)
             elif temp['type'].upper() == 'IOT':
                 raw = dict(temp.get('iot', {}))
                 aliases = {'endpointRef': 'endpoint_ref', 'credentialRef': 'credential_ref',
@@ -743,7 +911,7 @@ class Workflow(object):
             else:
                 tk = DagonTask(TaskType[temp['type'].upper()], temp['name'], temp['command'], **options)
             self.add_task(tk)
-        # self.make_dependencies()
+        self._load_explicit_edges(Json_data['tasks'])
 
     def Validate_WF(self):
         """

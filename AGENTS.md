@@ -53,8 +53,16 @@ local, remote, Slurm, Docker, cloud, and data-staging environments.
 - `dagon/task.py`: base task model, dependency discovery, staging integration.
 - `dagon/__init__.py`: `Workflow`, stager logic, shared enums.
 - `dagon/batch.py`: local batch and Slurm tasks.
+- `dagon/prestage.py`: scheduler-aware pre-staging policy, `PreparedTask`,
+  stage-in script, marker, phases, and typed errors.
 - `dagon/remote.py`: SSH and cloud-backed tasks.
 - `dagon/docker_task.py`: local and remote Docker tasks.
+- `dagon/agentic/`: `TaskType.AGENTIC` contract, `dagon.ini` profile resolution,
+  registry of tools, guardrails, evaluators, and adapters, bounded engine,
+  sandboxed tool execution, publication, checkpoint identity, and the
+  `dagon-agent-runner` CLI used by CWL export.
+- `docs/tutorial/coverage.json`: machine-checked map from every `TaskType` and
+  inventoried feature to lessons, examples, and tests.
 - `dagon/communication/`: SSH/SCP/Globus/SKYCDS transfer helpers.
 - `examples/`: runnable examples and tutorial material.
 - `dagon.ini.sample`: safe sample configuration.
@@ -81,8 +89,9 @@ If behavior changed, run the smallest relevant example and document the command.
 
 - CI (`.github/workflows/ci.yml`) tests Ubuntu, macOS, Windows, Rocky Linux 9,
   and Debian bookworm arm64 (64-bit Raspberry Pi OS userland), and runs BeeOND
-  workflows on single-node Slurm with an emulated BeeOND site
-  (`tools/ci/slurm/`, `tools/ci_beeond_slurm.py`); see
+  workflows and the scheduler-aware pre-staging checks on single-node Slurm
+  with an emulated BeeOND site (`tools/ci/slurm/`, `tools/ci_beeond_slurm.py`,
+  `tools/ci_prestage_slurm.py`); see
   `docs/platform_support.md` and keep it accurate.
 - Run local launchers through `dagon.platform_support.bash_executable()`, never
   a hardcoded `/bin/bash` or `bash`; remote hosts may keep `bash`.
@@ -103,6 +112,48 @@ configuration validation separately from live integration behavior.
 - Be careful with shell command construction. Existing code builds many commands
   from strings; quote new path/user inputs defensively.
 
+## Scheduler-aware pre-staging maintenance
+
+- `pre_stage` defaults to `False` and must stay opt-in. The legacy launcher is
+  guarded byte for byte by `tests/fixtures/legacy_slurm_launcher.sh`. Do not
+  change the legacy text unless that is intended and documented.
+- Generate scripts from `Task.prepare_task()` / `PreparedTask`. Never split or
+  parse generated launcher text to separate staging from computation.
+- `sbatch` (or any scheduler submission) must never run when stage-in failed or
+  its success cannot be confirmed. Keep staging, submission, and execution
+  failures distinguishable (`failure_phase`, typed `PreStageError`s).
+- Grant eligibility through backend capability (`pre_stage_capable`,
+  `pre_stage_unsupported_reason()`), never through the task type name.
+  Allocation-dependent storage such as BeeOND stays ineligible until a
+  dedicated design exists.
+- No scheduler submission of any kind, including `StagerMover.SLURM` copy
+  jobs, may happen before stage-in has succeeded; keep that mover ineligible.
+- Verify staged content wherever the source is readable on the submission host,
+  and never claim content verification for existence-only movers.
+- A completed pre-staged checkpoint is reused only after its recorded input
+  identity has been re-verified; never relax this to directory accessibility.
+- Pre-staged dry runs must stay side-effect free (no scratch, scripts, SSH, or
+  scheduler calls), and `..` references must be refused before any transfer.
+- Classify submission versus execution failures from the `sbatch --parsable`
+  job identifier, never from display text, and never treat a submission
+  without a job identifier as completed. A successful `sbatch -W` counts as
+  completion only when `.dagon/compute-finished.txt`, written by the compute
+  launcher's `EXIT` trap, names that job with status 0: Slurm also exits 0 for
+  a job cancelled while pending.
+- The compute launcher must re-check staged content against
+  `.dagon/stage-in-destinations.txt` before the payload runs.
+- Keep shared working directories ineligible and the stage-in lock
+  token-owned: never remove another run's lock. Taking the lock must be
+  fail-atomic: if the owner token cannot be written and read back, remove the
+  new lock and exit non-zero before any input is removed or transferred.
+- Stage-in markers and metadata must never contain credentials, and
+  `execution.pre_stage` must stay path-free. A marker is never a skip token.
+- Changes require the local and remote pre-staging tests,
+  `tools/ci_prestage_slurm.py`, the manual `tools/hpc_prestage_deep.py`, the
+  `examples/dataflow/slurm/pre_stage_*.py`
+  examples, `docs/scheduler_prestaging.md`, and tutorial Lessons 23 and 25
+  (with `examples/tutorial/lesson_25_scheduler_prestaging.py`) to stay consistent.
+
 ## FaaS maintenance
 
 - `TaskType.FAAS` invokes already-deployed functions; deployment and infrastructure
@@ -116,6 +167,28 @@ configuration validation separately from live integration behavior.
   FAIR, checkpoint, and mixed-task interoperability tests.
 - Sanitize provider metadata before logs, scratch records, JSON, or FAIR exports,
   and keep cloud limits adapter-reported rather than timeless framework claims.
+
+## Agentic task maintenance
+
+- Agent and LLM provider configuration lives in `dagon.ini` (`[agent.<name>]`,
+  `[agent_provider.<name>]`, `[llm.<name>]`); tasks select a profile by name.
+  The profile is the maximum authority: tasks may narrow tools and budgets and
+  add guardrails, never widen them. Keys are read from environment variables at
+  invocation and must never be persisted, logged, exported, or checkpointed.
+- Tools have no implicit privileges. Register them with an argument schema,
+  side-effect class, timeout, output limit, and isolation. Tools, evaluators,
+  guardrails, and adapters run in supervised processes by default; inline isolation is
+  only for side-effect-free code. Guardrails and evaluators run outside the
+  agent; agent self-reports are never evidence of acceptance.
+- A result is published (atomically, `commit.json` last) only after independent
+  acceptance; a rejected or failed run must never release dependants. Reuse a
+  checkpoint only after re-verifying contract, profile, versions, and input
+  content hashes.
+- Tests and examples use the deterministic `mock` adapter or a loopback server;
+  never require a live model. Changes require `tests/test_agentic_*.py`, the
+  all-type interoperability tests, `examples/agentic/`, Lessons 14–16, 30, and
+  32, `docs/agentic_*.md`, CWL/FAIR/JSON documentation, and `coverage.json` to
+  stay consistent.
 
 ## Documentation standards
 
@@ -137,9 +210,13 @@ configuration validation separately from live integration behavior.
 - Keep infrastructure-dependent capabilities outside the mandatory local path;
   label optional integrations as locally testable, infrastructure-dependent,
   experimental, or reserved/planned.
-- Run tutorial structure/link checks, local examples, relevant unit tests, and
-  notebook JSON validation after documentation changes. Preserve formal academic
-  tone and distinguish observed evidence from inference.
+- Run tutorial structure/link checks (`tools/validate_tutorial.py`), the
+  coverage check (`tools/validate_tutorial_coverage.py`), local examples,
+  relevant unit tests, and notebook JSON validation after documentation changes.
+- A new `TaskType` or supported feature needs a lesson, a runnable example, a
+  test target, and a `docs/tutorial/coverage.json` entry with an honest evidence
+  level; the coverage validator fails until it is mapped.
+- Preserve formal academic tone and distinguish observed evidence from inference.
 
 - All documentation, tutorials, Jupyter notebooks, and examples must remain
   mutually consistent and accurately reflect the current implementation.

@@ -29,6 +29,9 @@ dagon/
   checkpoint.py               Checkpoint tasks
   config.py                   INI configuration reader
   dag_tps.py                  Meta-workflow coordination
+  agentic/                    TaskType.AGENTIC: contract, dagon.ini profiles, registry,
+                              guardrails, evaluators, adapters, bounded engine, tool worker,
+                              atomic publication, checkpoint identity, dagon-agent-runner
   fair/                       Optional FAIR models, recorder, validation, exporters
   api/                        HTTP client and workflow service
   cloud/                      Apache Libcloud helpers
@@ -103,6 +106,23 @@ A typical dataflow run follows this sequence:
 14. Status and checkpoint metadata are updated.
 15. Dependent tasks proceed.
 
+Command tasks build their scripts through `Task.prepare_task()`. It returns a
+`dagon.prestage.PreparedTask` with four separate parts: the discovered context
+(`context.sh`), the resolved `workflow://` input manifest, the per-input stage-in
+blocks, and the command invocation. The legacy launcher
+(`PreparedTask.legacy_launcher()`, also returned by `pre_process_command()`)
+stages inputs and then runs the command in one script, so for Slurm tasks the
+staging in step 12 happens inside the allocation. When scheduler-aware
+pre-staging is effective (`Workflow(pre_stage=True)` or `Slurm(...,
+pre_stage=True)`), steps 12 and 13 split. `stage_in.sh` runs on the submission
+host and is verified (content is compared with the source when the source is
+readable there), `.dagon/stage-in-complete.json` is written, and only then is a
+compute-only launcher submitted with `sbatch --parsable`. The compute launcher
+re-checks the staged content before the command runs, and a token-owned lock
+in `.dagon/stage-in.lock` keeps concurrent runs out of the same working
+directory until the job has returned. A failed stage-in never reaches the
+scheduler. See [Scheduler-aware pre-staging](scheduler_prestaging.md).
+
 ## Status model
 
 `dagon.Status` has these values:
@@ -129,6 +149,12 @@ Explicit dependencies are created with:
 ```python
 consumer.add_dependency_to(producer)
 ```
+
+Explicit edges are also recorded in `explicit_prevs`, so
+`Workflow.make_dependencies()` restores them after it rebuilds the graph from
+`workflow://` references; `remove_dependency_to` removes one permanently.
+`Task.as_json()` writes them as `explicit_prevs` (task names), and
+`Workflow.load_json()` restores them after all tasks are built.
 
 Implicit dependencies are created by parsing:
 
@@ -185,6 +211,13 @@ workflow-scope `BeeONDVolume` submits one holder job and runs each task launcher
 as an `srun --jobid=<holder>` step. `Workflow.run()` asks the holder to persist
 the volume and release the allocation. See [BeeOND](beeond.md).
 
+`Slurm` and `RemoteSlurm` are the only backends with
+`pre_stage_capable = True`. They run `context.sh` and `stage_in.sh` on the
+submission host: locally for `Slurm`, over SSH on the login node for
+`RemoteSlurm`. They write the stage-in marker atomically and submit the
+compute-only launcher through the unchanged `generate_command()`. BeeOND and
+parallel-mode tasks are not eligible.
+
 ### Docker
 
 `DockerTask` creates or uses a Docker container through the Docker Python SDK.
@@ -230,3 +263,18 @@ use = False
   configuration, staging, task-subclass, and API-client code; stricter static
   checking remains a maintainability improvement.
 - Some examples depend on external systems and cannot be verified in generic CI.
+
+## Agentic tasks
+
+`dagon.agentic.task.AgenticTask` is a local `Task` subclass. Its
+`execute()` runs a bounded engine (`dagon/agentic/engine.py`) that alternates
+adapter proposals with runtime checks, registered guardrails, process-isolated
+tool calls (`dagon/agentic/worker.py`), and independent evaluators. The adapter
+runs in its own supervised worker for the whole run
+(`dagon/agentic/adapter_worker.py`), and custom evaluators and guardrails run in
+worker processes, so a deadline or cancellation kills them with their descendants. Profiles are
+resolved from `dagon.ini` (`[agent.*]`, `[agent_provider.*]`, `[llm.*]`) by
+`dagon/agentic/config.py`. Publication is atomic with `commit.json` written
+last, and checkpoint reuse recomputes an identity digest over the contract,
+profile, registered versions, and input hashes. The task fails, and so blocks
+its dependants, unless the result is accepted. See [Agentic tasks](agentic_tasks.md).

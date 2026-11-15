@@ -17,12 +17,12 @@ from dagon.fair import Agent, Artifact, FairProfile
 from dagon.task import DagonTask, TaskType
 from tests.helpers import make_workflow
 from tests.helpers import minimal_config
+from tests.agentic_fixtures import FIXTURE_INI, agent_sections
 from dagon import Workflow, Status
 
 
 class TaskTypeInteroperabilityTests(unittest.TestCase):
-    def _tasks(self):
-        reference = "workflow:///producer/output/value.txt"
+    def _tasks(self, reference="workflow:///producer/output/value.txt"):
         with patch("dagon.docker_task.docker.from_env", return_value=None), \
              patch("dagon.kubernetes_task.config.load_kube_config"), \
              patch("dagon.kubernetes_task.client.CoreV1Api"):
@@ -52,6 +52,11 @@ class TaskTypeInteroperabilityTests(unittest.TestCase):
                                         request={"events": [{"source": reference}]},
                                         completion={"mode": "first_event"},
                                         outputs={"observations": "outputs/observations.json"}),
+                TaskType.AGENTIC: DagonTask(TaskType.AGENTIC, "agentic", agent="quality-local",
+                                            specification={"objective": "Acknowledge the staged value"},
+                                            inputs={"value": {"uri": reference, "media_type": "text/plain"}},
+                                            requirements=[{"id": "ran", "evaluator": "exact_match",
+                                                           "expected": {}}]),
             }
 
     @staticmethod
@@ -73,6 +78,31 @@ class TaskTypeInteroperabilityTests(unittest.TestCase):
         for task_type, task in tasks.items():
             with self.subTest(task_type=task_type):
                 self.assertIn(producer, task.prevs)
+
+    def test_pairwise_producer_consumer_dependency_matrix(self):
+        """Every registered type as producer x every registered type as consumer (metadata contract).
+
+        Dependency discovery and reference counting are checked for all
+        ``len(TaskType) ** 2`` pairs.  Actual artifact transfer is exercised
+        separately (portable emulation below and tests/test_agentic_task.py);
+        no live remote service is contacted.
+        """
+        pairs = 0
+        for producer_type, producer in self._tasks("workflow:///source/output/value.txt").items():
+            with self.subTest(producer=producer_type.value):
+                workflow = make_workflow("pairs-" + producer_type.value)
+                workflow.add_task(DagonTask(TaskType.BATCH, "source", "mkdir -p output; echo 1 > output/value.txt"))
+                producer.name = "producer"
+                workflow.add_task(producer)
+                consumers = self._tasks()
+                for consumer in consumers.values():
+                    workflow.add_task(consumer)
+                workflow.make_dependencies()
+                for consumer_type, consumer in consumers.items():
+                    self.assertIn(producer, consumer.prevs, (producer_type, consumer_type))
+                    pairs += 1
+                self.assertEqual(producer.reference_count, len(TaskType))
+        self.assertEqual(pairs, len(TaskType) ** 2)
 
     def test_every_factory_type_exposes_fair_declarations(self):
         for task_type, task in self._tasks().items():
@@ -117,11 +147,17 @@ class TaskTypeInteroperabilityTests(unittest.TestCase):
                 if task_type is TaskType.IOT:
                     checkpoint.update({"task_type": "iot", "schema_version": 1, "outputs": []})
                 workflow.checkpoints[workflow.name + "." + task.name] = checkpoint
+                if task_type is TaskType.AGENTIC:
+                    # Stricter contract: reuse needs a verified accepted commit and identity
+                    # (tests/test_agentic_checkpoint.py), never a bare successful directory.
+                    self.assertFalse(task.reuse_checkpoint())
+                    continue
                 self.assertTrue(task.reuse_checkpoint())
                 self.assertTrue(task.fair_checkpoint_reused)
 
     def test_mixed_tasktype_graph_exports_as_deterministic_cwl(self):
         config = minimal_config()
+        config.update(agent_sections())
         workflow = Workflow("mixed-cwl", config=config, portable_emulation=True)
         workflow.add_task(DagonTask(TaskType.BATCH, "producer",
                                     "mkdir -p output; echo value > output/value.txt"))
@@ -134,18 +170,30 @@ class TaskTypeInteroperabilityTests(unittest.TestCase):
             if shutil.which("cwltool"):
                 subprocess.run(["cwltool", "--validate", str(target)], check=True,
                                text=True, capture_output=True)
-                executed = subprocess.run(["cwltool", "--no-container", str(target)],
-                                          text=True, capture_output=True)
-                self.assertEqual(executed.returncode, 0, executed.stderr)
+                if shutil.which("dagon-agent-runner"):
+                    # The agentic step resolves its profile from an explicit dagon.ini input.
+                    ini = Path(directory, "dagon.ini")
+                    ini.write_text(FIXTURE_INI, encoding="utf-8")
+                    job = Path(directory, "job.json")
+                    job.write_text(json.dumps({"dagon_config": {"class": "File", "path": str(ini)}}),
+                                   encoding="utf-8")
+                    executed = subprocess.run(["cwltool", "--no-container", "--outdir",
+                                               str(Path(directory, "out")), str(target), str(job)],
+                                              text=True, capture_output=True, cwd=directory)
+                    self.assertEqual(executed.returncode, 0, executed.stderr[-3000:])
         self.assertEqual(document["cwlVersion"], "v1.2")
         self.assertEqual(len(document["steps"]), len(TaskType) + 1)
-        self.assertNotIn("workflow://", json.dumps(document))
+        # Command steps resolve every reference; the agentic step intentionally keeps its
+        # versioned logical contract and binds each reference to a staged file at run time.
+        generic = {key: step for key, step in document["steps"].items() if key != "agentic"}
+        self.assertNotIn("workflow://", json.dumps(generic))
         for step in document["steps"].values():
             self.assertIn("task_dir", step["out"])
 
     def test_every_task_type_executes_together_in_portable_emulation(self):
         with tempfile.TemporaryDirectory() as directory:
             config = minimal_config()
+            config.update(agent_sections())
             config["batch"]["scratch_dir_base"] = directory
             workflow = Workflow("portable-all", config=config, portable_emulation=True,
                                 checkpoint_file=str(Path(directory, "checkpoint.json")))

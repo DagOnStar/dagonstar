@@ -2,7 +2,7 @@ from enum import Enum
 import os
 import posixpath
 import logging
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 
 from dagon.batch import Batch
 from dagon.batch import Slurm
@@ -89,11 +89,18 @@ class Stager(object):
         self.data_mover = data_mover
         self.stager_mover = stager_mover
         self.cfg = cfg
+        self.last_data_mover: Optional[DataMover] = None
         self.logger = logging.getLogger()
 
-    def stage_in(self, dst_task: Any, src_task: Any, dst_path: str, local_path: str) -> str:
+    def stage_in(self, dst_task: Any, src_task: Any, dst_path: str, local_path: str,
+                 strict: bool = False) -> str:
         """
         Evaluates the context of the machines and choose the transfer protocol
+
+        :param strict: generate failure-propagating, space-safe transfer loops
+            (used by scheduler-aware pre-staging); ``False`` keeps the legacy
+            launcher text unchanged
+        :type strict: bool
 
         :param dst_task: task where the data has to be put
         :type dst_task: :class:`dagon.task.Task`
@@ -139,6 +146,10 @@ class Stager(object):
             data_mover = self.data_mover
 
 
+        # Recorded for scheduler-aware pre-staging, which compares the staged
+        # content with its source only for same-host COPY and LINK transfers.
+        self.last_data_mover = data_mover
+
         src = src_task.get_scratch_dir() + "/" + local_path
 
         dst = dst_path + "/" + posixpath.dirname(posixpath.normpath(local_path))
@@ -178,7 +189,7 @@ class Stager(object):
             cmd = "ln -sf \"$file\" \"$dst\""
             if StagerMover(self.stager_mover) == StagerMover.PARALLEL:
                 cmd = "ln -sf {} \"$dst\""
-            command = command + self.generate_command(src, dst, cmd, self.stager_mover.value)
+            command = command + self.generate_command(src, dst, cmd, self.stager_mover.value, strict=strict)
 
         # Check if the copy have to be used...
         elif data_mover == DataMover.COPY:
@@ -187,7 +198,7 @@ class Stager(object):
             cmd = "cp -r \"$file\" \"$dst\""
             if StagerMover(self.stager_mover) == StagerMover.PARALLEL:
                 cmd = "cp -r {} \"$dst\""
-            command = command + self.generate_command(src, dst, cmd, self.stager_mover.value)
+            command = command + self.generate_command(src, dst, cmd, self.stager_mover.value, strict=strict)
 
         # Check if the secure copy have to be used...
         elif data_mover == DataMover.SCP:
@@ -207,7 +218,7 @@ class Stager(object):
                     cmd = ("scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no "
                            "-o UserKnownHostsFile=/dev/null -i " + quote(key_path) +
                            " -r " + source + ' "$dst"\n\n')
-                command = command + self.generate_command(src, dst, cmd, self.stager_mover.value)
+                command = command + self.generate_command(src, dst, cmd, self.stager_mover.value, strict=strict)
                 command += "\nif [ $? -ne 0 ]; then code=1; fi"
                 # command += "\n rm " + dst_task.working_dir + "/.dagon/ssh_key"
             else:  # if source is a local machine
@@ -231,7 +242,7 @@ class Stager(object):
                     cmd = ("scp -r -o LogLevel=ERROR -o StrictHostKeyChecking=no "
                            "-o UserKnownHostsFile=/dev/null -i " + quote(key_path) +
                            " -r {} " + destination + "\n\n")
-                command_local = self.generate_command(src, dst, cmd, self.stager_mover.value)
+                command_local = self.generate_command(src, dst, cmd, self.stager_mover.value, strict=strict)
                 res = Batch.execute_command(command_local)
 
                 if res['code']:
@@ -241,7 +252,30 @@ class Stager(object):
 
         return command
 
-    def generate_command(self, src: str, dst: str, cmd: str, mode: int) -> str:
+    def generate_command(self, src: str, dst: str, cmd: str, mode: int, strict: bool = False) -> str:
+        """Return the shell loop that applies *cmd* to every file matching *src*.
+
+        With *strict*, the loop expands *src* with ``IFS`` set to a newline (so
+        scratch paths with spaces stay one word while globs still expand),
+        records every failed transfer, and leaves a non-zero ``$?`` when any
+        transfer failed.  The transfer template is also assigned in single
+        quotes, so ``eval`` expands ``$file`` and ``$dst`` as quoted variables
+        instead of re-parsing their values: shell syntax in a scratch path is
+        never executed.  ``file`` and ``dst`` are exported for
+        :attr:`StagerMover.SLURM` copy jobs.  Without *strict* the legacy text
+        is produced unchanged.
+        """
+        if strict:
+            strict_start = ("dagon_stage_status=0\n"
+                            "dagon_saved_ifs=\"$IFS\"\n"
+                            "IFS='\n'\n")
+            strict_fail = " || dagon_stage_status=1"
+            strict_restore = "IFS=\"$dagon_saved_ifs\"\n"
+            strict_end = "(exit \"$dagon_stage_status\")\n"
+            cmd_line = "export file dst\ncmd=" + quote(cmd)
+        else:
+            strict_start = strict_fail = strict_restore = strict_end = ""
+            cmd_line = 'cmd="' + cmd.replace('"', '\\"') + '"'
         batch_cfg = self.cfg.get("batch", {})
         slurm_cfg = self.cfg.get("slurm", {})
         jobs = batch_cfg.get("threads", "1")
@@ -257,13 +291,13 @@ partition={partition}
 
 job_ids=()
 
-for file in $src
+{strict_start}for file in $src
 do
-cmd="{cmd}"
+{cmd_line}
 case $mode in
     1)
     # Run in parallel using local queue
-    find $src -type f,l | parallel -j$jobs "$cmd"
+    find $src -type f,l | parallel -j$jobs "$cmd"{strict_fail}
     break
     ;;
     2)
@@ -273,11 +307,11 @@ case $mode in
     ;;
     *)
     # Run requentially
-    eval "$cmd"
+    eval "$cmd"{strict_fail}
     ;;
 esac
 done
-
+{strict_restore}
 # Wait for all sbatch jobs to complete
 if [ "${{#job_ids[@]}}" -gt 0 ]; then
     echo "Waiting for all copies to complete..."
@@ -291,11 +325,15 @@ if [ "${{#job_ids[@]}}" -gt 0 ]; then
         sleep 5
     done
 fi
-        """.format(
+{strict_end}        """.format(
             src=quote(src),
             dst=quote(dst),
             mode=int(mode),
             jobs=quote(jobs),
             partition=quote(partition),
-            cmd=cmd.replace('"', '\\"'),
+            cmd_line=cmd_line,
+            strict_start=strict_start,
+            strict_fail=strict_fail,
+            strict_restore=strict_restore,
+            strict_end=strict_end,
         )

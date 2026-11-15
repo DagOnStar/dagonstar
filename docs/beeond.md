@@ -116,7 +116,6 @@ solve = DagonTask(TaskType.SLURM, "solve", './solve.sh "$DAGON_BEEOND"',
                   beeond="workflow:scratch")
 workflow.add_task(prepare)
 workflow.add_task(solve)
-workflow.make_dependencies()
 solve.add_dependency_to(prepare)   # shared-volume data is not a workflow:// reference
 workflow.run()
 ```
@@ -146,7 +145,7 @@ confirming persistence, after writing the checkpoint file. You can also call
 `workflow.stop_beeond_volumes()` yourself.
 
 Tasks that share a workflow volume do not get implicit dependencies from it.
-Declare the order with `add_dependency_to` after `make_dependencies()`, or let
+Declare the order with `add_dependency_to`, or let
 `workflow://` references order them.
 
 ## Configuration
@@ -243,6 +242,18 @@ What it cannot guarantee:
 - **CWL.** `saveAsCWL` is unchanged: BeeOND is DAGonStar execution behavior and
   is not exported. A command that uses `$DAGON_BEEOND` needs that variable from
   the CWL runner's environment to run there.
+
+## Scheduler-aware pre-staging
+
+[Scheduler-aware pre-staging](scheduler_prestaging.md) is not supported for
+BeeOND tasks. A task-scope volume exists only inside its own allocation, and a
+workflow-scope task runs as a step of a holder job that already holds its
+allocation. A Slurm task with `beeond=...` and an explicit `pre_stage=True`
+raises `PreStageConfigurationError` when it is added to the workflow. When it
+only inherits `Workflow(pre_stage=True)`, it keeps the legacy lifecycle and a
+warning is logged. BeeOND tasks are never staged into a mount that does not
+exist yet. Supporting this combination would need a dedicated design, and is
+future work.
 
 ## Portable emulation and local testing
 

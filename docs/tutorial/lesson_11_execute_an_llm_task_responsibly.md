@@ -74,4 +74,4 @@ LLM auditability requires explicit context, limitations, and human review.
 
 ## Next lesson
 
-Next, change execution environment while holding graph stable. Return to the [syllabus](README.md) at any time.
+Next, invoke an already-deployed serverless function as a structured task. Return to the [syllabus](README.md) at any time.

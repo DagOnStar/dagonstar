@@ -15,8 +15,8 @@ local execution works on each, and what the CI/CD workflow
 | Raspberry Pi (64-bit) | `debian:bookworm` container on a native arm64 runner | 3.11 (system) | unit tests, local examples |
 
 "Local examples" are the self-contained scripts run by
-`python tools/run_local_examples.py`: tutorial lessons 01–11 and the FAIR,
-FaaS, IoT, and LLM mock examples. They use only local processes, temporary
+`python tools/run_local_examples.py`: tutorial lessons 00–32 and the FAIR,
+FaaS, IoT, LLM, and agentic mock examples. They use only local processes, temporary
 scratch directories, and loopback mock services.
 
 The Raspberry Pi job exercises the userland of 64-bit Raspberry Pi OS, which is
@@ -29,7 +29,7 @@ SSH, multi-node Slurm, real BeeGFS/BeeOND, Globus, SKYCDS, DynoStore, or cloud
 services. Those paths are tested through command generation and mocks only (see
 the [developer guide](developer_guide.md)). The one exception is the
 `beeond-slurm` job described below, which runs single-node Slurm with an
-emulated BeeOND site.
+emulated BeeOND site and also checks scheduler-aware pre-staging there.
 
 ### BeeOND on Slurm (emulated site)
 
@@ -55,6 +55,49 @@ To run the checks on a cluster you control:
 ```bash
 python tools/ci_beeond_slurm.py --partition <partition> --nodes <n> --scratch <shared-dir>
 ```
+
+### Scheduler-aware pre-staging on Slurm
+
+The same job runs `tests.test_scheduler_prestaging` and
+`tests.test_remote_scheduler_prestaging`, then `tools/ci_prestage_slurm.py`
+with real `sbatch`. The script checks that:
+
+- a pre-staged task's stage-in finished, and its completion marker existed,
+  before the job started, and the job saw its input at start;
+- the same task without pre-staging stages inside the job and gives the same
+  result;
+- the staged content was compared with its source, and the job identifier
+  came from `sbatch --parsable`;
+- a failed stage-in never wrote or submitted a compute launcher;
+- an explicit `pre_stage=True` with BeeOND or with `StagerMover.SLURM` is
+  rejected;
+- a completed task is reused when its input is unchanged and runs again when
+  the producer's output changed;
+- a `workflow://` reference with `..` fails in staging without a transfer or
+  submission, and a dry run creates no scratch directory;
+- a staged input changed after stage-in but before the job starts stops the
+  job before the command runs;
+- a stage-in lock held by another run blocks stage-in without touching that
+  run's data, and a finished run releases its own lock;
+- a failed lock-owner write removes the new lock and stops before anything is
+  removed or submitted (skipped when run as root);
+- a job held pending with `--begin` and cancelled with `scancel` is an
+  execution failure, not a completed task, and its checkpoint is not reusable.
+
+`tools/hpc_prestage_deep.py` is a manual site-validation tool, not run in CI.
+On a real cluster it stages a large file and many small files, checks a
+two-node allocation, holds jobs pending with `--begin` to observe a real queue
+wait, a queued change, and a cancellation, runs two processes against one
+working directory, and uses node-local scratch to observe the execution-phase
+failure. A separate mode checks checkpoint re-verification for RemoteSlurm over
+real SSH.
+
+Finally, the job runs `examples/dataflow/slurm/pre_stage_local.py` on the
+cluster. A single node with an empty queue shows ordering and gating only, not
+queue-time effects or multi-node file-system visibility. On every other
+platform, the pre-staging unit tests and `pre_stage_mock.py` (part of the local
+examples) use a mock `sbatch`. The RemoteSlurm tests use a loopback SSH double
+and are skipped on Windows.
 
 ## Local execution on each platform
 
@@ -134,19 +177,21 @@ requests, on `v*` tags, and on manual dispatch.
 
 | Job | Purpose |
 | --- | --- |
-| `quality` | Ruff and mypy on the typed helper modules, tutorial validation, notebook JSON check, `bash -n` on the CI shell scripts. |
+| `quality` | Ruff and mypy on the typed helper modules (including `dagon/prestage.py` and `dagon/agentic/`), Ruff on the pre-staging and agentic examples, the coverage validator, and tutorial lessons 00 and 12–32, tutorial structure and feature-coverage validation (`tools/validate_tutorial_coverage.py`), notebook JSON check, `bash -n` on the CI shell scripts. |
 | `test` | Unit tests, `compileall`, and local examples on Ubuntu, macOS, and Windows. |
 | `rocky-linux` | Unit tests and local examples on Rocky Linux 9. |
 | `raspberry-pi` | Unit tests and local examples on Debian bookworm arm64. |
-| `beeond-slurm` | BeeOND unit tests and live per-task, per-workflow, failure, and signal persistence checks on single-node Slurm with an emulated BeeOND site. |
-| `build` | Builds sdist and wheel, runs `twine check --strict`, imports the wheel in a clean virtual environment, and uploads `dist/` as an artifact. On a tag, it checks that the tag equals `v` + the `setup.cfg` version. |
+| `agentic-contract` | Ubuntu: agentic unit tests, all-type interoperability and coverage tests, the agentic examples and Lessons 14–16 with the deterministic mock adapter, and validation and execution of the agentic CWL export with `cwltool --no-container`. On failure, uploads only evaluation reports, traces, commit manifests, and runner errors under 256 KiB (never configuration). No live model is contacted. |
+| `notebook` | Ubuntu: executes the tutorial notebook's code cells in order with `tools/run_notebook_smoke.py` (no Jupyter); lessons needing unavailable infrastructure print explicit skips. |
+| `beeond-slurm` | BeeOND unit tests and live per-task, per-workflow, failure, and signal persistence checks on single-node Slurm with an emulated BeeOND site; pre-staging unit tests, `tools/ci_prestage_slurm.py`, and `pre_stage_local.py` on the same cluster. |
+| `build` | Builds sdist and wheel, runs `twine check --strict`, imports the wheel (including `dagon.agentic`) in a clean virtual environment outside the checkout, runs `dagon-agent-runner --help` and a mock agentic example there, checks that the sdist contains `dagon/agentic/`, and uploads `dist/` as an artifact. On a tag, it checks that the tag equals `v` + the `setup.cfg` version. |
 | `release` | On a `v*` tag only: creates a GitHub release with generated notes and attaches the distributions. |
 | `publish-pypi` | On a `v*` tag only, and only when the repository variable `PYPI_PUBLISH` is `true`: publishes to PyPI with trusted publishing (no stored token). |
 
 ### Publishing a release
 
-1. Set `version` in `setup.cfg`, for example `1.0.3`, and merge to `main`.
-2. Tag and push: `git tag v1.0.3 && git push origin v1.0.3`.
+1. Set `version` in `setup.cfg`, for example `2.9.5`, and merge to `main`.
+2. Tag and push: `git tag v2.9.5 && git push origin v2.9.5`.
 3. The workflow tests every platform, builds, and creates the GitHub release.
 
 PyPI publishing is off until a maintainer sets it up once: add a trusted

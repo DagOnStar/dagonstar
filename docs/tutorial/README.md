@@ -1,14 +1,14 @@
 # DAGonStar academic tutorial
 
-This tutorial teaches DAGonStar as a scientific-workflow system: graph construction, execution and recovery, structured task models, distributed infrastructure, then FAIR composition and interoperability. It is intended for graduate students, research software engineers, computational scientists, and advanced undergraduates who know basic Python and shell usage but may be new to workflow semantics.
+This tutorial teaches DAGonStar as a scientific-workflow system: graph construction, execution and recovery, structured task models (including agentic tasks), distributed infrastructure, then FAIR composition, interoperability, and operations. It is intended for graduate students, research software engineers, computational scientists, and advanced undergraduates who know basic Python and shell usage but may be new to workflow semantics.
 
 ## Complete-course learning outcomes
 
-After the course you can construct and validate a DAG, distinguish control from data dependencies, inspect staging and execution evidence, select task and backend models, reason about recovery and asynchronous lifecycle, record supported FAIR metadata, compose workflows, and evaluate a CWL v1.2 export's portability boundary.
+After the course you can construct and validate a DAG, distinguish control from data dependencies, inspect staging and execution evidence, select task and backend models, configure and evaluate bounded agentic tasks, reason about recovery and asynchronous lifecycle, record supported FAIR metadata, compose workflows, evaluate a CWL v1.2 export's portability boundary, and operate the system with honest evidence labels.
 
 ## Prerequisites
 
-Python 3, a command shell, and a repository checkout are sufficient for the local path. Start with Lesson 00. Docker, SSH, Slurm, DynoStore, cloud, and real web or LLM providers are optional and never required for the core conceptual sequence.
+Python 3, a command shell, and a repository checkout are sufficient for the local path. Start with Lesson 00. Docker, Apptainer, Kubernetes, Nomad, SSH, Slurm, BeeOND, Globus, DynoStore, cloud, and real web, LLM, FaaS, IoT, or agent providers are optional and never required for the core conceptual sequence.
 
 ## Curriculum map
 
@@ -26,35 +26,56 @@ Python 3, a command shell, and a repository checkout are sufficient for the loca
 | [09](lesson_09_execute_native_python_functions.md) | Native Python tasks | Local | No | Supported | Task models |
 | [10](lesson_10_execute_a_web_service_task.md) | Structured HTTP tasks | Local mock | Local mock | Supported | Task models |
 | [11](lesson_11_execute_an_llm_task_responsibly.md) | Auditable LLM tasks | Local mock | Local mock | Limited | Task models |
-| [12](lesson_12_run_a_task_in_docker.md) | Container execution | Docker | Docker daemon | No | Infrastructure |
-| [13](lesson_13_run_a_task_on_a_remote_host_with_ssh.md) | Remote execution | SSH | SSH host | No | Infrastructure |
-| [14](lesson_14_submit_a_task_through_slurm.md) | Scheduled execution | Slurm | Cluster | No | Infrastructure |
-| [15](lesson_15_make_a_workflow_fair_by_design.md) | FAIR metadata and provenance | Local | No | Supported | Advanced |
-| [16](lesson_16_compose_meta_workflows.md) | Workflow composition | Local | No | Limited | Advanced |
-| [17](lesson_17_export_and_validate_common_workflow_language.md) | CWL v1.2 capstone | Local | Optional validator | Supported | Advanced |
-| [18](lesson_18_compute_continuum_operations.md) | IoT and compute continuum synthesis | Local mock | No | Supported | Advanced |
+| [12](lesson_12_invoke_serverless_functions_with_faas_tasks.md) | FaaS invocation | Local mock | No | Supported | Task models |
+| [13](lesson_13_observe_and_actuate_devices_with_iot_tasks.md) | Bounded IoT interaction | Local mock | No | Supported | Task models |
+| [14](lesson_14_specify_and_configure_an_agentic_task.md) | Agentic contract and `dagon.ini` profiles | Local mock | No | Supported | Task models |
+| [15](lesson_15_constrain_agent_tools_with_guardrails.md) | Agent tools and guardrails | Local mock | No | Supported | Task models |
+| [16](lesson_16_evaluate_publish_and_checkpoint_agent_results.md) | Result fit, publication, checkpoints | Local mock | No | Supported | Task models |
+| [17](lesson_17_run_a_task_in_docker.md) | Container execution | Mocked client; Docker optional | Docker daemon (live only) | Construction checks | Infrastructure |
+| [18](lesson_18_run_a_task_with_apptainer.md) | HPC containers | Mocked; Apptainer optional | Apptainer (live only) | Construction checks | Infrastructure |
+| [19](lesson_19_run_a_task_on_kubernetes.md) | Pod lifecycle | Mocked API; cluster optional | Cluster (live only) | Construction checks | Infrastructure |
+| [20](lesson_20_run_a_task_on_nomad.md) | Nomad job lifecycle | Mocked API; Nomad optional | Nomad (live only) | Construction checks | Infrastructure |
+| [21](lesson_21_run_a_task_on_a_remote_host_with_ssh.md) | Remote execution | Mocked SSH; host optional | SSH host (live only) | Construction checks | Infrastructure |
+| [22](lesson_22_configure_cloud_tasks_without_provisioning.md) | Cloud task configuration | Local | Provider (live only) | Configuration checks | Infrastructure |
+| [23](lesson_23_submit_a_task_through_slurm.md) | Scheduled execution | Mock `sbatch`; Slurm optional | Cluster (live only) | Limited | Infrastructure |
+| [24](lesson_24_use_beeond_job_local_storage.md) | BeeOND job-local storage | Local emulation | BeeOND site (live only) | Supported | Infrastructure |
+| [25](lesson_25_stage_inputs_before_scheduler_submission.md) | Scheduler-aware pre-staging | Mock `sbatch` | Cluster (live only) | Limited | Infrastructure |
+| [26](lesson_26_select_data_movers_and_transfer_services.md) | Data movers and transfer services | Local mock | Transfer services (live only) | Supported | Infrastructure |
+| [27](lesson_27_make_a_workflow_fair_by_design.md) | FAIR metadata and provenance | Local | No | Supported | Advanced |
+| [28](lesson_28_compose_meta_workflows.md) | Workflow composition | Local | No | Limited | Advanced |
+| [29](lesson_29_export_and_validate_common_workflow_language.md) | CWL v1.2 export and execution | Local | Optional validator | Supported | Advanced |
+| [30](lesson_30_compute_continuum_operations.md) | Compute continuum synthesis | Local mock | No | Supported | Advanced |
+| [31](lesson_31_operate_deploy_and_troubleshoot_dagonstar.md) | Operations, packaging, CI | Local | No | Limited | Advanced |
+| [32](lesson_32_capstone_every_task_type_with_evidence.md) | Capstone: every task type | Local emulation | No | Supported | Advanced |
 
 ### Modules and effort
 
 - Module 0, orientation: Lesson 00, about 20 minutes.
 - Module 1, constructing the graph: Lessons 01–04, about 95 minutes.
 - Module 2, execution and data movement: Lessons 05–08, about 110 minutes.
-- Module 3, structured task models: Lessons 09–11, about 90 minutes.
-- Module 4, distributed infrastructure: Lessons 12–14, about 115 minutes plus site setup.
-- Module 5, FAIR composition and interoperability: Lessons 15–18, about 160 minutes.
+- Module 3, structured task models: Lessons 09–16 (native, web, LLM, FaaS, IoT, and three agentic lessons), about 270 minutes.
+- Module 4, distributed infrastructure: Lessons 17–26 (Docker, Apptainer, Kubernetes, Nomad, SSH, cloud, Slurm, BeeOND, pre-staging, data movers), about 350 minutes plus optional site setup.
+- Module 5, FAIR composition, interoperability, and operations: Lessons 27–32, about 270 minutes.
 - [Optional integrations](integrations/README.md) are selected by research need and maturity.
 
+Every registered `TaskType` and every inventoried supported feature is mapped to a lesson, a runnable example,
+and a test target in [`coverage.json`](coverage.json); `python tools/validate_tutorial_coverage.py` checks the
+mapping, the evidence paths, and the notebook. Evidence levels distinguish local execution, mocked contracts,
+portable emulation, and optional live integration.
+
 The [course notebook](DAGonStar_tutorial.ipynb) includes executable verification
-for every Lesson 00–18 in local Jupyter and Google Colab. For infrastructure
-Lessons 12–14 it runs deterministic construction, quoting, and command-generation
-tests; live Docker, SSH, and Slurm claims still require their real backends.
-Lesson 18 uses the bounded, credential-free IoT mock and focused contract tests.
+for every Lesson 00–32 in local Jupyter and Google Colab. For infrastructure
+Lessons 17–26 it runs the lesson scripts, which mock Docker, Kubernetes, Nomad,
+SSH, cloud, and scheduler clients or use portable emulation; live Docker,
+Apptainer, Kubernetes, Nomad, SSH, cloud, Slurm, BeeOND, and transfer-service
+claims still require their real backends. Lessons 14–16 use the deterministic
+`mock` agent provider and never contact a model endpoint.
 
 [Open the complete course notebook in Google Colab](https://colab.research.google.com/github/DagOnStar/dagonstar/blob/main/docs/tutorial/DAGonStar_tutorial.ipynb).
 
 ## Run and verify examples
 
-From the repository root, install as described in Lesson 00, then run `python examples/tutorial/lesson_NN_....py`. Local scripts create isolated temporary scratch directories, make exact assertions, and exit nonzero on failure. Run `python tools/validate_tutorial.py` for structure and internal-link checks.
+From the repository root, install as described in Lesson 00, then run `python examples/tutorial/lesson_NN_....py`; every lesson from 00 to 32 has a script with the matching number, and `python tools/run_local_examples.py` runs them all. Local scripts create isolated temporary scratch directories, make exact assertions, and exit nonzero on failure. Run `python tools/validate_tutorial.py` for structure and internal-link checks and `python tools/validate_tutorial_coverage.py` for feature coverage.
 
 Use the [glossary](resources/glossary.md), [troubleshooting guide](resources/troubleshooting.md), and [teaching notes](resources/teaching_notes.md) throughout.
 

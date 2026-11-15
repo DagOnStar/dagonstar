@@ -75,6 +75,13 @@ Checkpoint keys are built from:
 Therefore, stable workflow and task names are essential. If you rename a task,
 DAGonStar treats it as a different checkpoint entry.
 
+Agentic tasks add a content identity: a completed agentic checkpoint is reused
+only when the recomputed digest of the contract, effective profile, registered
+tool/guardrail/evaluator/adapter versions, and input content hashes matches the
+recorded one, the commit manifest exists, and the published files keep their
+recorded hashes. A run that was not accepted is never reused. See
+[Agentic evaluation and checkpoints](agentic_evaluation.md#checkpoint-identity).
+
 ## Working directory persistence
 
 Checkpoint reuse requires the recorded working directory to exist.
@@ -91,6 +98,24 @@ Task-scope volumes are persisted below the working directory, so checkpoint
 reuse sees their data. Workflow volumes are new for each run. Set
 `restore=True` to copy the previous persistent directory into the new volume
 when resuming. See [BeeOND](beeond.md).
+
+Pre-staged Slurm tasks (see [Scheduler-aware pre-staging](scheduler_prestaging.md))
+add `"pre_stage": {"effective": true, "staged": ..., "stage_in_code": ...,
+"marker": ".dagon/stage-in-complete.json", "policy_version": 4,
+"source_identity_sha256": ..., "inputs": [...]}`. Their restart rule is
+stricter than the general one. A pre-staged task with `code == 0` and an
+accessible working directory is reused only when the content identity of its
+inputs, recomputed from the producers' current scratch directories on the
+submission host, still matches the identity recorded after its successful
+stage-in. If an input changed, cannot be re-read on the submission host (for
+example, an `SCP` input), or the record has no identity, a warning is logged
+and the task runs its whole lifecycle again. Any task that did not complete
+also runs again. A stage-in completion marker is never treated as permission
+to skip stage-in. `stage_in.sh` deletes an existing marker, identity record,
+and staged inputs before it transfers anything, so an interrupted or partial
+stage-in cannot be reported as complete. A failed `sbatch` after a successful
+stage-in leaves the staged inputs and marker in place as evidence. They are
+staged again on the rerun.
 
 ## Checkpointing and dataflow
 

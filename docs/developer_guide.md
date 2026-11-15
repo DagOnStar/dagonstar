@@ -47,8 +47,15 @@ Run the lightweight quality checks (install `mypy==1.13.0` and
 `ruff==0.6.9` first if they are not already available):
 
 ```bash
-python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py tests tools/run_local_examples.py
-python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py
+python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic tests tools/run_local_examples.py tools/validate_tutorial_coverage.py examples/agentic
+python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic/*.py
+```
+
+Validate the tutorial structure and the feature-coverage manifest:
+
+```bash
+python tools/validate_tutorial.py
+python tools/validate_tutorial_coverage.py
 ```
 
 Run the self-contained local examples as a smoke test:
@@ -103,6 +110,11 @@ To add a task type:
 6. Add unit tests for construction and dependency behavior.
 7. Update [reference_guide.md](reference_guide.md), [architecture.md](architecture.md),
    and relevant tutorials.
+8. Add a lesson, a runnable example, a test target, and a
+   `docs/tutorial/coverage.json` entry; `tools/validate_tutorial_coverage.py`
+   derives the task types from `TaskType` and fails until the new type is mapped.
+9. Extend `tests/test_tasktype_interoperability.py` so the all-type graph
+   includes the new type.
 
 ## Modifying dependency resolution
 
@@ -142,6 +154,43 @@ Prefer adding helpers and unit tests before broad rewrites.
 New staging or command-generation code should avoid raw string concatenation for
 paths or user-controlled values. Prefer explicit quoting helpers and tests that
 cover spaces, special characters, missing files, directories, and glob patterns.
+
+### Staging extension points (scheduler-aware pre-staging)
+
+`Task.prepare_task(command, strict_staging)` is the single source of every
+command-task script. It calls `discover_context()` (`context.sh`),
+`launcher_prologue()`, and `build_stage_plan()` (reference resolution, mover
+selection, one stage-in block per reference, and the `StageInput` manifest),
+then renders the invocation through `include_command()`. Do not parse or split
+generated shell text. Add information to `PreparedTask` instead.
+
+- `PreparedTask.legacy_launcher()` must stay byte-for-byte equal to the
+  historical launcher. `tests/fixtures/legacy_slurm_launcher.sh` guards it, so
+  update that fixture only for an intended, documented change.
+- `Stager.stage_in(..., strict=True)` and `generate_command(..., strict=True)`
+  produce the loop used by `stage_in.sh`. That loop propagates failures, keeps
+  paths with spaces intact, and is safe against injection: the template is
+  single-quoted before `eval`. The non-strict text is the legacy one.
+- To make another backend pre-stage-capable, set `pre_stage_capable = True` and
+  implement `run_stage_in()` (run the script outside any allocation),
+  `write_stage_marker()` (atomic), `read_scratch_file()` (also used to read
+  the stage-in identity record), `run_identity_check()` (run a read-only
+  script without writing a file, for checkpoint re-verification),
+  `release_stage_lock()` (remove `.dagon/stage-in.lock` only when the token
+  matches), and optionally `requested_cores()`. Extend `pre_stage_unsupported_reason()` for
+  per-task restrictions, as `Slurm` does for BeeOND; the base class already
+  refuses `StagerMover.SLURM`. Scheduler-only setup belongs in
+  `launcher_prologue()`, which only the compute launcher contains.
+- Classify scheduler failures as staging, submission, or execution failures,
+  from the job identifier printed by `sbatch --parsable` (set while
+  `task.pre_stage_submission` is true), never from display text. `sbatch`
+  must never run when stage-in failed or cannot be confirmed, and a
+  submission without a job identifier is a submission failure, even with
+  exit status 0. With a job identifier and exit status 0, completion still
+  requires `.dagon/compute-finished.txt` naming that job with status 0
+  (`compute_record_problem()`); otherwise it is an execution failure.
+- Test with `examples/dataflow/slurm/mock_scheduler.py` (a mock `sbatch -W`) and
+  the loopback SSH double in `tests/test_remote_scheduler_prestaging.py`.
 
 ## Security expectations
 

@@ -5,7 +5,7 @@
 Enable `FairProfile` on a workflow and use task `declare_outputs(Artifact(...))`
 or `declare_inputs()` for intentional data metadata. The recorder writes local
 RO-Crate, PROV, DataCite, CodeMeta, SHA-256 and human-readable reports. See the
-[FAIR principles](fair_principles.md) and [FAIR tutorial](tutorial/lesson_15_make_a_workflow_fair_by_design.md)
+[FAIR principles](fair_principles.md) and [FAIR tutorial](tutorial/lesson_27_make_a_workflow_fair_by_design.md)
 for the implemented model and a runnable example.
 This guide explains how to author DAGonStar workflows for scientific computing.
 
@@ -66,6 +66,15 @@ simulation.add_dependency_to(quality_control)
 ```
 
 Read this as: `quality_control` depends on `download`.
+
+Explicit edges may be added before or after `workflow.make_dependencies()`.
+That method rebuilds the graph from `workflow://` references and then restores
+every edge added with `add_dependency_to`, without duplicating an edge that is
+also discovered from a reference. `workflow.run()` calls it when it has not run
+yet, so explicit edges added before `run()` are kept. Use
+`task.remove_dependency_to(other)` to remove an explicit edge permanently.
+Explicit edges are saved in the workflow JSON as `explicit_prevs` and restored
+by `Workflow(..., jsonload=...)`.
 
 ## Dataflow dependencies
 
@@ -158,6 +167,33 @@ by the workflow. The command finds the volume through `$DAGON_BEEOND`, and
 DAGonStar copies the volume to persistent storage before it is destroyed. See
 [BeeOND on-demand file systems](beeond.md).
 
+### Stage inputs before requesting resources
+
+By default, a Slurm job copies its `workflow://` inputs after the scheduler
+has allocated its cores, so the allocation is idle while data moves. To copy
+the inputs on the submission host first and submit only when they are in
+place, enable scheduler-aware pre-staging:
+
+```python
+workflow = Workflow("forecast", pre_stage=True)          # default for Slurm tasks
+simulate = DagonTask(TaskType.SLURM, "simulate", "./model workflow:///prepare/input.nc", ntasks=200)
+summary = DagonTask(TaskType.SLURM, "summary", "./summarise workflow:///simulate/out.nc",
+                    pre_stage=False)                       # keep the legacy lifecycle
+```
+
+The scratch directory must be on a file system that the submission host and
+the compute nodes share at the same path, and that persists while the job is
+queued. If stage-in fails, or a staged input's content differs from its
+source, the job is never submitted, and the task fails with
+`failure_phase == "staging"`. BeeOND tasks and tasks using
+`StagerMover.SLURM` are not eligible, and neither are tasks that share a fixed
+`working_dir`. A completed pre-staged task is reused on resume only if its
+inputs are unchanged, and the job refuses to run if its staged inputs changed
+while it was queued. Other task types
+ignore the workflow default. See [Scheduler-aware pre-staging](scheduler_prestaging.md)
+for eligibility, filesystem requirements, failure handling, and metrics, and
+`examples/dataflow/slurm/pre_stage_mock.py` for a run without Slurm.
+
 ## Docker tasks
 
 Docker tasks run commands inside a container:
@@ -237,7 +273,10 @@ workflow.set_dry(True)
 ```
 
 Dry mode prevents task execution after launcher generation. It is useful when
-inspecting dependency resolution and generated scripts.
+inspecting dependency resolution and generated scripts. A pre-staged Slurm task
+in dry mode has no side effects at all: it creates no scratch directory, runs
+no script (not even `context.sh`), sends nothing over SSH, and only logs its
+planned order (stage-in, verify, marker, submit).
 
 ## Function-as-a-Service tasks
 
@@ -270,3 +309,14 @@ For scientific workflows:
 - Using remote tasks before SSH is verified.
 - Committing secrets in `dagon.ini`.
 - Assuming Docker, Slurm, Globus, or cloud credentials are available in CI.
+
+## Agentic tasks
+
+Use `TaskType.AGENTIC` when a step needs an agent to propose a result that
+DAGonStar must check before anything downstream runs. Name a profile from
+`dagon.ini` with `agent=`, describe the objective and output schema, declare
+`workflow://` inputs, and list requirements with registered evaluators. The
+result is published only when the independent evaluation accepts it; otherwise
+the task fails and its dependants do not run. Start with
+[Lessons 14–16](tutorial/lesson_14_specify_and_configure_an_agentic_task.md)
+and [Agentic tasks](agentic_tasks.md).

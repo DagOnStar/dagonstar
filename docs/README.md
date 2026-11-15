@@ -5,12 +5,14 @@ Start with the [academic tutorial syllabus](tutorial/README.md). It presents the
 - orientation and setup;
 - workflow graph construction;
 - execution, staging, checkpointing, and lifecycle;
-- native Python, web, and LLM task models;
-- optional Docker, SSH, and Slurm infrastructure;
-- FAIR metadata, meta-workflows, and CWL interoperability;
+- native Python, web, LLM, FaaS, IoT, and agentic task models;
+- optional Docker, Apptainer, Kubernetes, Nomad, SSH, cloud, Slurm, BeeOND,
+  pre-staging, and data-mover infrastructure (taught with mocks and emulation);
+- FAIR metadata, meta-workflows, CWL interoperability, the compute continuum,
+  operations, and an all-task-type capstone;
 - [optional integrations](tutorial/integrations/README.md).
 
-The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) covers the core and task-model path. Use the [glossary](tutorial/resources/glossary.md) and [troubleshooting guide](tutorial/resources/troubleshooting.md) while working through it.
+The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) has a verification cell for each of the 33 lessons, and [`coverage.json`](tutorial/coverage.json) maps every task type and inventoried feature to lessons, examples, and tests. Use the [glossary](tutorial/resources/glossary.md) and [troubleshooting guide](tutorial/resources/troubleshooting.md) while working through it.
 
 ## Guides
 
@@ -23,10 +25,14 @@ The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) cove
 - [Workflow schema](the_workflow_schema.md)
 - [Checkpointing](checkpoints.md)
 - [BeeOND on-demand file systems](beeond.md)
+- [Scheduler-aware pre-staging](scheduler_prestaging.md)
 - [Asynchronous launch](asynch_launch.md)
 - [Native tasks](native_tasks.md)
 - [Web tasks](web_tasks.md)
 - [LLM tasks](llm_tasks.md)
+- [Agentic tasks](agentic_tasks.md), with [configuration](agentic_configuration.md),
+  [tools and guardrails](agentic_guardrails.md), and
+  [evaluation, publication, and checkpoints](agentic_evaluation.md)
 - [FAIR principles](fair_principles.md)
 - [IoT tasks and compute-continuum operations](iot_tasks.md)
 - [IoT providers](iot_providers.md)

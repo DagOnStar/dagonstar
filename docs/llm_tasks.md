@@ -67,7 +67,7 @@ export DAGON_RESEARCH_LLM_KEY='...'
 | --- | --- | --- |
 | `endpoint` | Yes | Provider base URL, or a complete URL ending in `/chat/completions`. |
 | `api_key_env` | One of this or `api_key` | Name of the environment variable containing the bearer token. When set, its value takes precedence. |
-| `api_key` | One of this or `api_key_env` | Literal bearer token. Use only in a private, ignored local configuration file. |
+| `api_key` | One of this or `api_key_env` | Literal bearer token. Use only in a private, ignored local configuration file. Agentic profiles refuse sections with `api_key`. |
 | `model` | No | Default model. A request-level `model` overrides it. |
 
 Never commit an API key, token, or private configuration. `dagon.ini.sample`
@@ -270,3 +270,11 @@ provider, and the complete response is saved in the task working directory.
   step when it affects scientific or operational decisions.
 - Use a private ignored configuration or environment variables for credentials,
   never workflow JSON, examples, or `dagon.ini.sample`.
+
+## Relation to agentic tasks
+
+`TaskType.AGENTIC` reuses the same `[llm.<name>]` sections through an
+`[agent.<name>]` profile whose provider uses the `builtin` implementation. An
+LLM task makes one request and records the response; an agentic task runs a
+bounded loop whose candidate results are checked by guardrails and evaluators
+before publication. See [Agentic task configuration](agentic_configuration.md).

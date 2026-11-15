@@ -19,8 +19,14 @@ RETIRED = re.compile(
     r"04_scratch_and_launchers|05_cycle_detection|06_checkpointing|07_data_staging|"
     r"08_docker_tasks|09_remote_and_slurm|10_meta_workflows|11_asynchronous_launch|"
     r"12_llm_tasks|13_web_tasks|14_native_tasks|15_fair_by_design|16_using_dynostore|"
-    r"17_cwl_interoperability|(?:1[89]|2[0-2])_faas|22_all_task_types)\.md"
+    r"17_cwl_interoperability|(?:1[89]|2[0-2])_faas|22_all_task_types|"
+    # Lessons 12-18 of the 19-lesson course were renumbered to 17, 21, 23, and 27-30.
+    r"12_run_a_task_in_docker|13_run_a_task_on_a_remote_host_with_ssh|"
+    r"14_submit_a_task_through_slurm|15_make_a_workflow_fair_by_design|"
+    r"16_compose_meta_workflows|17_export_and_validate_common_workflow_language|"
+    r"18_compute_continuum_operations)\.md"
 )
+LESSON_COUNT = 33
 GENERIC = (
     "explain the underlying mechanism",
     "DAGonStar constructed or inspected the graph",
@@ -30,8 +36,16 @@ GENERIC = (
 
 def validate():
     errors = []
-    if len(CANONICAL) != 19:
-        errors.append("tutorial index must list exactly Lessons 00-18")
+    if len(CANONICAL) != LESSON_COUNT:
+        errors.append("tutorial index must list exactly Lessons 00-%02d" % (LESSON_COUNT - 1))
+    numbers = [int(re.match(r"lesson_([0-9]{2})_", item).group(1)) for item in CANONICAL]
+    if numbers != list(range(len(CANONICAL))):
+        errors.append("tutorial lesson numbering is not contiguous from 00: %s" % numbers)
+    if len(set(CANONICAL)) != len(CANONICAL):
+        errors.append("tutorial index lists a lesson more than once")
+    for path in sorted(TUTORIAL.glob("lesson_*.md")):
+        if path.name not in CANONICAL and not RETIRED.fullmatch(path.name):
+            errors.append("lesson file is not in the tutorial index: " + path.name)
     for number, relative in enumerate(CANONICAL):
         path = TUTORIAL / relative
         if not path.is_file():
@@ -74,4 +88,4 @@ if __name__ == "__main__":
     failures = validate()
     if failures:
         print("\n".join(failures), file=sys.stderr); raise SystemExit(1)
-    print("Validated 19 canonical lessons and internal tutorial links.")
+    print("Validated %d canonical lessons and internal tutorial links." % LESSON_COUNT)

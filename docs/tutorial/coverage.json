@@ -1,0 +1,1225 @@
+{
+  "schema_version": 1,
+  "description": "Machine-checked map from every registered TaskType and every inventoried supported feature to tutorial lessons, runnable examples, and test targets. Validated by tools/validate_tutorial_coverage.py.",
+  "evidence_levels": {
+    "local-executed": "Executed locally by the example and tests with real local processes and files.",
+    "mock-contract": "The DAGonStar side of an external boundary is executed against a mock or loopback fixture.",
+    "portable-emulation": "Executed under Workflow(portable_emulation=True); backend behaviour is not exercised.",
+    "live-optional": "Only configuration, selection, or lazy-import behaviour is checked; live use needs site services.",
+    "planned": "Not implemented; never counts toward supported-feature coverage."
+  },
+  "features": [
+    {
+      "feature_id": "tasktype.checkpoint",
+      "category": "task-type",
+      "task_types": [
+        "checkpoint"
+      ],
+      "source_paths": [
+        "dagon/checkpoint.py"
+      ],
+      "lessons": [
+        7
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_07_checkpoint_and_resume.py",
+        "examples/tutorial/lesson_32_capstone.py"
+      ],
+      "test_targets": [
+        "tests.test_checkpointing",
+        "tests.test_failure_paths.FailurePathTests.test_checkpoint_command_preserves_nonzero_exit_without_stderr"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Reuses recorded working directories; it does not validate undeclared external inputs."
+    },
+    {
+      "feature_id": "tasktype.batch",
+      "category": "task-type",
+      "task_types": [
+        "batch"
+      ],
+      "source_paths": [
+        "dagon/batch.py"
+      ],
+      "lessons": [
+        1,
+        2,
+        3
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_01_first_local_task.py",
+        "examples/tutorial/lesson_02_build_a_dag.py",
+        "examples/tutorial/lesson_03_workflow_data_dependencies.py"
+      ],
+      "test_targets": [
+        "tests.test_command_exit_status",
+        "tests.test_workflow_core"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Runs local bash launchers; correctness of the scientific executable is the user's responsibility."
+    },
+    {
+      "feature_id": "tasktype.slurm",
+      "category": "task-type",
+      "task_types": [
+        "slurm"
+      ],
+      "source_paths": [
+        "dagon/batch.py"
+      ],
+      "lessons": [
+        23
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_23_slurm_tasks.py",
+        "examples/dataflow/slurm/pre_stage_mock.py"
+      ],
+      "test_targets": [
+        "tests.test_optional_integrations.OptionalIntegrationTests.test_slurm_command_quotes_all_user_controlled_values",
+        "tests.test_command_exit_status"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "Lessons use a mock sbatch; live submission is exercised only by the single-node CI Slurm job and site runs."
+    },
+    {
+      "feature_id": "tasktype.cloud",
+      "category": "task-type",
+      "task_types": [
+        "cloud"
+      ],
+      "source_paths": [
+        "dagon/remote.py",
+        "dagon/cloud/__init__.py"
+      ],
+      "lessons": [
+        22
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_22_cloud_tasks.py"
+      ],
+      "test_targets": [
+        "tests.test_optional_integrations.OptionalIntegrationTests.test_cloud_task_defers_provider_import_and_connection_until_execute",
+        "tests.test_optional_integrations.OptionalIntegrationTests.test_cloud_task_reports_missing_optional_extra"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "No instance is provisioned; provider behaviour, billing, and cleanup are live-optional and unverified."
+    },
+    {
+      "feature_id": "tasktype.docker",
+      "category": "task-type",
+      "task_types": [
+        "docker"
+      ],
+      "source_paths": [
+        "dagon/docker_task.py"
+      ],
+      "lessons": [
+        17
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_17_docker_tasks.py"
+      ],
+      "test_targets": [
+        "tests.test_docker_task"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "The Docker client is mocked; no daemon or image is used."
+    },
+    {
+      "feature_id": "tasktype.kubernetes",
+      "category": "task-type",
+      "task_types": [
+        "kubernetes"
+      ],
+      "source_paths": [
+        "dagon/kubernetes_task.py"
+      ],
+      "lessons": [
+        19
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_19_kubernetes_tasks.py"
+      ],
+      "test_targets": [
+        "tests.test_kubernetes_task"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "The Kubernetes API is mocked; no cluster, quota, or scheduling policy is exercised."
+    },
+    {
+      "feature_id": "tasktype.apptainer",
+      "category": "task-type",
+      "task_types": [
+        "apptainer"
+      ],
+      "source_paths": [
+        "dagon/apptainer_task.py"
+      ],
+      "lessons": [
+        18
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_18_apptainer_tasks.py"
+      ],
+      "test_targets": [
+        "tests.test_apptainer_task"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "subprocess is mocked; image builds and container execution are live-optional."
+    },
+    {
+      "feature_id": "tasktype.nomad",
+      "category": "task-type",
+      "task_types": [
+        "nomad"
+      ],
+      "source_paths": [
+        "dagon/nomad_task.py"
+      ],
+      "lessons": [
+        20
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_20_nomad_tasks.py"
+      ],
+      "test_targets": [
+        "tests.test_nomad_task"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "The Nomad HTTP API is mocked; drivers, scheduling, and log streaming on a real agent are unverified."
+    },
+    {
+      "feature_id": "tasktype.llm",
+      "category": "task-type",
+      "task_types": [
+        "llm"
+      ],
+      "source_paths": [
+        "dagon/llm.py"
+      ],
+      "lessons": [
+        11
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_11_llm_tasks.py",
+        "examples/llm/local_mock_llm.py"
+      ],
+      "test_targets": [
+        "tests.test_llm"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "A loopback mock replaces the model; factuality and real-provider behaviour are not evaluated."
+    },
+    {
+      "feature_id": "tasktype.native",
+      "category": "task-type",
+      "task_types": [
+        "native"
+      ],
+      "source_paths": [
+        "dagon/native.py",
+        "dagon/native_runner.py"
+      ],
+      "lessons": [
+        9
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_09_native_python_tasks.py"
+      ],
+      "test_targets": [
+        "tests.test_native"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "The function must be importable from the runner environment."
+    },
+    {
+      "feature_id": "tasktype.web",
+      "category": "task-type",
+      "task_types": [
+        "web"
+      ],
+      "source_paths": [
+        "dagon/web/task.py"
+      ],
+      "lessons": [
+        10
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_10_web_tasks.py"
+      ],
+      "test_targets": [
+        "tests.test_web"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "A loopback server replaces the service; production availability and authentication are unverified."
+    },
+    {
+      "feature_id": "tasktype.faas",
+      "category": "task-type",
+      "task_types": [
+        "faas"
+      ],
+      "source_paths": [
+        "dagon/faas.py",
+        "dagon/faas_providers.py"
+      ],
+      "lessons": [
+        12
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_12_faas_tasks.py",
+        "examples/faas/mock_sync.py",
+        "examples/faas/local_http.py"
+      ],
+      "test_targets": [
+        "tests.test_faas"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "Mock and loopback providers only; AWS, Azure, and Google adapters are live-optional."
+    },
+    {
+      "feature_id": "tasktype.iot",
+      "category": "task-type",
+      "task_types": [
+        "iot"
+      ],
+      "source_paths": [
+        "dagon/iot/task.py"
+      ],
+      "lessons": [
+        13
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_13_iot_tasks.py",
+        "examples/iot/observe_mock.py"
+      ],
+      "test_targets": [
+        "tests.test_iot_task"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "The mock provider replaces devices and brokers; physical observation and actuation are not exercised."
+    },
+    {
+      "feature_id": "tasktype.agentic",
+      "category": "task-type",
+      "task_types": [
+        "agentic"
+      ],
+      "source_paths": [
+        "dagon/agentic/task.py",
+        "dagon/agentic/engine.py"
+      ],
+      "lessons": [
+        14,
+        15,
+        16
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_14_agentic_specification.py",
+        "examples/tutorial/lesson_15_agentic_tools_and_guardrails.py",
+        "examples/tutorial/lesson_16_agentic_evaluation_and_checkpoints.py",
+        "examples/agentic/tool_free.py"
+      ],
+      "test_targets": [
+        "tests.test_agentic_task"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Executed with the deterministic mock adapter; live model quality and cost limits are not evaluated."
+    },
+    {
+      "feature_id": "graph.explicit-dependencies",
+      "category": "graph",
+      "task_types": [],
+      "source_paths": [
+        "dagon/task.py"
+      ],
+      "lessons": [
+        2
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_02_build_a_dag.py"
+      ],
+      "test_targets": [
+        "tests.test_workflow_core.WorkflowCoreTests.test_save_as_cwl_preserves_explicit_dependencies"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Ordering edges carry no data."
+    },
+    {
+      "feature_id": "graph.workflow-references",
+      "category": "graph",
+      "task_types": [],
+      "source_paths": [
+        "dagon/task.py",
+        "dagon/__init__.py"
+      ],
+      "lessons": [
+        3
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_03_workflow_data_dependencies.py"
+      ],
+      "test_targets": [
+        "tests.test_workflow_core.WorkflowCoreTests.test_dataflow_references_create_dependencies"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "References resolve to producer scratch directories; external URLs are not dependencies."
+    },
+    {
+      "feature_id": "graph.cycle-validation",
+      "category": "graph",
+      "task_types": [],
+      "source_paths": [
+        "dagon/__init__.py"
+      ],
+      "lessons": [
+        4
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_04_validate_and_fix_cycles.py"
+      ],
+      "test_targets": [
+        "tests.test_workflow_core.WorkflowCoreTests.test_explicit_cycle_is_rejected"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Validation covers declared and inferred edges only."
+    },
+    {
+      "feature_id": "execution.scratch-and-launchers",
+      "category": "execution",
+      "task_types": [],
+      "source_paths": [
+        "dagon/task.py",
+        "dagon/platform_support.py"
+      ],
+      "lessons": [
+        5
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_05_scratch_launchers_and_logs.py"
+      ],
+      "test_targets": [
+        "tests.test_shell_commands",
+        "tests.test_platform_support"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Windows requires a POSIX bash (Git for Windows, MSYS2, or Cygwin)."
+    },
+    {
+      "feature_id": "staging.copy-link",
+      "category": "staging",
+      "task_types": [],
+      "source_paths": [
+        "dagon/stager/base.py"
+      ],
+      "lessons": [
+        6
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_06_data_staging.py"
+      ],
+      "test_targets": [
+        "tests.test_staging"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "LINK requires a shared file system; content verification applies to same-host COPY and LINK only."
+    },
+    {
+      "feature_id": "execution.checkpoint-resume",
+      "category": "execution",
+      "task_types": [],
+      "source_paths": [
+        "dagon/__init__.py",
+        "dagon/task.py"
+      ],
+      "lessons": [
+        7
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_07_checkpoint_and_resume.py"
+      ],
+      "test_targets": [
+        "tests.test_checkpointing"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Batch checkpoints do not detect command changes."
+    },
+    {
+      "feature_id": "execution.async-lifecycle",
+      "category": "execution",
+      "task_types": [],
+      "source_paths": [
+        "dagon/__init__.py"
+      ],
+      "lessons": [
+        8
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_08_asynchronous_execution.py"
+      ],
+      "test_targets": [
+        "tests.test_workflow_core.WorkflowCoreTests.test_launch_wait_and_lifecycle_events"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "The caller must join the returned thread before treating the workflow as complete."
+    },
+    {
+      "feature_id": "execution.dry-run",
+      "category": "execution",
+      "task_types": [],
+      "source_paths": [
+        "dagon/prestage.py",
+        "dagon/agentic/task.py"
+      ],
+      "lessons": [
+        25,
+        14
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_25_scheduler_prestaging.py",
+        "examples/tutorial/lesson_14_agentic_specification.py"
+      ],
+      "test_targets": [
+        "tests.test_scheduler_prestaging.LocalMockSchedulerTests.test_dry_run_neither_stages_nor_submits",
+        "tests.test_agentic_task.WorkflowIntegrationTests.test_dry_run_has_no_side_effects"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Dry runs check side-effect freedom for pre-staged and agentic tasks; other backends keep legacy semantics."
+    },
+    {
+      "feature_id": "execution.portable-emulation",
+      "category": "execution",
+      "task_types": [],
+      "source_paths": [
+        "dagon/__init__.py"
+      ],
+      "lessons": [
+        32,
+        24
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_32_capstone.py",
+        "examples/tutorial/lesson_24_beeond_storage.py"
+      ],
+      "test_targets": [
+        "tests.test_tasktype_interoperability.TaskTypeInteroperabilityTests.test_every_task_type_executes_together_in_portable_emulation"
+      ],
+      "evidence_level": "portable-emulation",
+      "limitations": "Emulation runs infrastructure types as local processes; it is not evidence of backend behaviour."
+    },
+    {
+      "feature_id": "config.dagon-ini",
+      "category": "configuration",
+      "task_types": [],
+      "source_paths": [
+        "dagon/config.py",
+        "dagon.ini.sample"
+      ],
+      "lessons": [
+        0,
+        14
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_00_environment_check.py",
+        "examples/tutorial/lesson_14_agentic_specification.py"
+      ],
+      "test_targets": [
+        "tests.test_config",
+        "tests.test_agentic_config"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "The sample is documentation; private configuration stays outside the repository."
+    },
+    {
+      "feature_id": "workflow.json-roundtrip",
+      "category": "interoperability",
+      "task_types": [],
+      "source_paths": [
+        "dagon/__init__.py",
+        "dagon/task.py"
+      ],
+      "lessons": [
+        31
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_31_operations.py"
+      ],
+      "test_targets": [
+        "tests.test_workflow_core.WorkflowCoreTests.test_load_json_recreates_task_instances",
+        "tests.test_explicit_dependencies.ExplicitDependencyJsonTests"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Round trips cover registered task types and explicit edges; runtime state is not serialized."
+    },
+    {
+      "feature_id": "agentic.profiles",
+      "category": "agentic",
+      "task_types": [
+        "agentic"
+      ],
+      "source_paths": [
+        "dagon/agentic/config.py",
+        "dagon.ini.sample"
+      ],
+      "lessons": [
+        14
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_14_agentic_specification.py"
+      ],
+      "test_targets": [
+        "tests.test_agentic_config"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Profiles cap tools and budgets; cost limits are not implemented."
+    },
+    {
+      "feature_id": "agentic.tools",
+      "category": "agentic",
+      "task_types": [
+        "agentic"
+      ],
+      "source_paths": [
+        "dagon/agentic/registry.py",
+        "dagon/agentic/sandbox.py",
+        "dagon/agentic/builtins.py"
+      ],
+      "lessons": [
+        15
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_15_agentic_tools_and_guardrails.py",
+        "examples/agentic/guarded_repair.py"
+      ],
+      "test_targets": [
+        "tests.test_agentic_guardrails"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Process isolation bounds time and output; it is not an operating-system sandbox."
+    },
+    {
+      "feature_id": "agentic.guardrails",
+      "category": "agentic",
+      "task_types": [
+        "agentic"
+      ],
+      "source_paths": [
+        "dagon/agentic/guardrails.py"
+      ],
+      "lessons": [
+        15
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_15_agentic_tools_and_guardrails.py",
+        "examples/agentic/guarded_repair.py"
+      ],
+      "test_targets": [
+        "tests.test_agentic_guardrails"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Guardrails check declared tools, arguments, paths, and references; they cannot judge semantics."
+    },
+    {
+      "feature_id": "agentic.evaluation",
+      "category": "agentic",
+      "task_types": [
+        "agentic"
+      ],
+      "source_paths": [
+        "dagon/agentic/evaluation.py"
+      ],
+      "lessons": [
+        16
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_16_agentic_evaluation_and_checkpoints.py",
+        "examples/agentic/evaluation_failure.py"
+      ],
+      "test_targets": [
+        "tests.test_agentic_evaluation"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Built-in evaluators are deterministic; model-based judges are not provided."
+    },
+    {
+      "feature_id": "agentic.publication",
+      "category": "agentic",
+      "task_types": [
+        "agentic"
+      ],
+      "source_paths": [
+        "dagon/agentic/engine.py"
+      ],
+      "lessons": [
+        16
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_16_agentic_evaluation_and_checkpoints.py"
+      ],
+      "test_targets": [
+        "tests.test_agentic_checkpoint"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Atomic replacement assumes a local file system with atomic rename."
+    },
+    {
+      "feature_id": "agentic.checkpoint-identity",
+      "category": "agentic",
+      "task_types": [
+        "agentic"
+      ],
+      "source_paths": [
+        "dagon/agentic/engine.py",
+        "dagon/agentic/task.py"
+      ],
+      "lessons": [
+        16
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_16_agentic_evaluation_and_checkpoints.py",
+        "examples/agentic/checkpoint_identity.py"
+      ],
+      "test_targets": [
+        "tests.test_agentic_checkpoint"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Identity covers contract, profile, versions, and input content, not external model drift."
+    },
+    {
+      "feature_id": "agentic.mixed-dataflow",
+      "category": "agentic",
+      "task_types": [
+        "agentic",
+        "native",
+        "iot",
+        "faas"
+      ],
+      "source_paths": [
+        "dagon/agentic/task.py"
+      ],
+      "lessons": [
+        30,
+        32
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_30_compute_continuum.py",
+        "examples/agentic/mixed_workflow.py"
+      ],
+      "test_targets": [
+        "tests.test_tasktype_interoperability.TaskTypeInteroperabilityTests.test_pairwise_producer_consumer_dependency_matrix"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Producers must expose a local working directory; remote producers raise a capability error."
+    },
+    {
+      "feature_id": "agentic.openai-compatible-adapter",
+      "category": "agentic",
+      "task_types": [
+        "agentic"
+      ],
+      "source_paths": [
+        "dagon/agentic/providers.py"
+      ],
+      "lessons": [
+        14
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_14_agentic_specification.py"
+      ],
+      "test_targets": [
+        "tests.test_agentic_provider"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "Tested against a loopback server; real endpoints are live-optional and nondeterministic."
+    },
+    {
+      "feature_id": "agentic.cwl-runner",
+      "category": "interoperability",
+      "task_types": [
+        "agentic"
+      ],
+      "source_paths": [
+        "dagon/agentic/runner.py",
+        "dagon/__init__.py"
+      ],
+      "lessons": [
+        29
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_29_cwl_export.py",
+        "examples/agentic/cwl_local.py"
+      ],
+      "test_targets": [
+        "tests.test_agentic_cwl"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "cwltool execution runs only where cwltool and the console script are installed."
+    },
+    {
+      "feature_id": "faas.http-provider",
+      "category": "faas",
+      "task_types": [
+        "faas"
+      ],
+      "source_paths": [
+        "dagon/faas_providers.py"
+      ],
+      "lessons": [
+        12
+      ],
+      "example_paths": [
+        "examples/faas/local_http.py"
+      ],
+      "test_targets": [
+        "tests.test_faas.FaaSTaskTests.test_http_provider_builds_envelope_headers_and_normalizes_response"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "urlopen is mocked or loopback; TLS and provider authentication are unverified."
+    },
+    {
+      "feature_id": "faas.cloud-adapters",
+      "category": "faas",
+      "task_types": [
+        "faas"
+      ],
+      "source_paths": [
+        "dagon/faas_providers.py"
+      ],
+      "lessons": [
+        12
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_12_faas_tasks.py"
+      ],
+      "test_targets": [
+        "tests.test_faas.FaaSTaskTests.test_mock_error_and_missing_optional_sdk_boundary"
+      ],
+      "evidence_level": "live-optional",
+      "limitations": "AWS Lambda, Azure, and Google adapters import their SDKs lazily and are not invoked in tests."
+    },
+    {
+      "feature_id": "iot.actuation-safety",
+      "category": "iot",
+      "task_types": [
+        "iot"
+      ],
+      "source_paths": [
+        "dagon/iot/task.py"
+      ],
+      "lessons": [
+        13
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_13_iot_tasks.py"
+      ],
+      "test_targets": [
+        "tests.test_iot_task.IoTTaskTests.test_unknown_non_idempotent_actuation_is_not_replayed"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "Physical device interlocks remain authoritative."
+    },
+    {
+      "feature_id": "iot.compute-placement",
+      "category": "iot",
+      "task_types": [
+        "iot"
+      ],
+      "source_paths": [
+        "dagon/iot/task.py"
+      ],
+      "lessons": [
+        30
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_30_compute_continuum.py",
+        "examples/iot/observe_mock.py"
+      ],
+      "test_targets": [
+        "tests.test_iot_task"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "Placement is recorded, not deployed."
+    },
+    {
+      "feature_id": "remote.ssh-ports-and-quoting",
+      "category": "infrastructure",
+      "task_types": [
+        "batch",
+        "slurm",
+        "docker"
+      ],
+      "source_paths": [
+        "dagon/remote.py",
+        "dagon/communication/ssh.py"
+      ],
+      "lessons": [
+        21
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_21_ssh_remote_tasks.py"
+      ],
+      "test_targets": [
+        "tests.test_optional_integrations.OptionalIntegrationTests.test_remote_task_passes_custom_ssh_port_to_connection",
+        "tests.test_shell_commands"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "No SSH connection is opened; host keys and authentication are live-optional."
+    },
+    {
+      "feature_id": "slurm.beeond",
+      "category": "infrastructure",
+      "task_types": [
+        "slurm"
+      ],
+      "source_paths": [
+        "dagon/beeond.py"
+      ],
+      "lessons": [
+        24
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_24_beeond_storage.py",
+        "examples/dataflow/slurm/beeond_local_emulation.py"
+      ],
+      "test_targets": [
+        "tests.test_beeond"
+      ],
+      "evidence_level": "portable-emulation",
+      "limitations": "Emulation omits volume speed, multi-node sharing, and the holder job; CI adds single-node Slurm evidence."
+    },
+    {
+      "feature_id": "slurm.scheduler-prestaging",
+      "category": "infrastructure",
+      "task_types": [
+        "slurm"
+      ],
+      "source_paths": [
+        "dagon/prestage.py",
+        "dagon/batch.py"
+      ],
+      "lessons": [
+        25
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_25_scheduler_prestaging.py",
+        "examples/dataflow/slurm/pre_stage_mock.py"
+      ],
+      "test_targets": [
+        "tests.test_scheduler_prestaging",
+        "tests.test_remote_scheduler_prestaging"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "The mock proves ordering, not queue-time reduction; shared scratch is assumed."
+    },
+    {
+      "feature_id": "movers.scp",
+      "category": "data-movement",
+      "task_types": [],
+      "source_paths": [
+        "dagon/stager/base.py",
+        "dagon/communication/scp.py"
+      ],
+      "lessons": [
+        26
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_26_data_movers.py"
+      ],
+      "test_targets": [
+        "tests.test_failure_paths.FailurePathTests.test_remote_target_quotes_connection_values_but_expands_path_variable"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "Live SCP between hosts is site-dependent and unverified."
+    },
+    {
+      "feature_id": "movers.gridftp-globus",
+      "category": "data-movement",
+      "task_types": [],
+      "source_paths": [
+        "dagon/stager/base.py",
+        "dagon/communication/data_transfer.py"
+      ],
+      "lessons": [
+        26
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_26_data_movers.py"
+      ],
+      "test_targets": [
+        "tests.test_failure_paths.FailurePathTests.test_globus_intermediate_endpoint_accepts_preferred_and_legacy_keys",
+        "tests.test_failure_paths.FailurePathTests.test_globus_manager_reports_missing_optional_extra_before_authentication"
+      ],
+      "evidence_level": "live-optional",
+      "limitations": "Requires Globus endpoints and authentication; only selection and configuration are checked."
+    },
+    {
+      "feature_id": "movers.skycds",
+      "category": "data-movement",
+      "task_types": [],
+      "source_paths": [
+        "dagon/stager/base.py",
+        "dagon/communication/data_transfer.py"
+      ],
+      "lessons": [
+        26
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_26_data_movers.py"
+      ],
+      "test_targets": [
+        "tests.test_staging"
+      ],
+      "evidence_level": "live-optional",
+      "limitations": "SKYCDS upload and download require the service; the lesson describes selection only."
+    },
+    {
+      "feature_id": "movers.dynostore",
+      "category": "data-movement",
+      "task_types": [],
+      "source_paths": [
+        "examples/dynostore/dynostore_commands.py"
+      ],
+      "lessons": [
+        26
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_26_data_movers.py",
+        "examples/dynostore/dynostore_workflow.py"
+      ],
+      "test_targets": [
+        "tests.test_dynostore_examples"
+      ],
+      "evidence_level": "live-optional",
+      "limitations": "DynoStore is reached through example commands; transfers need a running server."
+    },
+    {
+      "feature_id": "movers.stager-modes",
+      "category": "data-movement",
+      "task_types": [],
+      "source_paths": [
+        "dagon/stager/base.py"
+      ],
+      "lessons": [
+        26,
+        25
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_26_data_movers.py",
+        "examples/tutorial/lesson_25_scheduler_prestaging.py"
+      ],
+      "test_targets": [
+        "tests.test_staging.StagingTests.test_generate_command_supports_all_staging_modes"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "PARALLEL needs GNU parallel; SLURM copy jobs are ineligible for pre-staging."
+    },
+    {
+      "feature_id": "fair.metadata-export",
+      "category": "fair",
+      "task_types": [],
+      "source_paths": [
+        "dagon/fair/recorder.py"
+      ],
+      "lessons": [
+        27
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_27_fair_by_design.py",
+        "examples/fair/fair_local.py"
+      ],
+      "test_targets": [
+        "tests.test_fair"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Local exports are not repository publication or remote validation."
+    },
+    {
+      "feature_id": "fair.agentic-artifacts",
+      "category": "fair",
+      "task_types": [
+        "agentic"
+      ],
+      "source_paths": [
+        "dagon/fair/recorder.py"
+      ],
+      "lessons": [
+        27,
+        16
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_27_fair_by_design.py",
+        "examples/tutorial/lesson_32_capstone.py"
+      ],
+      "test_targets": [
+        "tests.test_agentic_task"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Only accepted agentic outputs are recorded as outputs."
+    },
+    {
+      "feature_id": "meta.dag-tps",
+      "category": "composition",
+      "task_types": [],
+      "source_paths": [
+        "dagon/dag_tps.py"
+      ],
+      "lessons": [
+        28
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_28_meta_workflows.py"
+      ],
+      "test_targets": [
+        "tests.test_workflow_core.WorkflowCoreTests.test_transversal_references_resolve_across_loaded_workflows"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Cross-workflow recovery across independent services is not covered."
+    },
+    {
+      "feature_id": "meta.dagon-service-api",
+      "category": "operations",
+      "task_types": [],
+      "source_paths": [
+        "dagon/api/__init__.py"
+      ],
+      "lessons": [
+        31,
+        28
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_31_operations.py",
+        "examples/tutorial/lesson_28_meta_workflows.py"
+      ],
+      "test_targets": [
+        "tests.test_workflow_core.WorkflowCoreTests.test_unknown_reference_requires_api_service",
+        "tests.test_failure_paths.FailurePathTests.test_api_server_reports_missing_optional_extra"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "The DAGon service is mocked; a running service is live-optional."
+    },
+    {
+      "feature_id": "cwl.export",
+      "category": "interoperability",
+      "task_types": [],
+      "source_paths": [
+        "dagon/__init__.py"
+      ],
+      "lessons": [
+        29
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_29_cwl_export.py",
+        "examples/cwl/export_workflow.py"
+      ],
+      "test_targets": [
+        "tests.test_cwl_example",
+        "tests.test_agentic_cwl"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Backend-specific staging and remote execution remain outside the exported command graph."
+    },
+    {
+      "feature_id": "operations.runtime-environment",
+      "category": "operations",
+      "task_types": [],
+      "source_paths": [
+        "dagon/runtime_env.py"
+      ],
+      "lessons": [
+        31
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_31_operations.py"
+      ],
+      "test_targets": [
+        "tests.test_runtime_env"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Runners need the dagon package importable from the scratch directory."
+    },
+    {
+      "feature_id": "operations.packaging-extras",
+      "category": "operations",
+      "task_types": [],
+      "source_paths": [
+        "setup.cfg"
+      ],
+      "lessons": [
+        0,
+        31
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_00_environment_check.py",
+        "examples/tutorial/lesson_31_operations.py"
+      ],
+      "test_targets": [
+        "tests.test_packaging"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Extras are installed separately; the base installation excludes provider SDKs."
+    },
+    {
+      "feature_id": "operations.continuous-integration",
+      "category": "operations",
+      "task_types": [],
+      "source_paths": [
+        ".github/workflows/ci.yml",
+        "tools/run_local_examples.py"
+      ],
+      "lessons": [
+        31
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_31_operations.py",
+        "tools/run_local_examples.py"
+      ],
+      "test_targets": [
+        "tests.test_tutorial"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Local runs are not CI runs; platform results come from the CI service."
+    }
+  ],
+  "exclusions": [
+    {
+      "feature_id": "peer2peer.node",
+      "source_paths": [
+        "dagon/peer2peer/node.py"
+      ],
+      "reason": "Experimental Flask peer-to-peer service functions (docs/architecture.md); no public workflow API and no tests, so no lesson can substantiate behaviour.",
+      "evidence": [
+        "docs/architecture.md"
+      ]
+    },
+    {
+      "feature_id": "ftp_publisher.ftp_api",
+      "source_paths": [
+        "dagon/ftp_publisher/__init__.py"
+      ],
+      "reason": "FTP publishing helper that logs in to a live FTP server at construction; it is not used by any task type and has no tests.",
+      "evidence": [
+        "docs/architecture.md"
+      ]
+    },
+    {
+      "feature_id": "api.workflow_server",
+      "source_paths": [
+        "dagon/api/server.py"
+      ],
+      "reason": "Flask server wrapper; only its missing-extra error is tested. Lesson 31 covers the client API against a mock instead.",
+      "evidence": [
+        "tests/test_failure_paths.py"
+      ]
+    },
+    {
+      "feature_id": "movers.http-ftp-sftp",
+      "source_paths": [
+        "dagon/stager/base.py"
+      ],
+      "reason": "DataMover.HTTP, HTTPS, FTP, and SFTP are enumerated but Stager.stage_in has no branch that transfers with them.",
+      "evidence": [
+        "dagon/stager/base.py"
+      ]
+    }
+  ]
+}

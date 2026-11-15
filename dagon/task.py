@@ -1,5 +1,7 @@
 import logging
+import re
 import shutil
+import uuid
 import glob
 import os
 import subprocess
@@ -15,6 +17,32 @@ from dagon.ftp_publisher import FTP_API
 import dagon
 from dagon.shell import quote
 from dagon.platform_support import bash_executable, launcher_environment, shell_path
+from dagon.prestage import (
+    ALLOCATION_STARTED_NAME, COMPUTE_RECORD_NAME, DESTINATION_IDENTITY_NAME, IDENTITY_NAME, INTEGRITY_CONTENT, LOCK_BUSY_EXIT, INTEGRITY_EXISTENCE, MARKER_NAME,
+    PRE_STAGE_POLICY_VERSION, PreparedTask, PreStageConfigurationError, ScheduledExecutionError,
+    SchedulerSubmissionError, StageInFailedError, StageInput, TaskPhase, compute_record_problem,
+    estimated_core_hours_saved,
+    identity_digest, identity_script, marker_document, utc_now, validate_pre_stage, validate_reference_path,
+)
+
+# ``sbatch --parsable`` prints ``<job id>`` or ``<job id>;<cluster>`` on its first line.
+_PARSABLE_JOB_ID = re.compile(r"^(\d+(?:_\d+)?)(?:;\S+)?$")
+
+
+def parsable_job_id(output: Any) -> Optional[str]:
+    """Return the job identifier printed by ``sbatch --parsable``, or ``None``.
+
+    Only the first non-empty output line is inspected, and only a bare numeric
+    identifier (optionally followed by ``;<cluster>``) is accepted, so display
+    text such as ``Submitted batch job 42`` or an error message never counts as
+    evidence that the scheduler accepted the job.
+    """
+    for line in str(output or "").splitlines():
+        line = line.strip()
+        if line:
+            match = _PARSABLE_JOB_ID.match(line)
+            return match.group(1) if match else None
+    return None
 
 
 class TaskType(Enum):
@@ -29,6 +57,7 @@ class TaskType(Enum):
     :cvar CLOUD: Task executed in a cloud instance (ec2, digital ocean and google cloud  tested with libcloud)
     :cvar DOCKER: Task executed on a docker container (local or remote)
     :cvar APPTAINER: Task executed in an Apptainer container (HPC environments)
+    :cvar AGENTIC: Bounded agent with independent evaluation (see dagon.agentic)
     """
 
     CHECKPOINT = "checkpoint"
@@ -44,6 +73,7 @@ class TaskType(Enum):
     WEB = "web"
     FAAS = "faas"
     IOT = "iot"
+    AGENTIC = "agentic"
 
 
 # Different types os tasks and their module and class name
@@ -66,6 +96,7 @@ tasks_types: Dict[TaskType, TaskTypeSpec] = {
     TaskType.WEB: ("dagon.web", "WebTask"),
     TaskType.FAAS: ("dagon.faas", "FaaSTask"),
     TaskType.IOT: ("dagon.iot", "IoTTask"),
+    TaskType.AGENTIC: ("dagon.agentic.task", "AgenticTask"),
 }
 
 
@@ -103,6 +134,14 @@ class Task(Thread):
     # Optional BeeOND volume specification (see dagon.beeond); only the
     # Slurm task family currently accepts one.
     beeond: Any = None
+    # Declared scheduler-aware pre-staging override (see dagon.prestage):
+    # ``None`` inherits ``Workflow.pre_stage``.  Class attributes (rather than
+    # ``__init__`` assignments) survive the repeated ``Task.__init__`` calls of
+    # multiply-inherited backends such as RemoteSlurm.
+    pre_stage: Optional[bool] = None
+    # Backends whose scheduler submission can be separated from stage-in set
+    # this to True and implement the submission-host helpers.
+    pre_stage_capable: bool = False
     """
     **Represents a task executed by DagOn**
 
@@ -169,6 +208,9 @@ class Task(Thread):
         self.name = name
         self.nexts: List[Any] = []
         self.prevs: List[Any] = []
+        # Edges added by callers (not discovered from workflow:// references);
+        # Workflow.make_dependencies() restores them after rebuilding the graph.
+        self.explicit_prevs: List[Any] = []
         self.reference_count = 0
         self.remove_scratch_dir = False
         self.ip = None
@@ -193,7 +235,14 @@ class Task(Thread):
         self.fair_outputs = []
         self.fair_annotations = {}
         self.fair_checkpoint_reused = False
-        
+        # Scheduler-aware pre-staging state (only used when it is effective).
+        self.pre_stage_phase: Optional[TaskPhase] = None
+        self.pre_stage_metrics: Dict[str, Any] = {}
+        self.prepared_task: Optional[PreparedTask] = None
+        # True only while a pre-staged compute launcher is being submitted.
+        self.pre_stage_submission = False
+        self.failure_phase: Optional[str] = None
+
 
     def declare_inputs(self, *artifacts: Any) -> "Task":
         """Attach intentional input artifact metadata and return this task."""
@@ -213,6 +262,415 @@ class Task(Thread):
     def get_execution_metadata(self) -> Dict[str, Any]:
         """Return sanitized backend metadata for optional provenance recorders."""
         return {}
+
+    # -- Scheduler-aware pre-staging -------------------------------------
+
+    def pre_stage_unsupported_reason(self) -> Optional[str]:
+        """Return why this task cannot pre-stage, or ``None`` when it can.
+
+        Eligibility is a backend capability (:attr:`pre_stage_capable`) plus
+        per-task conditions that backends may extend, never the task type name.
+        """
+        if not self.pre_stage_capable:
+            return ("%s tasks do not support scheduler-aware pre-staging; "
+                    "only Slurm and RemoteSlurm tasks do" % type(self).__name__)
+        if self.mode == "parallel":
+            return "pre-staging is not supported for tasks in parallel mode"
+        stager_mover = self.stager_mover
+        if stager_mover is not None and \
+                dagon.stager.base.StagerMover(stager_mover) == dagon.stager.base.StagerMover.SLURM:
+            return ("pre-staging is not supported with StagerMover.SLURM: its copy jobs are scheduler "
+                    "submissions, and pre-staging must not request scheduler resources before stage-in "
+                    "has succeeded")
+        return self._shared_working_dir_reason(self.workflow)
+
+    def _shared_working_dir_reason(self, workflow: Any) -> Optional[str]:
+        other = self.shared_working_dir_task(workflow)
+        if other is None:
+            return None
+        return ("pre-staging is not supported for a working directory shared with task %s: stage-in "
+                "replaces the staged inputs, marker, and records in that directory" % other.name)
+
+    def shared_working_dir_task(self, workflow: Any = None) -> Optional["Task"]:
+        """Return another task of the workflow with the same fixed working directory, if any.
+
+        Directories are compared on the same host (``ip``) after normalisation.
+        Generated scratch directories are unique per task, so only explicit
+        ``working_dir`` values can collide.
+        """
+        workflow = workflow if workflow is not None else self.workflow
+        if workflow is None or not self.working_dir:
+            return None
+        mine = (getattr(self, "ip", None), path.normpath(str(self.working_dir)))
+        for task in getattr(workflow, "tasks", []):
+            if task is self or not getattr(task, "working_dir", None):
+                continue
+            if (getattr(task, "ip", None), path.normpath(str(task.working_dir))) == mine:
+                return task
+        return None
+
+    def validate_pre_stage_declaration(self, workflow: Any = None) -> None:
+        """Validate the declared override; reject an explicit request that cannot be honoured.
+
+        :raises PreStageConfigurationError: for a non-boolean value, or for
+            ``pre_stage=True`` on a task that cannot pre-stage
+        """
+        declared = validate_pre_stage(self.pre_stage)
+        if declared is True:
+            reason = self.pre_stage_unsupported_reason()
+            if reason is None and workflow is not None and workflow is not self.workflow:
+                # Called by Workflow.add_task before the task joins *workflow*.
+                reason = self._shared_working_dir_reason(workflow)
+            if reason is not None:
+                raise PreStageConfigurationError("Task %s: %s" % (self.name, reason))
+
+    def resolve_pre_stage(self) -> bool:
+        """Return whether pre-staging is effective for this task.
+
+        ``effective = task.pre_stage if task.pre_stage is not None else workflow.pre_stage``,
+        restricted to eligible tasks.  An explicit ``pre_stage=True`` on an
+        ineligible task raises; an inherited workflow default keeps the legacy
+        lifecycle for ineligible tasks and logs why.  The declared override is
+        never modified.
+
+        :raises PreStageConfigurationError: see :meth:`validate_pre_stage_declaration`
+        """
+        self.validate_pre_stage_declaration()
+        declared = self.pre_stage
+        if declared is False:
+            return False
+        default = bool(getattr(self.workflow, "pre_stage", False)) if self.workflow is not None else False
+        if not (declared if declared is not None else default):
+            return False
+        reason = self.pre_stage_unsupported_reason()
+        if reason is None:
+            return True
+        if self.pre_stage_capable and self.workflow is not None:
+            # Only scheduler tasks are expected to honour the workflow default;
+            # tell users when an eligible backend falls back for a task reason.
+            self.workflow.logger.warning(
+                "%s: workflow pre_stage=True not applied, using the legacy lifecycle: %s", self.name, reason)
+        return False
+
+    def pre_stage_requested(self) -> bool:
+        """Return whether pre-staging is configured at all for this task (effective or not)."""
+        workflow_default = bool(getattr(self.workflow, "pre_stage", False)) if self.workflow is not None else False
+        return self.pre_stage is not None or (workflow_default and self.pre_stage_capable)
+
+    def run_stage_in(self, script: str) -> ExecutionResult:
+        """Write and run the stage-in script on the submission host (backend specific)."""
+        raise PreStageConfigurationError("%s cannot run a stage-in script" % type(self).__name__)
+
+    def write_stage_marker(self, content: str) -> None:
+        """Atomically write the stage-in completion marker (backend specific)."""
+        raise PreStageConfigurationError("%s cannot write a stage-in marker" % type(self).__name__)
+
+    def read_scratch_file(self, filepath: str) -> Optional[str]:
+        """Return the content of a scratch file, or ``None`` (backend specific)."""
+        return None
+
+    def release_stage_lock(self, token: str) -> None:
+        """Remove the stage-in lock if *token* owns it (backend specific)."""
+        return None
+
+    def run_identity_check(self, script: str) -> ExecutionResult:
+        """Run a read-only identity script on the submission host (backend specific).
+
+        Used only to validate a pre-staged checkpoint before it is reused.
+        """
+        raise PreStageConfigurationError("%s cannot validate pre-staged inputs" % type(self).__name__)
+
+    def requested_cores(self) -> Optional[int]:
+        """Return the number of cores requested from the scheduler, when known."""
+        return None
+
+    def _set_pre_stage_phase(self, phase: TaskPhase) -> None:
+        self.pre_stage_phase = phase
+        self.pre_stage_metrics["phase"] = phase.value
+        if self.workflow is not None:
+            self.workflow.logger.debug("%s: pre-stage phase %s", self.name, phase.value)
+
+    def execute_pre_staged(self, key: str) -> None:
+        """Run the scheduler-aware pre-staging lifecycle.
+
+        ``context -> stage plan -> stage_in.sh on the submission host -> verify
+        -> marker -> compute-only launcher -> scheduler``.  The scheduler is
+        never contacted when stage-in fails or its success cannot be confirmed.
+        """
+        metrics = self.pre_stage_metrics
+        metrics.clear()
+        metrics.update({"pre_stage_effective": True, "policy_version": PRE_STAGE_POLICY_VERSION, "allocation_wait_seconds": None,
+                        "execution_seconds": None})
+        checkpoint = self.workflow.checkpoints[key]
+        checkpoint["pre_stage"] = {"effective": True, "staged": False}
+        self._set_pre_stage_phase(TaskPhase.PREPARING)
+
+        # The staging hooks surround context discovery, planning, and the
+        # actual transfer (unlike the legacy lifecycle, where the transfer
+        # happens later, inside the scheduler job).
+        self.workflow._fire_event("on_task_staging_in_start", self)
+        try:
+            try:
+                prepared = self.prepare_task(self.command, strict_staging=True)
+            except Exception as exc:
+                self.failure_phase = "staging"
+                self._set_pre_stage_phase(TaskPhase.FAILED)
+                raise StageInFailedError("%s: stage-in planning failed: %s" % (self.name, exc)) from exc
+            self.prepared_task = prepared
+            metrics["inputs"] = len(prepared.inputs)
+            metrics["inputs_content_verified"] = sum(
+                1 for item in prepared.inputs if item.integrity == INTEGRITY_CONTENT)
+            # The stage-in lock is held from stage-in until the scheduler job
+            # has returned, so no other run can replace these inputs meanwhile.
+            lock_token = uuid.uuid4().hex
+            try:
+                self._run_stage_in(prepared, key, lock_token)
+            except BaseException:
+                self._release_stage_lock(lock_token)
+                raise
+        finally:
+            self.workflow._fire_event("on_task_staging_in_end", self)
+        try:
+            self._submit_pre_staged(prepared, checkpoint)
+        finally:
+            self._release_stage_lock(lock_token)
+
+    def _release_stage_lock(self, token: str) -> None:
+        try:
+            self.release_stage_lock(token)
+        except Exception as exc:  # never hide the task outcome behind a cleanup failure
+            self.workflow.logger.warning("%s: could not release the stage-in lock: %s", self.name, exc)
+
+    def _submit_pre_staged(self, prepared: PreparedTask, checkpoint: Dict[str, Any]) -> None:
+        """Submit the compute-only launcher and classify the outcome from the job identifier."""
+        metrics = self.pre_stage_metrics
+        launcher_script = self.post_process_command(prepared.compute_launcher())
+        self.workflow._fire_event("on_task_execute_start", self)
+
+        self._set_pre_stage_phase(TaskPhase.SUBMITTED)
+        metrics["submission_started_at"] = utc_now()
+        submitted = time()
+        # Submit with ``--parsable`` so acceptance is judged from the job
+        # identifier, not from display text (see :func:`parsable_job_id`).
+        self.pre_stage_submission = True
+        try:
+            self.result = self.on_execute(launcher_script, "launcher.sh")
+        finally:
+            self.pre_stage_submission = False
+        returned = time()
+        self.completetion_time = returned - submitted
+        metrics["scheduler_returned_at"] = utc_now()
+        # sbatch -W returns when the job ends: this includes queue time.
+        metrics["scheduler_wall_seconds"] = round(self.completetion_time, 3)
+        self.workflow.logger.debug("%s Completed in %s seconds ---" % (self.name, self.completetion_time))
+        self._record_allocation_timing(submitted, returned)
+        job_id = parsable_job_id(self.result.get("output"))
+        metrics["scheduler_job_id"] = job_id
+        if not self.result['code'] and job_id is None:
+            # A successful exit is not evidence that the scheduler accepted and
+            # ran the job: without a job identifier the outcome is unconfirmed.
+            checkpoint["code"] = 1
+            self._set_pre_stage_phase(TaskPhase.FAILED)
+            self.failure_phase = "submission"
+            raise SchedulerSubmissionError(
+                "%s: the scheduler returned success without a job identifier (sbatch --parsable printed "
+                "none), so acceptance of the job cannot be confirmed (staged inputs kept)" % self.name)
+        checkpoint["code"] = self.result['code']
+        if self.result['code']:
+            self._set_pre_stage_phase(TaskPhase.FAILED)
+            if job_id is not None:
+                self.failure_phase = "execution"
+                raise ScheduledExecutionError(
+                    "%s: scheduler job %s failed after pre-staging; see its output (by default "
+                    "slurm-%s.out in the working directory)" % (self.name, job_id, job_id))
+            self.failure_phase = "submission"
+            raise SchedulerSubmissionError(
+                "%s: scheduler submission failed after successful pre-staging (staged inputs kept): %s"
+                % (self.name, self.result.get('message')))
+        # sbatch -W also exits 0 for a job cancelled before it started: require
+        # the record that the compute launcher writes when it ends.
+        problem, record = self._compute_completion_problem(job_id)
+        if problem is not None:
+            checkpoint["code"] = 1
+            self._set_pre_stage_phase(TaskPhase.FAILED)
+            self.failure_phase = "execution"
+            raise ScheduledExecutionError(
+                "%s: scheduler job %s returned success, but %s; the task is not treated as completed "
+                "(for example, the job was cancelled before it started)" % (self.name, job_id, problem))
+        metrics["compute_completion_confirmed"] = True
+        self._record_compute_timing(record, submitted, returned)
+        self._set_pre_stage_phase(TaskPhase.COMPLETED)
+
+    def _record_compute_timing(self, record: Optional[str], submitted: float, returned: float) -> None:
+        """Use the times in the completion record: the re-check cost, and the start as a fallback.
+
+        Both times come from the compute node's clock, so their difference does
+        not depend on clock skew; the resolution is one second.
+        """
+        fields = (record or "").split()
+        if len(fields) < 4 or not (fields[2].isdigit() and fields[3].isdigit()):
+            return
+        started, rechecked = int(fields[2]), int(fields[3])
+        metrics = self.pre_stage_metrics
+        metrics["compute_recheck_seconds"] = max(rechecked - started, 0)
+        if metrics.get("allocation_wait_seconds") is None:
+            self._apply_allocation_start(float(started), submitted, returned)
+        if metrics.get("staging_seconds") is not None:
+            metrics["estimated_allocated_core_hours_saved"] = estimated_core_hours_saved(
+                metrics.get("requested_cores"), metrics["staging_seconds"], metrics["compute_recheck_seconds"])
+
+    def _compute_completion_problem(self, job_id: str, attempts: int = 5) -> Tuple[Optional[str], Optional[str]]:
+        """Return why the job's completion record does not confirm success (or ``None``), and the record.
+
+        A missing record is read again a few times, one second apart, because a
+        shared file system may show a file written on a compute node with a delay.
+        """
+        path = self.working_dir + "/.dagon/" + COMPUTE_RECORD_NAME
+        problem = None
+        for attempt in range(attempts):
+            record = self.read_scratch_file(path)
+            problem = compute_record_problem(record, job_id)
+            if record is not None and record.strip():
+                return problem, record
+            if attempt + 1 < attempts:
+                sleep(1)
+        return problem, None
+
+    def plan_pre_staged_dry_run(self) -> PreparedTask:
+        """Plan a pre-staged task without any side effect (dry run).
+
+        The ``workflow://`` references are parsed and checked
+        (:func:`dagon.prestage.validate_reference_path`), and the planned order
+        is logged.  No scratch directory is created and nothing runs on the
+        submission host, so the data mover, which context discovery would
+        choose, is not resolved, and integrity levels are not decided.
+        Directories that do not exist yet are shown as placeholders.
+        """
+        metrics = self.pre_stage_metrics
+        metrics.clear()
+        metrics.update({"pre_stage_effective": True, "policy_version": PRE_STAGE_POLICY_VERSION,
+                        "dry_run": True})
+        self._set_pre_stage_phase(TaskPhase.PREPARING)
+        working_dir = self.working_dir or "<scratch of %s>" % self.name
+        inputs: List[StageInput] = []
+        self.workflow._fire_event("on_task_staging_in_start", self)
+        try:
+            command = self.command
+            pos = 0
+            while True:
+                pos1 = command.find(dagon.Workflow.SCHEMA, pos)
+                if pos1 == -1:
+                    break
+                pos2 = command.find(" ", pos1)
+                if pos2 == -1:
+                    pos2 = len(command)
+                arg = command[pos1:pos2].replace(dagon.Workflow.SCHEMA, "")
+                elements = arg.split("/")
+                workflow_name = elements[0] or self.workflow.name
+                task_name = elements[1] if len(elements) > 1 else ""
+                local_path = "/" + "/".join(elements[2:])
+                try:
+                    validate_reference_path(workflow_name, task_name, local_path)
+                except PreStageConfigurationError as exc:
+                    self.failure_phase = "staging"
+                    self._set_pre_stage_phase(TaskPhase.FAILED)
+                    raise StageInFailedError("%s: stage-in planning failed: %s" % (self.name, exc)) from exc
+                producer = self.workflow.find_task_by_name(workflow_name, task_name)
+                source_root = (producer.working_dir if producer is not None and producer.working_dir
+                               else "<scratch of %s>" % task_name)
+                destination = working_dir + "/.dagon/inputs/" + workflow_name + "/" + task_name
+                inputs.append(StageInput(reference=dagon.Workflow.SCHEMA + arg, workflow=workflow_name,
+                                         task=task_name, local_path=local_path,
+                                         source=source_root + "/" + local_path,
+                                         destination=destination + "/" + local_path))
+                pos = pos2
+            prepared = PreparedTask(working_dir=working_dir, header="", prologue="", stage_blocks=[], invoke="",
+                                    resolved_command=command, inputs=inputs)
+            self.prepared_task = prepared
+            metrics["inputs"] = len(inputs)
+            self.workflow.logger.info("%s: dry run, planned pre-staged order: %s",
+                                      self.name, " -> ".join(prepared.planned_order()))
+        finally:
+            self.workflow._fire_event("on_task_staging_in_end", self)
+        self.workflow._fire_event("on_task_execute_start", self)
+        return prepared
+
+    def _run_stage_in(self, prepared: PreparedTask, key: str, lock_token: Optional[str] = None) -> None:
+        metrics = self.pre_stage_metrics
+        self._set_pre_stage_phase(TaskPhase.STAGING)
+        started_at = utc_now()
+        metrics["staging_started_at"] = started_at
+        started = time()
+        try:
+            result = self.run_stage_in(prepared.stage_in_script(lock_token))
+        except Exception as exc:
+            result = {"code": 1, "message": str(exc), "output": ""}
+        staging_seconds = time() - started
+        finished_at = utc_now()
+        metrics.update({"staging_finished_at": finished_at, "staging_seconds": round(staging_seconds, 3)})
+        self.workflow.checkpoints[key]["pre_stage"]["stage_in_code"] = result.get("code")
+        if result.get("code"):
+            self.failure_phase = "staging"
+            self._set_pre_stage_phase(TaskPhase.FAILED)
+            if result.get("code") == LOCK_BUSY_EXIT:
+                metrics["stage_in_lock_busy"] = True
+            raise StageInFailedError(
+                "%s: stage-in failed on the submission host; no scheduler job was submitted: %s"
+                % (self.name, (result.get("message") or result.get("output") or "").strip()))
+        try:
+            listing = self.read_scratch_file(self.working_dir + "/.dagon/" + IDENTITY_NAME)
+            if listing is None:
+                raise IOError("the stage-in identity record .dagon/%s is missing" % IDENTITY_NAME)
+            source_identity = identity_digest(listing)
+            staged = self.read_scratch_file(self.working_dir + "/.dagon/" + DESTINATION_IDENTITY_NAME)
+            if staged is None:
+                raise IOError("the staged-input record .dagon/%s is missing" % DESTINATION_IDENTITY_NAME)
+            self.write_stage_marker(marker_document(self, prepared, started_at, finished_at, staging_seconds,
+                                                    source_identity, identity_digest(staged)))
+        except Exception as exc:
+            self.failure_phase = "staging"
+            self._set_pre_stage_phase(TaskPhase.FAILED)
+            raise StageInFailedError("%s: could not record stage-in completion; no scheduler job was "
+                                     "submitted: %s" % (self.name, exc)) from exc
+        # The checkpoint keeps what is needed to re-verify the inputs before a
+        # completed result is reused (see :meth:`validate_pre_staged_checkpoint`).
+        self.workflow.checkpoints[key]["pre_stage"].update(
+            {"staged": True, "marker": ".dagon/" + MARKER_NAME,
+             "policy_version": PRE_STAGE_POLICY_VERSION,
+             "source_identity_sha256": source_identity,
+             "inputs": [{"reference": item.reference, "workflow": item.workflow, "task": item.task,
+                         "local_path": item.local_path, "integrity": item.integrity}
+                        for item in prepared.inputs]})
+        cores = self.requested_cores()
+        metrics["requested_cores"] = cores
+        metrics["estimated_allocated_core_hours_saved"] = estimated_core_hours_saved(cores, staging_seconds)
+        self._set_pre_stage_phase(TaskPhase.STAGED)
+
+    def _record_allocation_timing(self, submitted: float, returned: float) -> None:
+        """Derive queue and execution time from the launcher's start stamp, when available.
+
+        The stamp is written by the compute node; clock skew between it and the
+        submission host makes these values approximate.
+        """
+        try:
+            content = self.read_scratch_file(self.working_dir + "/.dagon/" + ALLOCATION_STARTED_NAME)
+            started = float((content or "").strip())
+        except (TypeError, ValueError, OSError):
+            return
+        self._apply_allocation_start(started, submitted, returned)
+
+    def _apply_allocation_start(self, started: float, submitted: float, returned: float) -> None:
+        """Record queue and execution time from the epoch second at which the launcher started."""
+        # ``date +%s`` has whole-second precision; tolerate one second either side.
+        if submitted - 1 <= started <= returned + 1:
+            started = min(max(started, submitted), returned)
+            self.pre_stage_metrics["allocation_wait_seconds"] = round(max(started - submitted, 0.0), 3)
+            self.pre_stage_metrics["execution_seconds"] = round(max(returned - started, 0.0), 3)
+            self.pre_stage_metrics["allocation_timing_resolution_seconds"] = 1
+
+    def pre_stage_metadata(self) -> Optional[Dict[str, Any]]:
+        """Return credential- and path-free pre-staging provenance, if configured."""
+        return dict(self.pre_stage_metrics) if self.pre_stage_metrics else None
 
     def checkpoint_key(self) -> str:
         """Return the stable checkpoint key used by every task backend."""
@@ -237,9 +695,58 @@ class Task(Thread):
             accessible = bool(self.exists_dir(working_dir))
         if not accessible:
             return False
+        pre_stage = checkpoint.get("pre_stage")
+        if isinstance(pre_stage, dict) and pre_stage.get("effective"):
+            reason = self.validate_pre_staged_checkpoint(pre_stage)
+            if reason is not None:
+                self.workflow.logger.warning(
+                    "%s: completed pre-staged checkpoint not reused, the task runs again: %s", self.name, reason)
+                return False
         self.working_dir = working_dir
         self.fair_checkpoint_reused = True
         return True
+
+    def validate_pre_staged_checkpoint(self, record: Dict[str, Any]) -> Optional[str]:
+        """Return why a completed pre-staged checkpoint must not be reused, or ``None``.
+
+        A completed checkpoint is reused only when the content of every input
+        can be re-read on the submission host and still matches the identity
+        recorded after the successful stage-in.  Inputs are resolved against the
+        producers' *current* scratch directories, so a producer that ran again
+        with different output invalidates the consumer.  Inputs whose source
+        was not readable on the submission host (for example ``SCP``) cannot be
+        re-verified, so such a checkpoint is never reused.  The stage-in
+        marker is never consulted: it is provenance, not a skip token.
+        """
+        if record.get("policy_version") != PRE_STAGE_POLICY_VERSION or "source_identity_sha256" not in record:
+            return "the checkpoint has no input identity for this pre-staging policy version"
+        entries = record.get("inputs")
+        if not isinstance(entries, list):
+            return "the checkpoint has no input manifest"
+        inputs = []
+        for entry in entries:
+            if not isinstance(entry, dict) or entry.get("integrity") != INTEGRITY_CONTENT:
+                return "input %s cannot be re-verified on the submission host" % (
+                    entry.get("reference") if isinstance(entry, dict) else entry)
+            producer = self.workflow.find_task_by_name(entry.get("workflow"), entry.get("task"))
+            if producer is None or not producer.working_dir:
+                return "the producer of %s is not available" % entry.get("reference")
+            inputs.append(StageInput(
+                reference=str(entry.get("reference")), workflow=str(entry.get("workflow")),
+                task=str(entry.get("task")), local_path=str(entry.get("local_path")),
+                source=str(producer.working_dir) + "/" + str(entry.get("local_path")),
+                destination="", integrity=INTEGRITY_CONTENT))
+        if not inputs:
+            return None
+        try:
+            result = self.run_identity_check(identity_script(inputs))
+        except Exception as exc:
+            return "the inputs could not be re-verified: %s" % exc
+        if result.get("code"):
+            return "the inputs could not be re-verified: %s" % (result.get("message") or "").strip()
+        if identity_digest(result.get("output") or "") != record.get("source_identity_sha256"):
+            return "the content of at least one input changed since the checkpoint was written"
+        return None
 
     def initialize_checkpoint(self) -> Dict[str, Any]:
         """Create the common checkpoint record after a working directory exists."""
@@ -408,6 +915,8 @@ class Task(Thread):
             json_task['nexts'].append(t.name)
         for t in self.prevs:
             json_task['prevs'].append(t.name)
+        # Edges added with add_dependency_to; prevs also holds discovered ones.
+        json_task['explicit_prevs'] = [t.name for t in self.__dict__.get("explicit_prevs", [])]
         return json_task
 
     def set_workflow(self, workflow: Any) -> None:
@@ -462,10 +971,26 @@ class Task(Thread):
         """
         task.nexts.append(self)
         self.prevs.append(task)
+        # Remember edges added outside dependency discovery, so that
+        # Workflow.make_dependencies() keeps them when it rebuilds the graph.
+        if not getattr(self.workflow, "_discovering_dependencies", False):
+            explicit = self.__dict__.setdefault("explicit_prevs", [])
+            if task not in explicit:
+                explicit.append(task)
 
         if self.workflow.is_api_available:  # add in the server
             self.workflow.api.add_dependency(
                 self.workflow.workflow_id, self.name, task.name)
+
+    def remove_dependency_to(self, task: Any) -> None:
+        """Remove the edge from *task* to this task, including an explicit one."""
+        while task in self.prevs:
+            self.prevs.remove(task)
+        while self in task.nexts:
+            task.nexts.remove(self)
+        explicit = self.__dict__.get("explicit_prevs", [])
+        while task in explicit:
+            explicit.remove(task)
 
     def add_transversal_point(self, task: Any) -> None:
         """
@@ -632,20 +1157,18 @@ class Task(Thread):
             # Go to the next element
             pos = pos2
 
-    # Pre process command
-    def pre_process_command(self, command):
+    def discover_context(self) -> str:
         """
-        Preprocess the command resolving the dependencies with other tasks
+        Run ``context.sh`` on the execution host and return the launcher header
 
-        :param command:
-        :type command: command to be executed by the task
+        The context script reports the host address and the available transfer
+        protocols, which :class:`dagon.stager.base.Stager` uses to choose a data
+        mover.  It runs where :meth:`on_execute` runs ``context.sh`` (for Slurm
+        tasks: the submission host, outside any allocation).
 
-        :return: command preprocessed
+        :return: launcher header shared by every generated script
         :rtype: str
         """
-        stager = dagon.stager.base.Stager(
-            self.data_mover, self.stager_mover, self.workflow.cfg)
-
         # Initialize the script
         header = "#! /bin/bash\n"
         header += "export PATH=\"$HOME/.local/bin:$PATH\"\n"
@@ -653,7 +1176,9 @@ class Task(Thread):
         header += "code=0\n"
         # Add and execute the script
 
-        context_script = header + "cd " + self.working_dir + "/.dagon\n"
+        # Quoted: shell syntax or spaces in a scratch path must never be executed
+        # or split while the context is discovered (this script runs in every mode).
+        context_script = header + "cd " + quote(self.working_dir + "/.dagon") + "\n"
 
         if "dynostore" in self.workflow.cfg:
 
@@ -706,13 +1231,23 @@ class Task(Thread):
         # ToDO: Check if dynostore is available
         self.set_info(info)
 
-        # start the creation of the launcher.sh script
-        # Create the header
-        header = header + "# Change the current directory to the working directory\n"
-        header = header + "cd " + self.working_dir + "\n"
-        header = header + "if [ $? -ne 0 ]; then code=1; fi \n\n"
-        header = header + self.launcher_prologue()
-        header = header + "# Start staging in\n\n"
+        return header
+
+    def build_stage_plan(self, command: str, strict_staging: bool = False) -> Tuple[List[str], List[StageInput], str]:
+        """
+        Resolve the ``workflow://`` references of *command* into a stage-in plan
+
+        :param command: command to be executed by the task
+        :param strict_staging: generate failure-propagating, space-safe transfer
+            loops (scheduler-aware pre-staging); ``False`` keeps the legacy text
+        :return: the stage-in shell blocks (one per reference), the resolved
+            input manifest, and the command with references rewritten to the
+            staged paths
+        """
+        stager = dagon.stager.base.Stager(
+            self.data_mover, self.stager_mover, self.workflow.cfg)
+        blocks: List[str] = []
+        inputs: List[StageInput] = []
 
         # Create the body
         body = command
@@ -798,16 +1333,31 @@ class Task(Thread):
 
             # Check if the referenced task is consistent
             if task is not None:
+                if strict_staging:
+                    # Pre-staging runs these transfers on the submission host:
+                    # refuse references that could leave the staging roots.
+                    validate_reference_path(workflow_name, task_name, local_path)
                 # Evaluate the destination path
                 dst_path = self.working_dir + "/.dagon/inputs/" + workflow_name + "/" + task_name
 
                 # Create the destination directory
-                header = header + "\n\n# Create the destination directory\n"
-                header = header + "mkdir -p " + quote(dst_path + "/" + path.dirname(local_path)) + "\n"
-                header = header + "if [ $? -ne 0 ]; then code=1; fi\n\n"
+                block = "\n\n# Create the destination directory\n"
+                block = block + "mkdir -p " + quote(dst_path + "/" + path.dirname(local_path)) + "\n"
+                block = block + "if [ $? -ne 0 ]; then code=1; fi\n\n"
                 # Add the move data command
-                header = header + \
-                    stager.stage_in(self, task, dst_path, local_path)
+                block = block + \
+                    stager.stage_in(self, task, dst_path, local_path, strict=strict_staging)
+                blocks.append(block)
+                # The source is readable where the stage-in script runs only
+                # for same-host COPY and LINK transfers.
+                mover = getattr(stager, "last_data_mover", None)
+                integrity = (INTEGRITY_CONTENT if mover in (dagon.stager.base.DataMover.COPY,
+                                                            dagon.stager.base.DataMover.LINK)
+                             else INTEGRITY_EXISTENCE)
+                inputs.append(StageInput(
+                    reference=dagon.Workflow.SCHEMA + arg, workflow=workflow_name, task=task_name,
+                    local_path=local_path, source=str(task.get_scratch_dir()) + "/" + local_path,
+                    destination=dst_path + "/" + local_path, integrity=integrity))
 
                 if self.mode == "parallel":
                     files = glob.glob(
@@ -882,9 +1432,8 @@ class Task(Thread):
                         self.workflow.add_task(parallel_task)
                         self.new_tasks.append(parallel_task)
 
-                    for next_task in self.nexts:
-                        if self in next_task.prevs:
-                            next_task.prevs.remove(self)
+                    for next_task in list(self.nexts):
+                        next_task.remove_dependency_to(self)
 
                         for new_task in self.new_tasks:
                             next_task.add_dependency_to(new_task)
@@ -899,11 +1448,39 @@ class Task(Thread):
                         dagon.Workflow.SCHEMA + arg, dst_path + "/" + local_path)
             pos = pos2
 
-        # Invoke the command
-        header = header + "\n\n# Invoke the command\n"
-        header = header + self.include_command(body)
-        header = header + "if [ $? -ne 0 ]; then code=1; fi"
-        return header
+        return blocks, inputs, body
+
+    def prepare_task(self, command: str, strict_staging: bool = False) -> PreparedTask:
+        """
+        Prepare *command* for execution as a structured :class:`dagon.prestage.PreparedTask`
+
+        The phases are kept separate: (1) context discovery, (2) reference
+        resolution and mover planning, (3) stage-in shell generation, and (4)
+        compute launcher generation.  The legacy combined launcher and the
+        pre-staging scripts are rendered from the same plan.
+        """
+        header = self.discover_context()
+        prologue = self.launcher_prologue()
+        blocks, inputs, body = self.build_stage_plan(command, strict_staging=strict_staging)
+        invoke = "\n\n# Invoke the command\n" + self.include_command(body) + "if [ $? -ne 0 ]; then code=1; fi"
+        return PreparedTask(working_dir=self.working_dir, header=header, prologue=prologue,
+                            stage_blocks=blocks, invoke=invoke, resolved_command=body, inputs=inputs)
+
+    # Pre process command
+    def pre_process_command(self, command):
+        """
+        Preprocess the command resolving the dependencies with other tasks
+
+        Returns the legacy launcher, which stages inputs and then runs the
+        command in the same script (inside the allocation for scheduler tasks).
+
+        :param command:
+        :type command: command to be executed by the task
+
+        :return: command preprocessed
+        :rtype: str
+        """
+        return self.prepare_task(command).legacy_launcher()
 
     def launcher_prologue(self) -> str:
         """Return launcher lines run after ``cd`` into the working directory.
@@ -1105,37 +1682,24 @@ class Task(Thread):
             self.workflow.logger.debug(
                 "%s Already completed ---" % (self.name))
         else:
-            self.create_working_dir()
-            self.initialize_checkpoint()
-
-            # ``pre_process_command`` creates the staging-in portion of the
-            # launcher.  The generated launcher performs that staging when it
-            # is subsequently executed.
-            self.workflow._fire_event("on_task_staging_in_start", self)
-            try:
-                launcher_script = self.pre_process_command(self.command)
-            finally:
-                self.workflow._fire_event("on_task_staging_in_end", self)
-            # Apply some command post processing
-            launcher_script = self.post_process_command(launcher_script)
-
-            # Execute only if not dry
-            self.workflow._fire_event("on_task_execute_start", self)
-            if self.workflow.dry is False:
-
-                # Invoke the actual executor
-                start_time = time()
-                self.result = self.on_execute(launcher_script, "launcher.sh")
-                self.completetion_time = time() - start_time
-                self.workflow.logger.debug(
-                    "%s Completed in %s seconds ---" % (self.name, self.completetion_time))
-
-                self.workflow.checkpoints[key]["code"] = self.result['code']
-
-                # Check if the execution failed
-                if self.result['code']:
-                    raise Exception(
-                        'Executable raised a execption ' + self.result['message'])
+            # Resolve before creating scratch so configuration errors leave no
+            # partial state behind.
+            pre_stage = self.resolve_pre_stage()
+            if pre_stage and self.workflow.dry is not False:
+                # A dry run of a pre-staged task is side-effect free: no
+                # scratch directory, checkpoint entry, context discovery,
+                # remote command, transfer, or scheduler call.
+                self.plan_pre_staged_dry_run()
+            elif pre_stage:
+                self.create_working_dir()
+                self.initialize_checkpoint()
+                self.execute_pre_staged(key)
+            else:
+                self.create_working_dir()
+                self.initialize_checkpoint()
+                if self.pre_stage_requested():
+                    self.pre_stage_metrics = {"pre_stage_effective": False, "policy_version": PRE_STAGE_POLICY_VERSION}
+                self.execute_legacy(key)
 
         # DAGonStar currently has no separate output-transfer phase.  These
         # hooks bracket the existing post-execution output/reference cleanup.
@@ -1144,6 +1708,37 @@ class Task(Thread):
             self.remove_reference_workflow()
         finally:
             self.workflow._fire_event("on_task_staging_out_end", self)
+
+    def execute_legacy(self, key: str) -> None:
+        """Run the legacy lifecycle: one launcher stages inputs and runs the command."""
+        # ``pre_process_command`` creates the staging-in portion of the
+        # launcher.  The generated launcher performs that staging when it
+        # is subsequently executed.
+        self.workflow._fire_event("on_task_staging_in_start", self)
+        try:
+            launcher_script = self.pre_process_command(self.command)
+        finally:
+            self.workflow._fire_event("on_task_staging_in_end", self)
+        # Apply some command post processing
+        launcher_script = self.post_process_command(launcher_script)
+
+        # Execute only if not dry
+        self.workflow._fire_event("on_task_execute_start", self)
+        if self.workflow.dry is False:
+
+            # Invoke the actual executor
+            start_time = time()
+            self.result = self.on_execute(launcher_script, "launcher.sh")
+            self.completetion_time = time() - start_time
+            self.workflow.logger.debug(
+                "%s Completed in %s seconds ---" % (self.name, self.completetion_time))
+
+            self.workflow.checkpoints[key]["code"] = self.result['code']
+
+            # Check if the execution failed
+            if self.result['code']:
+                raise Exception(
+                    'Executable raised a execption ' + self.result['message'])
 
     def run(self):
         """

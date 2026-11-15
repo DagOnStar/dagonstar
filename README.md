@@ -127,12 +127,13 @@ The full documentation set is available in `docs/`:
 - [Task-type interoperability](docs/tasktype_interoperability.md)
 - [Checkpoints](docs/checkpoints.md)
 - [BeeOND on-demand file systems](docs/beeond.md)
+- [Scheduler-aware pre-staging](docs/scheduler_prestaging.md)
 - [Exporting workflows to CWL](docs/cwl_export.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
 - [Using DAGonStar from Jupyter Notebook](docs/jupyter_notebook.md)
 - [Running DAGonStar demos in Google Colab](docs/colab.md)
 - [Examples Catalog](docs/examples/README.md)
-- [Tutorials: nineteen incremental lessons (00–18)](docs/tutorial/README.md)
+- [Tutorials: thirty-three incremental lessons (00–32)](docs/tutorial/README.md)
 - [Platform support and CI/CD](docs/platform_support.md)
 
 ## What DAGonStar supports
@@ -143,6 +144,11 @@ The full documentation set is available in `docs/`:
 - Remote SSH tasks.
 - Slurm tasks, optionally on BeeOND (BeeGFS On Demand) volumes created per task
   or per workflow, with verified copies to persistent storage.
+- Opt-in scheduler-aware pre-staging (`Workflow(pre_stage=True)` or
+  `pre_stage=True` per Slurm task). Slurm and RemoteSlurm tasks stage and verify
+  their `workflow://` inputs on the submission host before `sbatch`, so
+  allocated cores do not sit idle during transfers. A failed stage-in never
+  submits the job. BeeOND tasks and `StagerMover.SLURM` are not eligible.
 - Docker tasks, locally or over SSH.
 - Cloud-backed tasks through Apache Libcloud providers.
 - OpenAI-compatible LLM tasks with JSON prompts and `workflow://` text inputs.
@@ -152,6 +158,12 @@ The full documentation set is available in `docs/`:
   Azure Functions, and Google Cloud Run functions.
 - Provider-neutral IoT observation, configuration, actuation, and edge-compute
   tasks with deterministic mock execution and bounded completion.
+- Agentic tasks (`TaskType.AGENTIC`): bounded agents selected by named
+  `dagon.ini` profiles, optional registered tools, guardrails enforced outside
+  the agent, independent weighted result-fit evaluation with mandatory gates,
+  atomic publication of accepted results only, and verified checkpoint reuse.
+  A deterministic mock adapter and an OpenAI-compatible adapter are provided.
+- Kubernetes, Apptainer, and Nomad tasks, locally or over SSH.
 - Data staging by link, copy, SCP, Globus, and SKYCDS.
 - Checkpoint/resume support.
 - Self-contained Common Workflow Language (CWL) v1.2 command-graph export.
@@ -190,6 +202,38 @@ cluster whose Prolog and Epilog emulate a BeeOND site; real BeeGFS and
 multi-node sites are not exercised by CI. A manual run on a four-node production
 BeeOND site (Slurm 23.11.3) passed the same checks and the live example in both
 scopes.
+Scheduler-aware pre-staging is opt-in and leaves the default lifecycle
+unchanged: the legacy launcher is guarded by a byte-for-byte fixture. Its
+ordering, `sbatch` gate, typed failure phases (from `sbatch --parsable` job
+identifiers), retries, content verification of same-host transfers,
+changed-input checkpoint invalidation, a compute-side check that staged
+content did not change while queued, a fail-atomic, token-owned stage-in lock with
+rejection of shared working directories, side-effect-free dry run, rejection
+of `..` references and of `StagerMover.SLURM`, and the RemoteSlurm path are
+tested with a mock `sbatch` and a loopback SSH double. A submission that exits
+0 without a job identifier is treated as a submission failure, and one that exits 0 for a job that never ran its launcher (for example, cancelled while pending) as an execution failure. Manual runs
+on a production Slurm 23.11 cluster (NFS-shared scratch, compute nodes, real
+SSH for RemoteSlurm) passed the same harness, the local and remote examples,
+and a deeper site check (`tools/hpc_prestage_deep.py`: a 1 GiB input and
+5,000 small files, a two-node allocation, induced queue waits, a change and a
+cancellation while pending, two contending processes, node-local scratch).
+On that site, the job's re-check of its staged data took most of the
+pre-staged allocation for a 1 GiB input; after checksum batching, the
+pre-staged job was shorter than the legacy one under load, but not on a quiet
+file system before it. The re-check time is reported as
+`compute_recheck_seconds` and subtracted from the core-hour figure, which
+remains an estimate. This is evidence for one site, not a general guarantee. The `beeond-slurm` CI job runs
+the same scenarios with real `sbatch` on its single-node cluster, once the
+branch is pushed. Inputs moved by `SCP`, `GRIDFTP`, or `SKYCDS` are checked
+for existence only, not content. Production-scale transfers and real queue
+waits have not been measured. Shared-scratch visibility cannot be detected
+before submission; it is checked when the job starts. Rewritten `workflow://`
+arguments in user commands remain unquoted, as before, so scratch paths with
+spaces are supported by stage-in but not by those arguments. As part of this
+change, the context-discovery script (`context.sh`, used in every lifecycle)
+quotes its scratch path, so shell syntax in that path is no longer executed. The
+pre-staging transfer loop is injection-safe, while the legacy launcher text
+is unchanged.
 
 The repository has a sound baseline for changes to the core behavior:
 
@@ -199,6 +243,8 @@ The repository has a sound baseline for changes to the core behavior:
   command generation, Docker and remote-container construction, SSH-port
   forwarding, packaging extras, optional integration boundaries,
   BeeOND command generation, launcher persistence, and holder lifecycle,
+  scheduler-aware pre-staging (configuration, ordering, failure gating,
+  retries, checkpoints, and local and remote Slurm paths),
   command exit-status propagation through the launcher's output capture
   (local batch, Slurm, and Docker command paths),
   selected shell-quoting behavior, SSH host-key verification and safe remote
@@ -207,8 +253,10 @@ The repository has a sound baseline for changes to the core behavior:
 - the GitHub Actions CI/CD workflow runs that suite, source compilation, and
   the self-contained local examples on Ubuntu (Python 3.8–3.13), macOS,
   Windows (with Git Bash), Rocky Linux 9, and 64-bit Raspberry Pi OS userland
-  (Debian bookworm arm64), plus focused Ruff and mypy checks, a checked
-  sdist/wheel build, and tag-driven GitHub releases; local launchers use a
+  (Debian bookworm arm64), plus focused Ruff and mypy checks, tutorial and
+  feature-coverage validation, an agentic contract job (mock adapter and CWL
+  execution with `cwltool`), safe execution of the tutorial notebook's code
+  cells, a checked sdist/wheel build, and tag-driven GitHub releases; local launchers use a
   detected POSIX bash, so Windows requires Git for Windows, MSYS2, or Cygwin;
 - package extras keep Docker, cloud, Globus, and API dependencies out of the
   base installation;
@@ -216,8 +264,9 @@ The repository has a sound baseline for changes to the core behavior:
   allowing hosted notebook environments such as Google Colab to retain their
   platform dependencies;
 - documentation covers configuration, architecture, checkpoints, examples,
-  FAIR principles, CWL export semantics, and a canonical 19-lesson (00–18) academic
-  tutorial whose structure, links, metadata, and retired-name drift are checked
+  FAIR principles, CWL export semantics, agentic tasks, and a canonical 33-lesson
+  (00–32) academic tutorial whose structure, links, metadata, retired-name drift,
+  and task-type and feature coverage (`docs/tutorial/coverage.json`) are checked
   automatically; and
 - an all-factory contract test constructs a mixed workflow containing every
   `TaskType` and verifies `workflow://`, FAIR declarations, checkpoint reuse,
@@ -226,6 +275,15 @@ The repository has a sound baseline for changes to the core behavior:
 - sample configuration avoids committed credentials and the SKYCDS path checks
   for required runtime configuration; and
 - the LLM task boundary has local tests and a fully local mock-provider example.
+- agentic tasks have local tests for configuration resolution, contract
+  validation, the bounded loop, timeouts and cancellation (including killing a
+  tool's child processes), guardrails, evaluator validation and aggregation,
+  publication and crash recovery, checkpoint identity, secret redaction, the
+  loopback OpenAI-compatible adapter, JSON, FAIR, portable emulation, and CWL
+  export executed with `cwltool`; tests use only the deterministic mock adapter
+  or a loopback server, and live models are not evaluated.
+- the Nomad backend has mocked HTTP lifecycle tests (submission, polling,
+  timeout, logs, purge, and SSH ports).
 - native Python tasks have local staging, dependency, output, and runner tests;
   local native and web runner subprocesses can import `dagon` from the parent
   process's package location (appended after the user's `PYTHONPATH`), so the
@@ -240,8 +298,9 @@ not copy large outputs, obtain remote checksums, or validate every optional
 external profile. Credential capture remains disabled by default.
 
 The test suite is intentionally fast and local: it validates command generation,
-failure propagation, and integration boundaries, not live Docker, SSH, Slurm,
-cloud, Globus, or SKYCDS services. CI also runs focused style checks and a
+failure propagation, and integration boundaries, not live Docker, Kubernetes,
+Nomad, Apptainer, SSH, Slurm, cloud, Globus, SKYCDS, FaaS, IoT, LLM, or agent
+providers. CI also runs focused style checks and a
 progressive type check over the shell-command helper. Several legacy and
 site-specific code paths still construct shell commands, so changes around
 external execution should be kept small, quoted defensively, and verified at
@@ -306,7 +365,7 @@ workflow.run()
 
 Outputs are written below `<scratch>/.dagon/fair/<workflow>/<run>/`, including
 `run.json`, `ro-crate-metadata.json`, `prov.json`, `checksums.sha256`, and a
-FAIRness report. See [Lesson 15](docs/tutorial/lesson_15_make_a_workflow_fair_by_design.md).
+FAIRness report. See [Lesson 27](docs/tutorial/lesson_27_make_a_workflow_fair_by_design.md).
 
 `requirements.txt` remains a full development/demo environment that installs
 the optional integration dependencies together.
@@ -380,19 +439,24 @@ Example groups:
 
 - `examples/taskflow`: explicit task dependencies.
 - `examples/dataflow/batch`: local data-driven workflows and checkpointing.
-- `examples/dataflow/slurm`: Slurm and remote Slurm workflows.
+- `examples/dataflow/slurm`: Slurm and remote Slurm workflows, BeeOND, and
+  scheduler-aware pre-staging (`pre_stage_mock.py` runs without Slurm).
 - `examples/dataflow/docker`: Docker-backed workflows.
 - `examples/dataflow/cloud`: cloud-backed task examples.
 - `examples/transversal`: meta-workflow and transversal processing examples.
 - `examples/hipes-tutorial`: tutorial material for HiPES workflows.
 - `examples/cwl`: portable command-graph export plus a checked-in CWL v1.2
   document; see the [example guide](docs/examples/cwl.md) and
-  [Lesson 17](docs/tutorial/lesson_17_export_and_validate_common_workflow_language.md).
+  [Lesson 29](docs/tutorial/lesson_29_export_and_validate_common_workflow_language.md).
 - `examples/envapp`: environmental application workflows and utilities.
 - `examples/async`: local asynchronous launch and lifecycle-callback example.
 - `examples/native`: importable Python functions with staged `workflow://` inputs.
 - `examples/web`: local HTTP request, staged upload, and downstream native processing.
 - `examples/faas`: credential-free mock invocation plus JSON and CWL export.
+- `examples/agentic`: deterministic agentic tasks: tool-free revision, guarded
+  repair, a failing mandatory gate, checkpoint identity, mixed graphs, and CWL;
+  see the [example guide](docs/examples/agentic.md).
+- `examples/tutorial`: one self-checking script for each of the 33 lessons.
 
 Generate and test the portable CWL example without a private configuration:
 
@@ -440,6 +504,41 @@ automatic object upload is not currently implemented. See the [task guide](docs/
 [CWL mapping](docs/faas_cwl.md), [examples](examples/faas/README.md), and
 [optional-integration guide](docs/tutorial/integrations/README.md).
 
+## Agentic tasks
+
+`TaskType.AGENTIC` runs a bounded agent whose result is accepted only by
+independent evaluators. The task selects a profile from `dagon.ini`:
+
+```ini
+[agent_provider.fixture]
+implementation = mock
+
+[agent.quality-local]
+provider = fixture
+tools = inspect_records, repair_records
+guardrails = preserve_record_ids
+max_steps = 8
+timeout_seconds = 60
+```
+
+```python
+DagonTask(TaskType.AGENTIC, "quality_control", agent="quality-local",
+          specification={"objective": "Produce a complete, validated observation table"},
+          inputs={"source": "workflow:///prepare/outputs/observations.json"},
+          requirements=[{"id": "completeness", "evaluator": "record_coverage",
+                         "expected": {"count": 4}, "mandatory": True}],
+          evaluation={"threshold": 1.0})
+```
+
+The accepted result is written to `outputs/result.json` and the evaluation
+report to `outputs/evaluation.json`; a rejected result is never published and
+never releases dependants. Live OpenAI-compatible providers read their key from
+the environment variable named by `api_key_env` at invocation. See the
+[task guide](docs/agentic_tasks.md), [configuration](docs/agentic_configuration.md),
+[guardrails](docs/agentic_guardrails.md), [evaluation](docs/agentic_evaluation.md),
+[examples](examples/agentic/README.md), and tutorial
+[Lessons 14–16](docs/tutorial/lesson_14_specify_and_configure_an_agentic_task.md).
+
 ## Development
 
 Useful checks:
@@ -447,9 +546,11 @@ Useful checks:
 ```bash
 python -m unittest discover -s tests -v
 python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py
-python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py tests tools/run_local_examples.py
-python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py
+python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic tests tools/run_local_examples.py
+python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic/*.py
 python tools/run_local_examples.py
+python tools/validate_tutorial.py
+python tools/validate_tutorial_coverage.py
 python -m pip install -e .
 ```
 
@@ -462,7 +563,8 @@ The GitHub Actions CI/CD workflow (`.github/workflows/ci.yml`) runs the unit
 tests and local examples on Ubuntu, macOS, Windows, Rocky Linux 9, and 64-bit
 Raspberry Pi OS (Debian bookworm arm64) for pushes to `main`, `master`, and
 `development` and for pull requests, and runs BeeOND workflows on a single-node
-Slurm cluster with an emulated BeeOND site; it also builds the distributions and, on
+Slurm cluster with an emulated BeeOND site, the agentic contract with a
+deterministic mock adapter, and the tutorial notebook's code cells; it also builds the distributions and, on
 `v*` tags, creates a GitHub release. See [Platform support and CI/CD](docs/platform_support.md).
 
 When changing workflow execution behavior, add a targeted unit test where
@@ -505,6 +607,16 @@ Verify key-based SSH manually first:
 ```bash
 ssh -i /path/to/key user@host hostname
 ```
+
+### A pre-staged Slurm task fails before submission
+
+`task.failure_phase == "staging"` means `stage_in.sh` failed or could not be
+confirmed, and no job was submitted. Read the logged error and
+`<working_dir>/.dagon/stage_in.sh`; a missing producer output is the usual
+cause. `"submission"` means `sbatch` rejected the job after a successful
+stage-in. `PreStageConfigurationError` means `pre_stage=True` was set on a task
+that cannot pre-stage, for example a BeeOND task or a non-Slurm task. See
+[Scheduler-aware pre-staging](docs/scheduler_prestaging.md#failure-handling).
 
 ### Globus or SKYCDS staging fails
 

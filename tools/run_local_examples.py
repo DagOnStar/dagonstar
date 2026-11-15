@@ -6,8 +6,12 @@ Usage (from the repository root)::
 
 Every listed example uses only local processes, temporary scratch directories,
 and loopback mock services; none needs ``dagon.ini``, credentials, Docker, SSH,
-Slurm, or network access beyond ``127.0.0.1``.  The script exits non-zero when
-any example fails and prints the tail of its output.
+Slurm, or network access beyond ``127.0.0.1`` (``pre_stage_mock.py`` and the
+Lesson 23 and 25 scripts replace ``sbatch`` with a local mock scheduler; the
+infrastructure lessons mock their Docker, Kubernetes, Nomad, SSH, and cloud
+clients, and the agentic examples use the deterministic ``mock`` adapter).
+The script exits non-zero when any example fails and prints the tail of its
+output.
 """
 import os
 import subprocess
@@ -19,6 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 EXAMPLES = [
+    "examples/tutorial/lesson_00_environment_check.py",
     "examples/tutorial/lesson_01_first_local_task.py",
     "examples/tutorial/lesson_02_build_a_dag.py",
     "examples/tutorial/lesson_03_workflow_data_dependencies.py",
@@ -30,12 +35,40 @@ EXAMPLES = [
     "examples/tutorial/lesson_09_native_python_tasks.py",
     "examples/tutorial/lesson_10_web_tasks.py",
     "examples/tutorial/lesson_11_llm_tasks.py",
+    "examples/tutorial/lesson_12_faas_tasks.py",
+    "examples/tutorial/lesson_13_iot_tasks.py",
+    "examples/tutorial/lesson_14_agentic_specification.py",
+    "examples/tutorial/lesson_15_agentic_tools_and_guardrails.py",
+    "examples/tutorial/lesson_16_agentic_evaluation_and_checkpoints.py",
+    "examples/tutorial/lesson_17_docker_tasks.py",
+    "examples/tutorial/lesson_18_apptainer_tasks.py",
+    "examples/tutorial/lesson_19_kubernetes_tasks.py",
+    "examples/tutorial/lesson_20_nomad_tasks.py",
+    "examples/tutorial/lesson_21_ssh_remote_tasks.py",
+    "examples/tutorial/lesson_22_cloud_tasks.py",
+    "examples/tutorial/lesson_23_slurm_tasks.py",
+    "examples/tutorial/lesson_24_beeond_storage.py",
+    "examples/tutorial/lesson_25_scheduler_prestaging.py",
+    "examples/tutorial/lesson_26_data_movers.py",
+    "examples/tutorial/lesson_27_fair_by_design.py",
+    "examples/tutorial/lesson_28_meta_workflows.py",
+    "examples/tutorial/lesson_29_cwl_export.py",
+    "examples/tutorial/lesson_30_compute_continuum.py",
+    "examples/tutorial/lesson_31_operations.py",
+    "examples/tutorial/lesson_32_capstone.py",
     "examples/fair/fair_local.py",
     "examples/faas/mock_sync.py",
     "examples/faas/local_http.py",
     "examples/iot/observe_mock.py",
     "examples/llm/local_mock_llm.py",
     "examples/dataflow/slurm/beeond_local_emulation.py",
+    "examples/dataflow/slurm/pre_stage_mock.py",
+    "examples/agentic/tool_free.py",
+    "examples/agentic/guarded_repair.py",
+    "examples/agentic/evaluation_failure.py",
+    "examples/agentic/checkpoint_identity.py",
+    "examples/agentic/mixed_workflow.py",
+    "examples/agentic/cwl_local.py",
 ]
 
 

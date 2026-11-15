@@ -1,8 +1,8 @@
 name: CI/CD
 
 # Continuous integration on Linux (Ubuntu, Rocky Linux), macOS, Windows, and
-# 64-bit Raspberry Pi OS (Debian bookworm arm64), BeeOND on an emulated Slurm
-# site, plus packaging and releases.
+# 64-bit Raspberry Pi OS (Debian bookworm arm64), BeeOND and scheduler-aware
+# pre-staging on an emulated Slurm site, plus packaging and releases.
 on:
   pull_request:
   push:
@@ -28,7 +28,7 @@ env:
 
 jobs:
   quality:
-    name: Quality (ruff, mypy, tutorial)
+    name: Quality (ruff, mypy, tutorial, coverage)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -36,14 +36,18 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install quality tools
-        run: python -m pip install mypy==1.13.0 ruff==0.6.9
+        run: |
+          python -m pip install mypy==1.13.0 ruff==0.6.9
+          # The coverage validator derives the TaskType inventory from the package.
+          python -m pip install -e .
       - name: Run focused style checks
-        run: python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/beeond.py tests tools/run_local_examples.py tools/ci_beeond_slurm.py
+        run: python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/beeond.py dagon/prestage.py tests tools/run_local_examples.py tools/ci_beeond_slurm.py tools/ci_prestage_slurm.py tools/hpc_prestage_deep.py examples/dataflow/slurm/mock_scheduler.py examples/dataflow/slurm/pre_stage_mock.py examples/dataflow/slurm/pre_stage_local.py examples/dataflow/slurm/pre_stage_remote.py dagon/agentic examples/agentic tools/validate_tutorial_coverage.py examples/tutorial/lesson_00_environment_check.py examples/tutorial/lesson_1[2-9]_*.py examples/tutorial/lesson_2[0-9]_*.py examples/tutorial/lesson_3[0-2]_*.py
       - name: Run progressive type checks
-        run: python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/beeond.py
+        run: python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/beeond.py dagon/prestage.py dagon/agentic/*.py
       - name: Validate tutorial structure and notebook
         run: |
           python tools/validate_tutorial.py
+          python tools/validate_tutorial_coverage.py
           python -c "import json; json.load(open('docs/tutorial/DAGonStar_tutorial.ipynb', encoding='utf-8'))"
       - name: Check CI shell scripts
         run: for script in tools/ci/slurm/*.sh; do bash -n "$script"; done
@@ -137,9 +141,11 @@ jobs:
   # BeeOND integration: a single-node Slurm cluster whose Prolog/Epilog emulate
   # a BeeOND site (job-private mount created at job start, destroyed at job
   # end), so per-task and per-workflow persistence run against real sbatch,
-  # srun --jobid steps, and --signal time-limit warnings.
+  # srun --jobid steps, and --signal time-limit warnings.  The same cluster
+  # checks scheduler-aware pre-staging: stage-in before the job starts, the
+  # sbatch gate on failed stage-in, and the BeeOND rejection.
   beeond-slurm:
-    name: BeeOND on Slurm (emulated site)
+    name: BeeOND and pre-staging on Slurm (emulated site)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -155,6 +161,12 @@ jobs:
         run: python -m unittest tests.test_beeond -v
       - name: Run BeeOND workflows on Slurm
         run: python tools/ci_beeond_slurm.py --partition ci --scratch "$RUNNER_TEMP/beeond-scratch"
+      - name: Run pre-staging unit tests
+        run: python -m unittest tests.test_scheduler_prestaging tests.test_remote_scheduler_prestaging -v
+      - name: Run pre-staging checks on Slurm
+        run: python tools/ci_prestage_slurm.py --partition ci --scratch "$RUNNER_TEMP/prestage-scratch"
+      - name: Run the pre-staging example on Slurm
+        run: python examples/dataflow/slurm/pre_stage_local.py --partition ci --scratch "$RUNNER_TEMP/prestage-example"
       - name: Show Slurm and site logs
         if: failure()
         run: |
@@ -163,6 +175,7 @@ jobs:
           sacct -X 2>/dev/null || true
           sudo cat /var/log/slurm/beeond-ci.log || true
           sudo tail -n 100 /var/log/slurm/slurmctld.log /var/log/slurm/slurmd.log || true
+          find "$RUNNER_TEMP/prestage-scratch" "$RUNNER_TEMP/prestage-example" -maxdepth 4 -path '*/.dagon/*' \( -name 'stage_in.sh' -o -name 'stage-in-complete.json' -o -name 'allocation_started_at' \) -print -exec tail -n 40 {} \; || true
           find "$RUNNER_TEMP/beeond-scratch" -maxdepth 6 \( -name '*.out' -o -name '*.err' -o -name 'beeond_persist.status' -o -name 'holder-*.out' \) -print -exec tail -n 40 {} \; || true
       - uses: actions/upload-artifact@v7
         if: failure()
@@ -171,10 +184,67 @@ jobs:
           path: ${{ runner.temp }}/beeond-scratch
           if-no-files-found: ignore
 
+  # Agentic task contract: deterministic mock adapter, CWL validation and execution.
+  agentic-contract:
+    name: Agentic contract (mock adapter, CWL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install package and the CWL reference runner
+        run: |
+          # The all-type interoperability tests import the Docker and Kubernetes adapters.
+          python -m pip install -e ".[docker,kubernetes]"
+          python -m pip install cwltool
+      - name: Run agentic unit tests
+        run: python -m unittest discover -s tests -p "test_agentic_*.py" -v
+      - name: Run all-type interoperability and coverage tests
+        run: python -m unittest tests.test_tasktype_interoperability tests.test_tutorial_coverage -v
+      - name: Validate and execute the agentic CWL export
+        run: python examples/agentic/cwl_local.py
+      - name: Run the agentic examples and lessons
+        run: |
+          for script in examples/agentic/tool_free.py examples/agentic/guarded_repair.py examples/agentic/evaluation_failure.py examples/agentic/checkpoint_identity.py examples/agentic/mixed_workflow.py examples/tutorial/lesson_14_agentic_specification.py examples/tutorial/lesson_15_agentic_tools_and_guardrails.py examples/tutorial/lesson_16_agentic_evaluation_and_checkpoints.py; do
+            echo "== $script"; python "$script"
+          done
+      - name: Collect bounded failure evidence
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/agentic-evidence"
+          # Allowlist: reports and traces only; never configuration files.
+          find "$RUNNER_TEMP" /tmp -maxdepth 8 -path '*/.dagon/agentic/*' \( -name 'runner-error.json' -o -name 'commit.json' \) -size -256k -print -exec cp --parents {} "$RUNNER_TEMP/agentic-evidence" \; 2>/dev/null || true
+          find "$RUNNER_TEMP" /tmp -maxdepth 8 -path '*/outputs/*' \( -name 'evaluation.json' -o -name 'trace.json' \) -size -256k -print -exec cp --parents {} "$RUNNER_TEMP/agentic-evidence" \; 2>/dev/null || true
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: agentic-evidence
+          path: ${{ runner.temp }}/agentic-evidence
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Execute the tutorial notebook's code cells in order (no Jupyter required).
+  notebook:
+    name: Tutorial notebook (safe execution)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install package
+        run: python -m pip install -e ".[docker,kubernetes]"
+      - name: Execute notebook code cells
+        # Lessons that need Docker, cwltool, Slurm, or a cluster print explicit skips.
+        run: python tools/run_notebook_smoke.py
+
   # Continuous delivery: build and check the distributions on every run.
   build:
     name: Build distributions
-    needs: [quality, test, rocky-linux, raspberry-pi, beeond-slurm]
+    needs: [quality, test, rocky-linux, raspberry-pi, beeond-slurm, agentic-contract, notebook]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -195,7 +265,16 @@ jobs:
         run: |
           python -m venv /tmp/wheel-venv
           /tmp/wheel-venv/bin/python -m pip install dist/*.whl
-          cd /tmp && /tmp/wheel-venv/bin/python -c "import dagon, dagon.web, dagon.fair, dagon.iot, dagon.stager, dagon.platform_support; print('wheel import ok')"
+          cd /tmp && /tmp/wheel-venv/bin/python -c "import dagon, dagon.web, dagon.fair, dagon.iot, dagon.agentic, dagon.stager, dagon.platform_support; print('wheel import ok')"
+          /tmp/wheel-venv/bin/dagon-agent-runner --help > /dev/null
+          # The import line above left the shell in /tmp; copy from the checkout explicitly.
+          mkdir -p /tmp/wheel-smoke
+          cp "$GITHUB_WORKSPACE/examples/agentic/agentic_common.py" "$GITHUB_WORKSPACE/examples/agentic/tool_free.py" /tmp/wheel-smoke/
+          cd /tmp/wheel-smoke && /tmp/wheel-venv/bin/python tool_free.py
+      - name: Check the sdist contents
+        run: |
+          tar -tzf dist/*.tar.gz | grep -q "/dagon/agentic/engine.py"
+          tar -tzf dist/*.tar.gz | grep -q "/dagon/agentic/runner.py"
       - uses: actions/upload-artifact@v7
         with:
           name: dist

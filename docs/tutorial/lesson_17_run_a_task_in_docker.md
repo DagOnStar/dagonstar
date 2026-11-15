@@ -1,4 +1,4 @@
-# Lesson 12: Run a Task in Docker
+# Lesson 17: Run a Task in Docker
 
 > **Track:** Distributed infrastructure
 > **Runtime:** Docker
@@ -15,7 +15,7 @@ After completing this lesson, you will be able to:
 
 ## Prerequisites
 
-- [Lesson 11](lesson_11_execute_an_llm_task_responsibly.md), or equivalent concepts.
+- [Lesson 16](lesson_16_evaluate_publish_and_checkpoint_agent_results.md), or equivalent concepts.
 - Docker is optional for live integration; structural checks remain local.
 
 ## Scientific scenario
@@ -37,8 +37,11 @@ Use the unit test as a laboratory for task construction and command generation. 
 From the repository root:
 
 ~~~bash
+python examples/tutorial/lesson_17_docker_tasks.py
 python -m unittest tests.test_docker_task -v
 ~~~
+
+The script mocks the Docker client: it shows the `docker exec` wrapper with a quoted working directory and the `ssh://user@host:port` endpoint of a remote task on a non-default SSH port. Without the `docker` extra it prints a skip message naming `dagonstar[docker]`.
 
 ## Expected result
 
@@ -47,6 +50,7 @@ Local tests inspect construction and commands without requiring a daemon.
 ## Verify
 
 ~~~bash
+python examples/tutorial/lesson_17_docker_tasks.py
 python -m unittest tests.test_docker_task -v
 ~~~
 
@@ -74,4 +78,4 @@ Containers change execution environment, not workflow causality.
 
 ## Next lesson
 
-Next, make the host boundary explicit with SSH. Return to the [syllabus](README.md) at any time.
+Next, package the same environment for HPC systems with Apptainer. Return to the [syllabus](README.md) at any time.

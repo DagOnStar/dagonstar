@@ -40,7 +40,10 @@ From the repository root:
 ~~~bash
 python -m pip install -e .
 python -c "import dagon; print(dagon.Workflow.__name__)"
+python examples/tutorial/lesson_00_environment_check.py
 ~~~
+
+The environment check prints the Python version, platform, installed DAGonStar version, the bash used for launchers, every registered task type, and which optional packages are present. It also reads `dagon.ini.sample` and confirms that the sample agent profiles name environment variables rather than key values. Optional extras (`docker`, `kubernetes`, `cloud`, `globus`, and others) are needed only for the live variants of Lessons 17–26.
 
 ## Expected result
 
@@ -49,6 +52,7 @@ The import prints Workflow without contacting an external service.
 ## Verify
 
 ~~~bash
+python examples/tutorial/lesson_00_environment_check.py
 python -m unittest tests.test_workflow_core.WorkflowCoreTests.test_workflow_uses_safe_defaults_for_optional_sections -v
 ~~~
 

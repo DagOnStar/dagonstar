@@ -52,6 +52,11 @@ class FairRecorder:
                 marker = "workflow:///" + previous.name + "/"
                 if marker in task.command:
                     path = task.command.split(marker, 1)[1].split(" ", 1)[0]
+                elif getattr(task, "contract", None) is not None:
+                    # Agentic tasks keep their references in the structured contract.
+                    text = json.dumps(task.contract, sort_keys=True)
+                    if marker in text:
+                        path = re.split(r"[\s\"']", text.split(marker, 1)[1], 1)[0]
                 edges.append({"producer": previous.name, "consumer": task.name,
                               "path": path, "type": "workflow-edge"})
         self.run["dependencies"] = edges
@@ -107,6 +112,19 @@ class FairRecorder:
                     artifact.update({"size_bytes": candidate.stat().st_size, "checksum": _checksum(candidate),
                         "media_type": declared.get("media_type") or mimetypes.guess_type(str(candidate))[0]})
                 self.run["artifacts"].append(artifact)
+
+        if type(task).__name__ == "AgenticTask" and task.working_dir:
+            report = task.agentic_report or {}
+            for name, relative in sorted(task.outputs.items()):
+                candidate = Path(task.working_dir) / relative
+                if not candidate.is_file():
+                    continue
+                self.run["artifacts"].append({
+                    "name": name, "path": relative, "task": task.name, "declared_output": True,
+                    "id": self._artifact_id(task.name, relative), "exists": True, "local_path": str(candidate),
+                    "size_bytes": candidate.stat().st_size, "checksum": _checksum(candidate),
+                    "media_type": "application/json", "role": "agentic-" + name,
+                    "accepted_output": bool(report.get("accepted")) and name == "result"})
 
     def on_workflow_end(self, workflow: Any) -> None:
         if self.output_dir is None: return

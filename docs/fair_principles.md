@@ -87,6 +87,25 @@ comment, persistence settings, and, for workflow volumes, the holder job id and
 mount point. The volume contents are not recorded as artifacts unless they are
 declared outputs.
 
+Slurm tasks for which scheduler-aware pre-staging is configured add
+`execution.pre_stage`. It holds whether pre-staging was effective, the policy
+version, the last phase, the input count, how many inputs had their staged
+content compared with the source, the scheduler job identifier, the stage-in
+and submission timestamps, the requested cores, and the estimated allocated core-hours not
+held during stage-in. It contains no paths and no credentials. Allocation wait
+and execution time are included only when the job's start stamp can be read;
+they have one-second resolution. In pre-staged mode the `staging` record of a
+task spans the actual transfer. In the legacy mode it spans only launcher
+generation. See [Scheduler-aware pre-staging](scheduler_prestaging.md).
+
 This is local export only. It does not yet validate a full Workflow Run RO-Crate
 profile, emit PROV-O Turtle, package/copy data, publish to repositories, provide
 a FAIR CLI, or calculate remote/container checksums.
+
+## Agentic artifacts
+
+When FAIR recording is enabled, the files an agentic task writes (`result`,
+`evaluation`, `trace`) are recorded as artifacts with checksums, the role
+`agentic-<output name>`, and `accepted_output: true` only for an accepted
+result. The evaluation report contains digests and public profile fields, never
+keys or scratch paths.

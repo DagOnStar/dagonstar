@@ -14,6 +14,7 @@
 - **Synchronous / asynchronous execution:** caller-blocking run / background-thread launch.
 - **Backend:** execution environment such as local batch, Docker, SSH, or Slurm.
 - **Executor:** mechanism used by structured tasks to run locally or through Slurm.
+- **Scheduler-aware pre-staging:** opt-in mode (`pre_stage=True`) in which a Slurm task stages and verifies its `workflow://` inputs on the submission host before requesting resources, instead of inside the allocation.
 - **Declared artifact:** an intentional input or output described for provenance.
 - **Provenance:** evidence connecting agents, activities, inputs, and outputs.
 - **FAIR metadata:** descriptions supporting findability, accessibility, interoperability, and reuse; metadata alone is not publication.
@@ -22,3 +23,8 @@
 - **Inference:** a conclusion supported by observations and stated assumptions; it must not be reported as direct evidence.
 - **Reproducibility:** obtaining consistent results from a sufficiently specified method and environment; one successful rerun establishes only limited evidence.
 - **Portability boundary:** the point beyond which an exported description no longer represents backend-specific execution, staging, credentials, or policy.
+- **Agentic task:** a `TaskType.AGENTIC` task in which a bounded agent proposes a result that DAGonStar checks with guardrails and independent evaluators before publication.
+- **Agent profile:** a named `[agent.<name>]` section in `dagon.ini`; it is the maximum authority over tools, guardrails, and budgets.
+- **Guardrail:** a registered check, run outside the agent, that refuses or returns feedback on an action or candidate.
+- **Result fit:** the weighted mean of evaluator scores; acceptance also requires the threshold, mandatory, and hard gates.
+- **Coverage manifest:** `docs/tutorial/coverage.json`, the machine-checked map from task types and features to lessons, examples, and tests.
