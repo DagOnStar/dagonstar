@@ -67,15 +67,12 @@ simulation.add_dependency_to(quality_control)
 
 Read this as: `quality_control` depends on `download`.
 
-Add explicit edges after `workflow.make_dependencies()`. That method rebuilds
-the graph from `workflow://` references and discards earlier edges, and
-`workflow.run()` calls it when it has not run yet, so an explicit edge added
-before it is silently lost and the two tasks may run concurrently:
-
-```python
-workflow.make_dependencies()
-quality_control.add_dependency_to(download)
-```
+Explicit edges may be added before or after `workflow.make_dependencies()`.
+That method rebuilds the graph from `workflow://` references and then restores
+every edge added with `add_dependency_to`, without duplicating an edge that is
+also discovered from a reference. `workflow.run()` calls it when it has not run
+yet, so explicit edges added before `run()` are kept. Use
+`task.remove_dependency_to(other)` to remove an explicit edge permanently.
 
 ## Dataflow dependencies
 

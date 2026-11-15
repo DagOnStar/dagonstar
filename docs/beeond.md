@@ -116,7 +116,6 @@ solve = DagonTask(TaskType.SLURM, "solve", './solve.sh "$DAGON_BEEOND"',
                   beeond="workflow:scratch")
 workflow.add_task(prepare)
 workflow.add_task(solve)
-workflow.make_dependencies()
 solve.add_dependency_to(prepare)   # shared-volume data is not a workflow:// reference
 workflow.run()
 ```
@@ -146,7 +145,7 @@ confirming persistence, after writing the checkpoint file. You can also call
 `workflow.stop_beeond_volumes()` yourself.
 
 Tasks that share a workflow volume do not get implicit dependencies from it.
-Declare the order with `add_dependency_to` after `make_dependencies()`, or let
+Declare the order with `add_dependency_to`, or let
 `workflow://` references order them.
 
 ## Configuration

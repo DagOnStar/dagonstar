@@ -59,6 +59,10 @@ class NomadJobSpecificationTests(unittest.TestCase):
         self.assertEqual(group["Tasks"][0]["Resources"], {"CPU": 500, "MemoryMB": 1024})
         self.assertEqual(task.nomad_address, "http://nomad.invalid:4646")
 
+    def test_host_and_container_volume_is_mounted_once(self):
+        spec = _task(volume="/srv/data:/data")._generate_job_spec()["Job"]
+        self.assertEqual(spec["TaskGroups"][0]["Tasks"][0]["Config"]["volumes"], ["/srv/data:/data"])
+
     def test_volume_without_container_path_is_mounted_at_the_same_path(self):
         spec = _task(volume="/data")._generate_job_spec()["Job"]
         self.assertEqual(spec["TaskGroups"][0]["Tasks"][0]["Config"]["volumes"], ["/data:/data"])

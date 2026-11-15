@@ -36,7 +36,7 @@ with tempfile.TemporaryDirectory(prefix="dagon-tutorial-24-") as scratch:
                     beeond="workflow:shared")
     for task in (write, read, stage, use):
         wf.add_task(task)
-    # make_dependencies() rebuilds the graph from scratch, so add explicit edges after it.
+    # make_dependencies() rebuilds the graph and restores explicit edges in either order.
     wf.make_dependencies()
     use.add_dependency_to(stage)
     assert [task.name for task in use.prevs] == ["stage"]

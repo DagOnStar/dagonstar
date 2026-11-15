@@ -101,21 +101,31 @@ This is evidence for one site and Slurm release with the deterministic mock adap
   - The builtin adapter is tested only against a loopback server.
   - Runs are nondeterministic, and checkpoint identity does not capture drift behind an unchanged endpoint and model name.
 - **Not implemented:** cost budgets, model-based judges, `pre_stage=True` for agentic tasks, and inputs produced on remote (SSH or cloud) hosts.
-- **Pre-existing defects found but not fixed:**
-  - `NomadTask._generate_job_spec` adds a `host:container` volume twice.
-  - `Workflow.make_dependencies()`, which `run()` calls when it has not run yet, discards explicit `add_dependency_to` edges added before it. The user guide now documents the order. Several legacy examples (`examples/edge_fog/`, `examples/taskflow/`) add explicit edges without calling `make_dependencies()` first; they were left unchanged, following the conservative-fix rule.
+- **Pre-existing defects reported earlier:** see [A8](#a8-follow-up-explicit-edges-and-the-nomad-volume-claim). The explicit-edge defect is fixed; the Nomad claim was wrong.
 - **No independent audit.** F1 to F3, the start-up change, and the CI fixes have not been independently audited.
 
 ## A7. Commit history
 
 ```text
-(this commit) Update the implementation report for the agentic audit remediation
+b467c7c Update the implementation report for the agentic audit remediation
 f3cefb7 Run the wheel smoke example from a directory without a checkout
 81704d5 Copy the wheel smoke-test example from the checkout path
 f516d44 Add Lesson 24's explicit edge after make_dependencies
 e0844b3 Fix the first CI run of the agentic work
 3c6fffa Add TaskType.AGENTIC, the 33-lesson curriculum, and coverage validation
 ```
+
+## A8. Follow-up: explicit edges and the Nomad volume claim
+
+- **Explicit edges are now kept.** Previously `Workflow.make_dependencies()`, which `run()` calls when it has not run yet, cleared `prevs` and `nexts` and rediscovered only `workflow://` references, so an `add_dependency_to` edge added before it was lost and the two tasks could run concurrently (the Lesson 24 race).
+  - `Task.add_dependency_to` now also records the edge in `explicit_prevs`, except while the workflow is discovering references (`Workflow._discovering_dependencies`).
+  - `make_dependencies()` rebuilds the graph, restores the recorded edges without duplicates, and then validates it, so explicit cycles are still rejected. Reference counts still come from `workflow://` references only.
+  - New `Task.remove_dependency_to` removes an edge permanently; the parallel-mode rewiring uses it, so a replaced task's edges are not restored.
+  - `saveAsCWL` no longer needs its own edge-retention code.
+  - The legacy examples in `examples/edge_fog/` and `examples/taskflow/` that add edges before `make_dependencies()` now behave as written. Lesson 24 and the user guide, BeeOND, and architecture documents were updated.
+  - Tests: `tests/test_explicit_dependencies.py` (order enforced by `run()`, repeated rebuilds without duplicates, discovered edges not recorded as explicit, removal, cycles).
+- **The Nomad claim was wrong.** A6 previously said that `NomadTask._generate_job_spec` adds a `host:container` volume twice. The code appends the volume once and had not changed since `69a13ed`; the claim was an error in this report, not a defect. A regression test (`test_host_and_container_volume_is_mounted_once`) now guards the behaviour.
+- **Verification:** the full unit suite passed locally (macOS, 375 tests) and on the Rocky 8.10 cluster (Python 3.11.7, 375 tests); `tools/run_local_examples.py` passed 46 of 46 examples; Lesson 24 passed on the cluster; the CI-scoped ruff and mypy checks and both tutorial validators passed.
 
 ---
 

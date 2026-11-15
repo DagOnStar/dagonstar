@@ -150,6 +150,10 @@ Explicit dependencies are created with:
 consumer.add_dependency_to(producer)
 ```
 
+Explicit edges are also recorded in `explicit_prevs`, so
+`Workflow.make_dependencies()` restores them after it rebuilds the graph from
+`workflow://` references; `remove_dependency_to` removes one permanently.
+
 Implicit dependencies are created by parsing:
 
 ```text

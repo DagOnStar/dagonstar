@@ -208,6 +208,9 @@ class Task(Thread):
         self.name = name
         self.nexts: List[Any] = []
         self.prevs: List[Any] = []
+        # Edges added by callers (not discovered from workflow:// references);
+        # Workflow.make_dependencies() restores them after rebuilding the graph.
+        self.explicit_prevs: List[Any] = []
         self.reference_count = 0
         self.remove_scratch_dir = False
         self.ip = None
@@ -966,10 +969,26 @@ class Task(Thread):
         """
         task.nexts.append(self)
         self.prevs.append(task)
+        # Remember edges added outside dependency discovery, so that
+        # Workflow.make_dependencies() keeps them when it rebuilds the graph.
+        if not getattr(self.workflow, "_discovering_dependencies", False):
+            explicit = self.__dict__.setdefault("explicit_prevs", [])
+            if task not in explicit:
+                explicit.append(task)
 
         if self.workflow.is_api_available:  # add in the server
             self.workflow.api.add_dependency(
                 self.workflow.workflow_id, self.name, task.name)
+
+    def remove_dependency_to(self, task: Any) -> None:
+        """Remove the edge from *task* to this task, including an explicit one."""
+        while task in self.prevs:
+            self.prevs.remove(task)
+        while self in task.nexts:
+            task.nexts.remove(self)
+        explicit = self.__dict__.get("explicit_prevs", [])
+        while task in explicit:
+            explicit.remove(task)
 
     def add_transversal_point(self, task: Any) -> None:
         """
@@ -1411,9 +1430,8 @@ class Task(Thread):
                         self.workflow.add_task(parallel_task)
                         self.new_tasks.append(parallel_task)
 
-                    for next_task in self.nexts:
-                        if self in next_task.prevs:
-                            next_task.prevs.remove(self)
+                    for next_task in list(self.nexts):
+                        next_task.remove_dependency_to(self)
 
                         for new_task in self.new_tasks:
                             next_task.add_dependency_to(new_task)

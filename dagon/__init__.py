@@ -347,9 +347,15 @@ class Workflow(object):
         self.dag_tps = DAG_tps
 
     def make_dependencies(self) -> None:
+        """Rebuild the dependency graph.
+
+        Edges are rediscovered from ``workflow://`` references; edges added
+        with :meth:`dagon.task.Task.add_dependency_to` outside discovery are
+        restored afterwards, so explicit edges survive whether they were added
+        before or after this call (``run()`` calls it when it has not run yet).
         """
-        Looks for all the dependencies between tasks
-        """
+        explicit_edges = [(task, previous) for task in self.tasks
+                          for previous in list(getattr(task, "explicit_prevs", []))]
 
         # Clean all dependencies
         for task in self.tasks:
@@ -358,11 +364,20 @@ class Workflow(object):
             task.reference_count = 0
 
         # Automatically detect dependencies
-        for task in self.tasks:
-            # Invoke pre run
-            task.set_semaphore(self.sem)
-            task.set_dag_tps(self.dag_tps)
-            task.pre_run()
+        self._discovering_dependencies = True
+        try:
+            for task in self.tasks:
+                # Invoke pre run
+                task.set_semaphore(self.sem)
+                task.set_dag_tps(self.dag_tps)
+                task.pre_run()
+        finally:
+            self._discovering_dependencies = False
+        for task, previous in explicit_edges:
+            if previous not in task.prevs:
+                task.prevs.append(previous)
+            if task not in previous.nexts:
+                previous.nexts.append(task)
         self.Validate_WF()
         self._dependencies_made = True
         self._fire_event("on_dependencies_made", self)
@@ -487,21 +502,9 @@ class Workflow(object):
         :raises ValueError: if a task has no command that CWL can execute
         """
         # Dependency discovery normally happens immediately before a run.  Do
-        # it here as well, while retaining any explicit edges already attached
-        # by callers (make_dependencies rebuilds the discovered graph).
+        # it here as well; make_dependencies() keeps explicit edges.
         if not self._dependencies_made:
-            explicit_edges = [
-                (previous, task)
-                for task in self.tasks
-                for previous in task.prevs
-                if previous in self.tasks
-            ]
             self.make_dependencies()
-            for previous, task in explicit_edges:
-                if previous not in task.prevs:
-                    previous.nexts.append(task)
-                    task.prevs.append(previous)
-            self.Validate_WF()
 
         def cwl_identifier(value: str, used: set) -> str:
             identifier = re.sub(r"[^A-Za-z0-9_]", "_", value)
