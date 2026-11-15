@@ -101,3 +101,11 @@ generation. See [Scheduler-aware pre-staging](scheduler_prestaging.md).
 This is local export only. It does not yet validate a full Workflow Run RO-Crate
 profile, emit PROV-O Turtle, package/copy data, publish to repositories, provide
 a FAIR CLI, or calculate remote/container checksums.
+
+## Agentic artifacts
+
+When FAIR recording is enabled, the files an agentic task writes (`result`,
+`evaluation`, `trace`) are recorded as artifacts with checksums, the role
+`agentic-<output name>`, and `accepted_output: true` only for an accepted
+result. The evaluation report contains digests and public profile fields, never
+keys or scratch paths.

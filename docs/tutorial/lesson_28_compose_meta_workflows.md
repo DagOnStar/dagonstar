@@ -1,4 +1,4 @@
-# Lesson 16: Compose Meta-Workflows
+# Lesson 28: Compose Meta-Workflows
 
 > **Track:** Advanced
 > **Runtime:** Local
@@ -15,7 +15,7 @@ After completing this lesson, you will be able to:
 
 ## Prerequisites
 
-- [Lesson 15](lesson_15_make_a_workflow_fair_by_design.md), or equivalent concepts.
+- [Lesson 27](lesson_27_make_a_workflow_fair_by_design.md), or equivalent concepts.
 - No external service unless stated below.
 
 ## Scientific scenario
@@ -37,8 +37,11 @@ Identify each workflow namespace before following a transversal `workflow://` re
 From the repository root:
 
 ~~~bash
+python examples/tutorial/lesson_28_meta_workflows.py
 python -m unittest tests.test_workflow_core.WorkflowCoreTests.test_transversal_references_resolve_across_loaded_workflows -v
 ~~~
+
+The script composes two workflows with `DAG_TPS`, resolves `workflow://Acquisition/collect/...` across them, runs both, and shows that an unresolvable cross-workflow reference fails when the optional DAGon service is not configured.
 
 ## Expected result
 
@@ -47,6 +50,7 @@ The test proves local cross-workflow dependency discovery.
 ## Verify
 
 ~~~bash
+python examples/tutorial/lesson_28_meta_workflows.py
 python -m unittest tests.test_workflow_core.WorkflowCoreTests.test_transversal_references_resolve_across_loaded_workflows -v
 ~~~
 

@@ -12,3 +12,12 @@ def scale_file(input_file, scale, output_file):
 
 def needs_value(value):
     return {"value": value}
+
+
+def count_records(input_file, output_file):
+    import json
+    with open(input_file, encoding="utf-8") as source:
+        records = json.load(source)["observations"]
+    with open(output_file, "w", encoding="utf-8") as destination:
+        json.dump({"count": len(records)}, destination)
+    return {"count": len(records)}

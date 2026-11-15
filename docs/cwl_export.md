@@ -78,9 +78,38 @@ IoT tools invoke `dagon-iot-runner`, embed a redacted portable specification,
 declare scratch outputs, and retain semantics in `dagon:IoTTask`. Execution
 still needs the selected provider and device access. See [IoT and CWL](iot_cwl.md).
 
+## Agentic tasks
+
+`TaskType.AGENTIC` is exported as an executable step whose `baseCommand` is
+`dagon-agent-runner run` (installed by `pip install -e .`). The step embeds the
+portable, versioned contract as `agent-task.json` through
+`InitialWorkDirRequirement`, binds each declared `workflow://` input to the
+producer's CWL `File` output (or, with portable emulation, to a path inside
+the producer's `task_dir`), and declares the agent's `result`, `evaluation`,
+and `trace` files as CWL `File` outputs. A `dagon:AgenticTask` hint records the
+schema version, profile name, and contract SHA-256.
+
+Workflows containing an agentic task gain one workflow-level input,
+`dagon_config: File`. The agent profile, including any endpoint and the name of
+the environment variable holding a key, is resolved from that file at run
+time; no endpoint, credential, or scratch path is written to the CWL document.
+With `portable_emulation=True` the runner forces the deterministic mock
+adapter. Workflows without agentic tasks are exported exactly as before.
+
+The runner exits non-zero when the result is not accepted, so a generic CWL
+runner does not start dependent steps. Only producers in the same workflow
+that declare the referenced file as an output can be bound; other references
+raise `ValueError` at export. `tests/test_agentic_cwl.py` checks determinism
+and credential safety, and validates and executes a producer → agent →
+consumer document with `cwltool --no-container` when both `cwltool` and
+`dagon-agent-runner` are installed (the test is skipped otherwise).
+`examples/agentic/cwl_local.py` and
+[Lesson 29](tutorial/lesson_29_export_and_validate_common_workflow_language.md)
+show the same export. See [Agentic tasks](agentic_tasks.md).
+
 ## Runnable interoperability material
 
 The [`examples/cwl/`](../examples/cwl/README.md) directory contains the Python
 source and its deterministic, checked-in CWL output. The [example guide](examples/cwl.md)
-and [Lesson 17](tutorial/lesson_17_export_and_validate_common_workflow_language.md) cover regeneration,
+and [Lesson 29](tutorial/lesson_29_export_and_validate_common_workflow_language.md) cover regeneration,
 automatic testing, runner validation, and the interoperability boundary.

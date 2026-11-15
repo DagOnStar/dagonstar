@@ -57,6 +57,7 @@ class TaskType(Enum):
     :cvar CLOUD: Task executed in a cloud instance (ec2, digital ocean and google cloud  tested with libcloud)
     :cvar DOCKER: Task executed on a docker container (local or remote)
     :cvar APPTAINER: Task executed in an Apptainer container (HPC environments)
+    :cvar AGENTIC: Bounded agent with independent evaluation (see dagon.agentic)
     """
 
     CHECKPOINT = "checkpoint"
@@ -72,6 +73,7 @@ class TaskType(Enum):
     WEB = "web"
     FAAS = "faas"
     IOT = "iot"
+    AGENTIC = "agentic"
 
 
 # Different types os tasks and their module and class name
@@ -94,6 +96,7 @@ tasks_types: Dict[TaskType, TaskTypeSpec] = {
     TaskType.WEB: ("dagon.web", "WebTask"),
     TaskType.FAAS: ("dagon.faas", "FaaSTask"),
     TaskType.IOT: ("dagon.iot", "IoTTask"),
+    TaskType.AGENTIC: ("dagon.agentic.task", "AgenticTask"),
 }
 
 

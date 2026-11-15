@@ -52,6 +52,7 @@ profile supports CI, teaching, Colab, Jupyter, and portable validation.
 | `WEB` | HTTP/HTTPS endpoint or local mock server | Local mock runs in notebooks and Colab. |
 | `FAAS` | Mock, HTTP, or configured provider adapter | Mock provider runs locally. |
 | `IOT` | Mock or configured provider adapter | Deterministic mock runs locally. |
+| `AGENTIC` | `dagon.ini` agent profile (mock or OpenAI-compatible adapter) | Mock adapter runs locally; portable emulation forces it. |
 
 “Notebook supported” means workflow creation, validation, FAIR recording,
 checkpoint loading, and CWL export work in the Python kernel. A notebook does
@@ -99,3 +100,7 @@ matches the identity recorded after its stage-in; otherwise it runs again. A
 failed task, including a staging or submission failure, is staged again and
 resubmitted on resume. The stage-in completion marker is never a skip token.
 IoT additionally validates schema version, declared outputs, and SHA-256 evidence.
+Agentic tasks are reused only after re-verifying contract, profile, registered
+versions, input content hashes, and published output hashes; agentic inputs
+must come from producers with a local working directory. See
+[Agentic tasks](agentic_tasks.md).

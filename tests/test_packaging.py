@@ -54,6 +54,22 @@ class PackagingTests(unittest.TestCase):
                     set(extras[extra_name].splitlines()), all_requirements
                 )
 
+    def test_agentic_package_and_runner_are_registered(self):
+        parser = configparser.ConfigParser()
+        parser.read("setup.cfg")
+        self.assertIn("dagon.agentic", parser["options"]["packages"].split())
+        self.assertIn("dagon-agent-runner = dagon.agentic.runner:main",
+                      parser["options.entry_points"]["console_scripts"])
+
+    def test_agentic_base_import_needs_no_provider_sdk(self):
+        import subprocess
+        import sys
+        code = ("import sys, dagon.agentic, dagon.agentic.task, dagon.agentic.runner; "
+                "bad = [m for m in ('openai', 'anthropic', 'langchain', 'boto3', 'docker', 'kubernetes') "
+                "if m in sys.modules]; print(','.join(bad))")
+        completed = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
+        self.assertEqual(completed.stdout.strip(), "")
+
 
 if __name__ == "__main__":
     unittest.main()

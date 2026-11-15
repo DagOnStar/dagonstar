@@ -29,6 +29,9 @@ dagon/
   checkpoint.py               Checkpoint tasks
   config.py                   INI configuration reader
   dag_tps.py                  Meta-workflow coordination
+  agentic/                    TaskType.AGENTIC: contract, dagon.ini profiles, registry,
+                              guardrails, evaluators, adapters, bounded engine, tool worker,
+                              atomic publication, checkpoint identity, dagon-agent-runner
   fair/                       Optional FAIR models, recorder, validation, exporters
   api/                        HTTP client and workflow service
   cloud/                      Apache Libcloud helpers
@@ -254,3 +257,18 @@ use = False
   configuration, staging, task-subclass, and API-client code; stricter static
   checking remains a maintainability improvement.
 - Some examples depend on external systems and cannot be verified in generic CI.
+
+## Agentic tasks
+
+`dagon.agentic.task.AgenticTask` is a local `Task` subclass. Its
+`execute()` runs a bounded engine (`dagon/agentic/engine.py`) that alternates
+adapter proposals with runtime checks, registered guardrails, process-isolated
+tool calls (`dagon/agentic/worker.py`), and independent evaluators. The adapter
+runs in its own supervised worker for the whole run
+(`dagon/agentic/adapter_worker.py`), and custom evaluators and guardrails run in
+worker processes, so a deadline or cancellation kills them with their descendants. Profiles are
+resolved from `dagon.ini` (`[agent.*]`, `[agent_provider.*]`, `[llm.*]`) by
+`dagon/agentic/config.py`. Publication is atomic with `commit.json` written
+last, and checkpoint reuse recomputes an identity digest over the contract,
+profile, registered versions, and input hashes. The task fails, and so blocks
+its dependants, unless the result is accepted. See [Agentic tasks](agentic_tasks.md).

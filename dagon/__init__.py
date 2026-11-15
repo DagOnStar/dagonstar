@@ -520,6 +520,27 @@ class Workflow(object):
             task: cwl_identifier(str(task.name), used_ids)
             for task in self.tasks
         }
+        agentic_tasks = [task for task in self.tasks if type(task).__name__ == "AgenticTask"]
+        # Narrow file bindings for agentic tasks: producer -> {relative path: output id}.
+        file_outputs: Dict[Any, Dict[str, str]] = {}
+        agentic_bindings: Dict[Any, List[Any]] = {}
+        for task in agentic_tasks:
+            bindings = []
+            for reference, workflow_name, relative, producer in task._producers():
+                if workflow_name != self.name or producer not in task_ids:
+                    raise ValueError("CWL export of agentic task %s supports only producers in workflow %s: %s"
+                                     % (task.name, self.name, reference))
+                produced = file_outputs.setdefault(producer, {})
+                if type(producer).__name__ == "AgenticTask":
+                    names = {path: name for name, path in producer.outputs.items()}
+                    if relative not in names:
+                        raise ValueError("%s is not a declared output of agentic task %s" % (reference, producer.name))
+                    produced[relative] = names[relative]
+                elif relative not in produced:
+                    reserved = {"completed", "task_dir"} | set(produced.values())
+                    produced[relative] = cwl_identifier("file_" + relative, reserved)
+                bindings.append((reference, producer, relative, produced[relative]))
+            agentic_bindings[task] = bindings
         steps = {}
         for task in self.tasks:
             command = getattr(task, "command", None)
@@ -540,6 +561,27 @@ class Workflow(object):
                 input_id = "after_" + task_ids[previous]
                 tool_inputs[input_id] = "Directory" if self.portable_emulation else "boolean"
                 step_inputs[input_id] = task_ids[previous] + ("/task_dir" if self.portable_emulation else "/completed")
+
+            if type(task).__name__ == "AgenticTask":
+                steps[task_ids[task]] = self._agentic_cwl_step(task, task_ids, step_inputs, tool_inputs,
+                                                               agentic_bindings[task])
+                continue
+
+            bound_command = False
+            if not self.portable_emulation and agentic_tasks:
+                # Narrow binding: a command that reads a declared agentic output gets that File.
+                for producer in agentic_tasks:
+                    if producer not in task.prevs:
+                        continue
+                    for output_name, relative in sorted(producer.outputs.items()):
+                        for prefix in ("workflow:///%s/" % producer.name,
+                                       "workflow://%s/%s/" % (self.name, producer.name)):
+                            if prefix + relative in command:
+                                input_id = "%s_%s" % (task_ids[producer], output_name)
+                                tool_inputs[input_id] = "File"
+                                step_inputs[input_id] = task_ids[producer] + "/" + output_name
+                                command = command.replace(prefix + relative, "$(inputs.%s.path)" % input_id)
+                                bound_command = True
 
             if self.portable_emulation:
                 command_types = {"Checkpoint", "RemoteCheckpoint", "Batch", "RemoteBatch", "Slurm",
@@ -563,8 +605,9 @@ class Workflow(object):
                 "class": "CommandLineTool",
                 "label": str(task.name),
                 "requirements": {"InlineJavascriptRequirement": {}},
-                "baseCommand": ["/bin/sh", "-c"] if self.portable_emulation else ["/bin/sh", "-c", command],
-                **({"arguments": [command]} if self.portable_emulation else {}),
+                "baseCommand": ["/bin/sh", "-c"] if self.portable_emulation or bound_command
+                else ["/bin/sh", "-c", command],
+                **({"arguments": [command]} if self.portable_emulation or bound_command else {}),
                 "inputs": tool_inputs,
                 "outputs": {
                     "completed": {
@@ -619,6 +662,15 @@ class Workflow(object):
                 "run": tool,
             }
 
+        if not self.portable_emulation:
+            for producer, produced in file_outputs.items():
+                if type(producer).__name__ == "AgenticTask":
+                    continue
+                step = steps[task_ids[producer]]
+                for relative, output_id in sorted(produced.items(), key=lambda item: item[1]):
+                    step["run"]["outputs"][output_id] = {"type": "File", "outputBinding": {"glob": relative}}
+                    step["out"].append(output_id)
+
         terminal_tasks = [task for task in self.tasks if not task.nexts]
         outputs = {
             task_ids[task] + "_completed": {
@@ -627,19 +679,70 @@ class Workflow(object):
             }
             for task in terminal_tasks
         }
+        for task in agentic_tasks:
+            for output_name in ("result", "evaluation"):
+                outputs[task_ids[task] + "_" + output_name] = {
+                    "type": "File", "outputSource": task_ids[task] + "/" + output_name}
         document = {
             "cwlVersion": "v1.2",
             "class": "Workflow",
             "label": self.name,
-            "inputs": {},
+            "inputs": {"dagon_config": "File"} if agentic_tasks else {},
             "outputs": outputs,
             "steps": steps,
         }
-        if any(type(task).__name__ in {"FaaSTask", "IoTTask"} for task in self.tasks):
+        if any(type(task).__name__ in {"FaaSTask", "IoTTask", "AgenticTask"} for task in self.tasks):
             document["$namespaces"] = {"dagon": "https://dagonstar.org/cwl#"}
         with open(os.fspath(filename), "w", encoding="utf-8") as stream:
             json.dump(document, stream, indent=2, sort_keys=False)
             stream.write("\n")
+
+    def _agentic_cwl_step(self, task: Any, task_ids: Dict[Any, str], step_inputs: Dict[str, str],
+                          tool_inputs: Dict[str, Any], bindings: List[Any]) -> Dict[str, Any]:
+        """Return the executable CWL step of an agentic task (``dagon-agent-runner``).
+
+        The versioned contract is embedded; the agent profile is resolved at
+        run time from the ``dagon_config`` File input, so no endpoint,
+        credential, or scratch path is exported.
+        """
+        from dagon.agentic.models import contract_digest
+        arguments = ["--spec", "agent-task.json", "--config", "$(inputs.dagon_config.path)", "--workdir", ".",
+                     "--workflow", self.name, "--task", str(task.name)]
+        for index, (reference, producer, relative, output_id) in enumerate(bindings):
+            if self.portable_emulation:
+                arguments += ["--bind", "%s=$(inputs.after_%s.path)/%s" % (reference, task_ids[producer], relative)]
+            else:
+                input_id = "in_%d" % index
+                tool_inputs[input_id] = "File"
+                step_inputs[input_id] = "%s/%s" % (task_ids[producer], output_id)
+                arguments += ["--bind", "%s=$(inputs.%s.path)" % (reference, input_id)]
+        if self.portable_emulation:
+            arguments.append("--portable-emulation")
+        tool_inputs["dagon_config"] = "File"
+        step_inputs["dagon_config"] = "dagon_config"
+        outputs: Dict[str, Any] = {"completed": {"type": "boolean",
+                                                 "outputBinding": {"outputEval": "$(runtime.exitCode === 0)"}}}
+        for name, relative in sorted(task.outputs.items()):
+            outputs[name] = {"type": "File", "outputBinding": {"glob": relative}}
+        if self.portable_emulation:
+            outputs["task_dir"] = {"type": "Directory", "outputBinding": {"glob": "."}}
+        spec = task.portable_spec()
+        tool = {
+            "class": "CommandLineTool",
+            "label": str(task.name),
+            "requirements": {
+                "InlineJavascriptRequirement": {},
+                "InitialWorkDirRequirement": {"listing": [
+                    {"entryname": "agent-task.json", "entry": json.dumps(spec, sort_keys=True)}]},
+            },
+            "hints": {"dagon:AgenticTask": {"schema_version": spec["schema_version"], "agent_profile": spec["agent"],
+                                            "contract_sha256": contract_digest(spec)}},
+            "baseCommand": ["dagon-agent-runner", "run"],
+            "arguments": arguments,
+            "inputs": tool_inputs,
+            "outputs": outputs,
+        }
+        return {"label": str(task.name), "in": step_inputs, "out": list(outputs), "run": tool}
 
     def run(self, resume_checkpoint_file = None):
         """Run the workflow in the current thread."""
@@ -754,6 +857,10 @@ class Workflow(object):
                     if temp.get(key) is not None}
                 tk = DagonTask(TaskType.FAAS, temp['name'], specification,
                                working_dir=temp.get('working_dir'))
+            elif temp['type'].upper() == 'AGENTIC':
+                contract = dict(temp.get('agentic', {}))
+                contract.pop('schema_version', None)
+                tk = DagonTask(TaskType.AGENTIC, temp['name'], **contract)
             elif temp['type'].upper() == 'IOT':
                 raw = dict(temp.get('iot', {}))
                 aliases = {'endpointRef': 'endpoint_ref', 'credentialRef': 'credential_ref',

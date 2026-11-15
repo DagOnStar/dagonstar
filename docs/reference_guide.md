@@ -99,6 +99,9 @@ Factory task types:
 - `TaskType.LLM`
 - `TaskType.NATIVE`
 - `TaskType.WEB`
+- `TaskType.FAAS`
+- `TaskType.IOT`
+- `TaskType.AGENTIC`
 
 ## `dagon.task.DagonTask`
 
@@ -486,3 +489,17 @@ contract and [FaaS providers](faas_providers.md) for configuration.
 - `add_dependency(workflow_id, task, dependency)`
 
 The service is optional and disabled in the default sample configuration.
+
+## Agentic task reference
+
+`DagonTask(TaskType.AGENTIC, name, agent=..., specification=..., inputs=...,
+requirements=..., evaluation=..., outputs=None, tools=None, guardrails=None,
+budgets=None)` creates a `dagon.agentic.AgenticTask`. `agent` names an
+`[agent.<name>]` profile in `dagon.ini`. Contract errors raise
+`AgenticValidationError`; profile errors raise `AgenticConfigurationError`.
+After a run, `task.agentic_report` holds the evaluation report. Extension
+points are `register_tool`, `register_guardrail`, `register_evaluator`, and
+`register_adapter` in `dagon.agentic`. The `dagon-agent-runner` console script
+runs a portable specification outside a workflow. See
+[Agentic tasks](agentic_tasks.md), [configuration](agentic_configuration.md),
+[guardrails](agentic_guardrails.md), and [evaluation](agentic_evaluation.md).

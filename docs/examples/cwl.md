@@ -31,3 +31,7 @@ available, the test also asks the reference runner to validate the document.
 
 No credentials, network service, scheduler, or container runtime is required
 to generate the export. Running it requires a CWL v1.2 runner and `/bin/sh`.
+
+Agentic tasks export to an executable `dagon-agent-runner` step with a
+workflow-level `dagon_config: File` input; see the agentic section of the
+[CWL export guide](../cwl_export.md) and `examples/agentic/cwl_local.py`.

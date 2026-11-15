@@ -75,6 +75,13 @@ Checkpoint keys are built from:
 Therefore, stable workflow and task names are essential. If you rename a task,
 DAGonStar treats it as a different checkpoint entry.
 
+Agentic tasks add a content identity: a completed agentic checkpoint is reused
+only when the recomputed digest of the contract, effective profile, registered
+tool/guardrail/evaluator/adapter versions, and input content hashes matches the
+recorded one, the commit manifest exists, and the published files keep their
+recorded hashes. A run that was not accepted is never reused. See
+[Agentic evaluation and checkpoints](agentic_evaluation.md#checkpoint-identity).
+
 ## Working directory persistence
 
 Checkpoint reuse requires the recorded working directory to exist.

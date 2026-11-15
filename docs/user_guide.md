@@ -5,7 +5,7 @@
 Enable `FairProfile` on a workflow and use task `declare_outputs(Artifact(...))`
 or `declare_inputs()` for intentional data metadata. The recorder writes local
 RO-Crate, PROV, DataCite, CodeMeta, SHA-256 and human-readable reports. See the
-[FAIR principles](fair_principles.md) and [FAIR tutorial](tutorial/lesson_15_make_a_workflow_fair_by_design.md)
+[FAIR principles](fair_principles.md) and [FAIR tutorial](tutorial/lesson_27_make_a_workflow_fair_by_design.md)
 for the implemented model and a runnable example.
 This guide explains how to author DAGonStar workflows for scientific computing.
 
@@ -300,3 +300,14 @@ For scientific workflows:
 - Using remote tasks before SSH is verified.
 - Committing secrets in `dagon.ini`.
 - Assuming Docker, Slurm, Globus, or cloud credentials are available in CI.
+
+## Agentic tasks
+
+Use `TaskType.AGENTIC` when a step needs an agent to propose a result that
+DAGonStar must check before anything downstream runs. Name a profile from
+`dagon.ini` with `agent=`, describe the objective and output schema, declare
+`workflow://` inputs, and list requirements with registered evaluators. The
+result is published only when the independent evaluation accepts it; otherwise
+the task fails and its dependants do not run. Start with
+[Lessons 14–16](tutorial/lesson_14_specify_and_configure_an_agentic_task.md)
+and [Agentic tasks](agentic_tasks.md).

@@ -57,6 +57,12 @@ local, remote, Slurm, Docker, cloud, and data-staging environments.
   stage-in script, marker, phases, and typed errors.
 - `dagon/remote.py`: SSH and cloud-backed tasks.
 - `dagon/docker_task.py`: local and remote Docker tasks.
+- `dagon/agentic/`: `TaskType.AGENTIC` contract, `dagon.ini` profile resolution,
+  registry of tools, guardrails, evaluators, and adapters, bounded engine,
+  sandboxed tool execution, publication, checkpoint identity, and the
+  `dagon-agent-runner` CLI used by CWL export.
+- `docs/tutorial/coverage.json`: machine-checked map from every `TaskType` and
+  inventoried feature to lessons, examples, and tests.
 - `dagon/communication/`: SSH/SCP/Globus/SKYCDS transfer helpers.
 - `examples/`: runnable examples and tutorial material.
 - `dagon.ini.sample`: safe sample configuration.
@@ -145,8 +151,8 @@ configuration validation separately from live integration behavior.
 - Changes require the local and remote pre-staging tests,
   `tools/ci_prestage_slurm.py`, the manual `tools/hpc_prestage_deep.py`, the
   `examples/dataflow/slurm/pre_stage_*.py`
-  examples, `docs/scheduler_prestaging.md`, and the Lesson 14 tutorial section
-  to stay consistent.
+  examples, `docs/scheduler_prestaging.md`, and tutorial Lessons 23 and 25
+  (with `examples/tutorial/lesson_25_scheduler_prestaging.py`) to stay consistent.
 
 ## FaaS maintenance
 
@@ -161,6 +167,28 @@ configuration validation separately from live integration behavior.
   FAIR, checkpoint, and mixed-task interoperability tests.
 - Sanitize provider metadata before logs, scratch records, JSON, or FAIR exports,
   and keep cloud limits adapter-reported rather than timeless framework claims.
+
+## Agentic task maintenance
+
+- Agent and LLM provider configuration lives in `dagon.ini` (`[agent.<name>]`,
+  `[agent_provider.<name>]`, `[llm.<name>]`); tasks select a profile by name.
+  The profile is the maximum authority: tasks may narrow tools and budgets and
+  add guardrails, never widen them. Keys are read from environment variables at
+  invocation and must never be persisted, logged, exported, or checkpointed.
+- Tools have no implicit privileges. Register them with an argument schema,
+  side-effect class, timeout, output limit, and isolation. Tools, evaluators,
+  guardrails, and adapters run in supervised processes by default; inline isolation is
+  only for side-effect-free code. Guardrails and evaluators run outside the
+  agent; agent self-reports are never evidence of acceptance.
+- A result is published (atomically, `commit.json` last) only after independent
+  acceptance; a rejected or failed run must never release dependants. Reuse a
+  checkpoint only after re-verifying contract, profile, versions, and input
+  content hashes.
+- Tests and examples use the deterministic `mock` adapter or a loopback server;
+  never require a live model. Changes require `tests/test_agentic_*.py`, the
+  all-type interoperability tests, `examples/agentic/`, Lessons 14–16, 30, and
+  32, `docs/agentic_*.md`, CWL/FAIR/JSON documentation, and `coverage.json` to
+  stay consistent.
 
 ## Documentation standards
 
@@ -182,9 +210,13 @@ configuration validation separately from live integration behavior.
 - Keep infrastructure-dependent capabilities outside the mandatory local path;
   label optional integrations as locally testable, infrastructure-dependent,
   experimental, or reserved/planned.
-- Run tutorial structure/link checks, local examples, relevant unit tests, and
-  notebook JSON validation after documentation changes. Preserve formal academic
-  tone and distinguish observed evidence from inference.
+- Run tutorial structure/link checks (`tools/validate_tutorial.py`), the
+  coverage check (`tools/validate_tutorial_coverage.py`), local examples,
+  relevant unit tests, and notebook JSON validation after documentation changes.
+- A new `TaskType` or supported feature needs a lesson, a runnable example, a
+  test target, and a `docs/tutorial/coverage.json` entry with an honest evidence
+  level; the coverage validator fails until it is mapped.
+- Preserve formal academic tone and distinguish observed evidence from inference.
 
 - All documentation, tutorials, Jupyter notebooks, and examples must remain
   mutually consistent and accurately reflect the current implementation.

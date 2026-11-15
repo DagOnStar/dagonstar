@@ -1,4 +1,4 @@
-# Lesson 13: Run a Task on a Remote Host with SSH
+# Lesson 21: Run a Task on a Remote Host with SSH
 
 > **Track:** Distributed infrastructure
 > **Runtime:** SSH
@@ -15,7 +15,7 @@ After completing this lesson, you will be able to:
 
 ## Prerequisites
 
-- [Lesson 12](lesson_12_run_a_task_in_docker.md), or equivalent concepts.
+- [Lesson 20](lesson_20_run_a_task_on_nomad.md), or equivalent concepts.
 - SSH is optional for live integration; structural checks remain local.
 
 ## Scientific scenario
@@ -37,8 +37,11 @@ Model the remote task as four explicit concerns: host identity, authentication s
 From the repository root:
 
 ~~~bash
+python examples/tutorial/lesson_21_ssh_remote_tasks.py
 python -m unittest tests.test_security_configuration tests.test_shell_commands -v
 ~~~
+
+The script constructs remote tasks with the default port 22 and with port 2200 against a mocked `SSHManager`, shows that an incomplete identity opens no connection, and checks that a working directory containing `; rm -rf ~` stays inside single quotes in the generated `mkdir` command.
 
 ## Expected result
 
@@ -47,6 +50,7 @@ Tests verify safe local configuration and command construction.
 ## Verify
 
 ~~~bash
+python examples/tutorial/lesson_21_ssh_remote_tasks.py
 python -m py_compile dagon/remote.py dagon/communication/ssh.py
 ~~~
 
@@ -74,4 +78,4 @@ Remote execution adds explicit trust, environment, and movement boundaries.
 
 ## Next lesson
 
-Next, separate transport from scheduler semantics. Return to the [syllabus](README.md) at any time.
+Next, configure cloud hosts without provisioning them. Return to the [syllabus](README.md) at any time.

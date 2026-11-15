@@ -47,8 +47,15 @@ Run the lightweight quality checks (install `mypy==1.13.0` and
 `ruff==0.6.9` first if they are not already available):
 
 ```bash
-python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py tests tools/run_local_examples.py
-python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py
+python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic tests tools/run_local_examples.py tools/validate_tutorial_coverage.py examples/agentic
+python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic/*.py
+```
+
+Validate the tutorial structure and the feature-coverage manifest:
+
+```bash
+python tools/validate_tutorial.py
+python tools/validate_tutorial_coverage.py
 ```
 
 Run the self-contained local examples as a smoke test:
@@ -103,6 +110,11 @@ To add a task type:
 6. Add unit tests for construction and dependency behavior.
 7. Update [reference_guide.md](reference_guide.md), [architecture.md](architecture.md),
    and relevant tutorials.
+8. Add a lesson, a runnable example, a test target, and a
+   `docs/tutorial/coverage.json` entry; `tools/validate_tutorial_coverage.py`
+   derives the task types from `TaskType` and fails until the new type is mapped.
+9. Extend `tests/test_tasktype_interoperability.py` so the all-type graph
+   includes the new type.
 
 ## Modifying dependency resolution
 

@@ -43,6 +43,48 @@ partition=
 ; api_key_env=DAGON_LLM_EXAMPLE_API_KEY
 ; model=example-chat-model
 
+; Agentic tasks (TaskType.AGENTIC) select a named [agent.<name>] profile.
+; Profiles resolve to an [agent_provider.<name>] adapter and, for the builtin
+; reasoning adapter, to an [llm.<name>] provider.  The profile is the maximum
+; authority: tasks may only narrow tools and budgets and add guardrails.
+; See docs/agentic_configuration.md.  The API key is read from the environment
+; variable named by api_key_env only when the agent is invoked.
+[llm.local-model]
+endpoint=http://127.0.0.1:8080
+model=fixture-model
+api_key_env=DAGON_LLM_LOCAL_API_KEY
+
+[agent_provider.builtin]
+implementation=builtin
+
+[agent_provider.fixture]
+implementation=mock
+
+[agent.quality-local]
+provider=fixture
+strategy=bounded_iterative
+tools=inspect_records, repair_records
+guardrails=preserve_record_ids
+max_steps=8
+max_tool_calls=8
+timeout_seconds=60
+max_tokens=4096
+max_tool_output_bytes=65536
+max_trace_bytes=262144
+
+[agent.quality-live]
+provider=builtin
+llm_provider=local-model
+strategy=bounded_iterative
+tools=inspect_records, repair_records
+guardrails=preserve_record_ids
+max_steps=8
+max_tool_calls=8
+timeout_seconds=60
+max_tokens=4096
+max_tool_output_bytes=65536
+max_trace_bytes=262144
+
 ; FaaS profiles contain no credentials. Cloud adapters use their standard
 ; runtime credential chains; HTTP header values come from named environment variables.
 [faas.mock.local]

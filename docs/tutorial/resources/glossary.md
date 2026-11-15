@@ -23,3 +23,8 @@
 - **Inference:** a conclusion supported by observations and stated assumptions; it must not be reported as direct evidence.
 - **Reproducibility:** obtaining consistent results from a sufficiently specified method and environment; one successful rerun establishes only limited evidence.
 - **Portability boundary:** the point beyond which an exported description no longer represents backend-specific execution, staging, credentials, or policy.
+- **Agentic task:** a `TaskType.AGENTIC` task in which a bounded agent proposes a result that DAGonStar checks with guardrails and independent evaluators before publication.
+- **Agent profile:** a named `[agent.<name>]` section in `dagon.ini`; it is the maximum authority over tools, guardrails, and budgets.
+- **Guardrail:** a registered check, run outside the agent, that refuses or returns feedback on an action or candidate.
+- **Result fit:** the weighted mean of evaluator scores; acceptance also requires the threshold, mandatory, and hard gates.
+- **Coverage manifest:** `docs/tutorial/coverage.json`, the machine-checked map from task types and features to lessons, examples, and tests.

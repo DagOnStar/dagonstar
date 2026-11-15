@@ -28,3 +28,7 @@ For workflows whose commands contain `workflow://` references, the exporter
 preserves graph ordering but does not translate DAGonStar staging into CWL
 `File` parameters. See the [CWL export guide](../../docs/cwl_export.md) for the
 complete interoperability boundary.
+
+Agentic tasks export to an executable `dagon-agent-runner` step with a
+workflow-level `dagon_config: File` input; see the agentic section of the
+[CWL export guide](../../docs/cwl_export.md) and `examples/agentic/cwl_local.py`.

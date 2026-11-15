@@ -1,4 +1,4 @@
-# Lesson 17: Export and Validate Common Workflow Language
+# Lesson 29: Export and Validate Common Workflow Language
 
 > **Track:** Advanced
 > **Runtime:** Local
@@ -15,7 +15,7 @@ After completing this lesson, you will be able to:
 
 ## Prerequisites
 
-- [Lesson 16](lesson_16_compose_meta_workflows.md), or equivalent concepts.
+- [Lesson 28](lesson_28_compose_meta_workflows.md), or equivalent concepts.
 - No external service unless stated below.
 
 ## Scientific scenario
@@ -37,8 +37,12 @@ Inspect `examples/cwl/export_workflow.py` and predict how tasks, edges, commands
 From the repository root:
 
 ~~~bash
+python examples/tutorial/lesson_29_cwl_export.py
 python -m unittest tests.test_cwl_example -v
+python examples/agentic/cwl_local.py
 ~~~
+
+The Lesson 29 script exports the same graph twice, checks byte-identical output, a file edge and an ordering-only edge, and the absence of scratch paths, and runs `cwltool --validate` when it is installed. `cwl_local.py` exports an agentic step as a `dagon-agent-runner` invocation that takes `dagon_config` as a workflow input, and executes the graph with `cwltool --no-container` when both tools are present.
 
 ## Expected result
 
@@ -47,7 +51,8 @@ The test regenerates and checks deterministic CWL structure.
 ## Verify
 
 ~~~bash
-python -m unittest tests.test_cwl_example -v
+python examples/tutorial/lesson_29_cwl_export.py
+python -m unittest tests.test_cwl_example tests.test_agentic_cwl -v
 ~~~
 
 Schema validation does not prove identical runtime behavior on every runner.
@@ -74,4 +79,4 @@ CWL export describes the portable graph; it is not execution.
 
 ## Next lesson
 
-Next, [operate across the compute continuum with bounded IoT tasks](lesson_18_compute_continuum_operations.md). Return to the [syllabus](README.md) at any time.
+Next, [combine edge, serverless, native, and agentic tasks across the compute continuum](lesson_30_compute_continuum_operations.md). Return to the [syllabus](README.md) at any time.

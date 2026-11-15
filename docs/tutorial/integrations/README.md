@@ -12,3 +12,4 @@ These case studies sit outside the numbered curriculum so infrastructure and mat
 - [DynoStore case study](dynostore.md) — explicit integration; automatic `DataMover.DYNOSTORE` staging is reserved rather than implemented.
 - [FaaS task guide](../../faas_tasks.md) and [credential-free examples](../../../examples/faas/README.md) — supported invocation of already-deployed functions; deployment is outside DAGonStar's task lifecycle.
 - [All-task interoperability guide](../../tasktype_interoperability.md) — locally testable construction, traversal, FAIR, checkpoint, and CWL contracts; portable emulation is not evidence that an external backend ran.
+- [Agentic tasks with a live OpenAI-compatible endpoint](../../agentic_configuration.md#examples) — supported but infrastructure-dependent; tests and CI exercise the builtin adapter only against a loopback server.
