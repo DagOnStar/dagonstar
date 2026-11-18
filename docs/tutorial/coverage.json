@@ -907,7 +907,7 @@
         "tests.test_adhoc_filesystems"
       ],
       "evidence_level": "mock-contract",
-      "limitations": "Lifecycles run against local stand-ins (DAGonFS native protocol, CAPIO/Hercules scripts, docker recorder, loopback DynoStore gateway); the example uses portable emulation. Live runs (manual, not CI) are recorded in docs/performance/adhoc_filesystems_2026-11-18.md: DAGonFS, CAPIO, DynoStore, and Hercules (with tools/adhoc/hercules-a13da96-fixes.patch applied) passed byte-verified workflows; BeeOND relies on the earlier site run and CI emulation."
+      "limitations": "Lifecycles run against local stand-ins (DAGonFS native protocol, CAPIO/Hercules scripts, docker recorder, loopback DynoStore gateway); the example uses portable emulation. Live runs (manual, not CI) are recorded in docs/performance/adhoc_filesystems_2026-11-18.md: DAGonFS, CAPIO, DynoStore (with tools/adhoc/dynostore-b9dedd7-fixes.patch applied, including the managed compose lifecycle), and Hercules (with tools/adhoc/hercules-a13da96-fixes.patch applied) passed byte-verified workflows; BeeOND relies on the earlier site run and CI emulation."
     },
     {
       "feature_id": "slurm.scheduler-prestaging",

@@ -218,7 +218,10 @@ frontends; macOS and one- and two-node Slurm), CAPIO (one Slurm node), and
 DynoStore (Docker Compose on macOS) and Hercules (one and two Slurm nodes)
 with byte-verified data. Hercules works only with the fixes recorded in
 `tools/adhoc/hercules-a13da96-fixes.patch`; unpatched deployments failed and
-were stopped by the adapter's readiness check.
+were stopped by the adapter's readiness check. DynoStore deploys from its
+README steps, and keeps object overwrites consistent, only with
+`tools/adhoc/dynostore-b9dedd7-fixes.patch`; with it, the managed Docker
+Compose lifecycle was also verified live.
 BeeOND relies on the earlier production-site run and CI emulation. These live
 runs are manual and are not part of CI.
 Scheduler-aware pre-staging is opt-in and leaves the default lifecycle

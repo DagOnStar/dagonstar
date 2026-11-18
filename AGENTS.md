@@ -169,6 +169,10 @@ configuration validation separately from live integration behavior.
   or launchers (it is a URL path segment).
 - The DAGonFS native readiness/shutdown requests mirror DAGonFS protocol
   version 2; update them together with DAGonFS's `Protocol.h`.
+- DynoStore `b9dedd7` needs `tools/adhoc/dynostore-b9dedd7-fixes.patch` for a
+  scripted deployment and consistent overwrites. Keep it applicable to that
+  commit, list each fix in `docs/adhoc_filesystems.md`, and never let it, a
+  deployment log, or a benchmark report contain a user or admin token.
 - Hercules `a13da96` needs `tools/adhoc/hercules-a13da96-fixes.patch`. Keep the
   patch applicable to the commit it names, list each fix in
   `docs/adhoc_filesystems.md`, and record its verification in

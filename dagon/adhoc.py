@@ -895,10 +895,15 @@ class DynoStore(AdHocFileSystem):
             return
         if self.managed:
             cwd = os.path.dirname(os.path.abspath(str(self.compose_file)))
+            # DynoStore's deployment scripts read the compose file and project
+            # from these variables; they name no credential.
+            environment = dict(os.environ, DYNOSTORE_COMPOSE_FILE=os.path.abspath(str(self.compose_file)))
+            if self.compose_project:
+                environment["DYNOSTORE_PROJECT"] = self.compose_project
             # Set before "up" so that a failure below still brings the stack down.
             self._started = True
             for command in [self.compose_command("up", "-d")] + self.setup_commands:
-                completed = subprocess.run(command, cwd=cwd, check=False,
+                completed = subprocess.run(command, cwd=cwd, check=False, env=environment,
                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 if completed.returncode:
                     self.stop(raise_errors=False)

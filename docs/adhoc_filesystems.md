@@ -244,16 +244,64 @@ python -m dagon.adhoc dynostore evict "$KEY"
 or `DynoStoreClient.from_environment()` in Python. Tasks that call the
 `dynostore` CLI authenticate with the CLI's own token file.
 
-Deploying DynoStore from its repository's `docker-compose.dev.yml`
-(November 2026) needed four site steps that are not part of DAGonStar and
-that `setup_commands` can carry: creating the metadata tables (the FastAPI
-metadata service expects existing tables), registering the data containers
-directly with the metadata service (the gateway posts to `/api/servers`,
-which the service does not route), setting `ENABLE_KAGIO=false` on the
-gateway and metadata service (otherwise placement waits for an unreachable
-analytics host), and, for `evict` and `exists` on removed objects, two gateway
-and metadata route defects that were patched in the test deployment only. The
-[performance record](performance/adhoc_filesystems_2026-11-18.md) lists them.
+Setup commands run in the compose file's directory with
+`DYNOSTORE_COMPOSE_FILE` (absolute path) and, when `compose_project` is set,
+`DYNOSTORE_PROJECT` in their environment, so DynoStore's deployment scripts
+address the same stack as DAGonStar. `docker compose down` keeps the named
+volumes, so a stack initialised once (administrator, data containers) keeps
+its user token across workflow runs; DAGonStar never creates users or tokens.
+
+**Required DynoStore fixes.** DynoStore as released (commit `b9dedd7`, November 2026) cannot be deployed
+from its `docker-compose.dev.yml` and README steps, and loses data integrity
+on overwrite. [`tools/adhoc/dynostore-b9dedd7-fixes.patch`](../tools/adhoc/dynostore-b9dedd7-fixes.patch)
+(apply with `git apply` in a DynoStore checkout at that commit) fixes:
+
+1. The metadata service never creates its tables (it assumed Laravel
+   migrations); it now creates them at start-up, waiting for MySQL.
+   `configure_services.sh` called a removed PHP service; it now creates the
+   schema idempotently.
+2. The gateway registers data containers at `/api/servers`, which the
+   metadata service does not route, and reports success regardless; it now
+   uses `/servers` and propagates the status (also for `/statistic` and
+   `/clean`). The metadata service rejected the numeric `memory`/`storage`
+   the data containers send, and registration added a duplicate row on every
+   run; both are fixed.
+3. Data containers reported `storage: null` under Docker Desktop (no
+   partition contains the working directory); they now fall back to the
+   working directory's file system. Registration exits non-zero on failure,
+   and `create_nodes.sh` retries.
+4. KAGIO analytics and the replicator defaulted on and waited on a
+   site-specific host; they now default off (`ENABLE_KAGIO=true`,
+   `ENABLE_REPLICATOR=true`, and `KAGIO_API_BASE_URL` re-enable them).
+5. `DELETE /storage/<user>/<key>` called the controller with the wrong
+   arguments and without `await`; the metadata `exists` route never reached
+   its "not found" branch.
+6. A second `put` of an existing key kept the old chunk records, so `get`
+   returned the **previous** object's bytes, and a key re-used after `evict`
+   stayed marked removed. A re-put now deletes and forgets the old chunks and
+   clears the removal flag; a live key owned by another user is refused with
+   409. `evict` deletes every chunk and replica, not only those a read uses.
+7. The gateway stored metadata and data for keys the catalog service rejects;
+   it now refuses keys outside `[0-9A-Za-z-]{32,256}` with 400 first.
+   Catalog registration failures no longer raise a `TypeError`.
+8. The deployment scripts and README named `docker-compose-dev.yml` and mixed
+   compose files; they now use `docker-compose.dev.yml`, honour
+   `DYNOSTORE_PROJECT` and `DYNOSTORE_COMPOSE_FILE`, and the README notes
+   `DOCKER_DEFAULT_PLATFORM=linux/amd64` for MySQL 5.7 on arm64.
+
+With the patch, a deployment follows the README alone:
+
+```bash
+export DYNOSTORE_PROJECT=dynostore          # the -p name, if any
+docker compose -f docker-compose.dev.yml -p "$DYNOSTORE_PROJECT" up -d
+bash configure_services.sh
+(umask 077; bash generate_admin.sh | awk '{print $NF}' > ~/.dynostore-admin-token)
+bash create_nodes.sh "$(cat ~/.dynostore-admin-token)"
+```
+
+The [performance record](performance/adhoc_filesystems_2026-11-18.md) gives
+the live verification. Without fix 6, a workflow that re-uses an object key
+silently reads stale data.
 
 ## Portable emulation
 

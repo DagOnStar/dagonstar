@@ -31,6 +31,8 @@ Other live backends are named the same way: `--capio-server` with
 `--dynostore-server HOST:PORT` with the user token in `$DYNOSTORE_TOKEN`.
 Hercules needs the fixes in
 [`tools/adhoc/hercules-a13da96-fixes.patch`](../../tools/adhoc/hercules-a13da96-fixes.patch)
-applied to its source tree.
+applied to its source tree; DynoStore needs
+[`tools/adhoc/dynostore-b9dedd7-fixes.patch`](../../tools/adhoc/dynostore-b9dedd7-fixes.patch)
+for a deployment from its README steps.
 Measured results, with hosts, dates, and limitations, are recorded in
 [`docs/performance/adhoc_filesystems_2026-11-18.md`](../../docs/performance/adhoc_filesystems_2026-11-18.md).

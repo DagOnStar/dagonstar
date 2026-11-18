@@ -15,7 +15,7 @@ Values are medians of three runs unless stated. The raw reports are in
 |---|---|---|
 | DAGonFS (FUSE3, native, preload) | yes: lifecycle, three frontends, byte verification | macOS 26.6 arm64 (macFUSE); PurpleJeans, 1 and 2 nodes |
 | CAPIO | yes: lifecycle, interception, byte verification | PurpleJeans, 1 node |
-| DynoStore | yes: put, exists, get, evict, workflow tasks | macOS 26.6 arm64, Docker Desktop |
+| DynoStore | yes, with the fixes in `tools/adhoc/dynostore-b9dedd7-fixes.patch`: clean deployment from the README steps, put, exists, get, evict, CLI, workflow tasks, managed compose lifecycle | macOS 26.6 arm64, Docker Desktop |
 | Hercules | yes, with the fixes in `tools/adhoc/hercules-a13da96-fixes.patch`: lifecycle, interception, byte verification | PurpleJeans, 1 and 2 nodes |
 | BeeOND | no new run (no BeeOND or Docker on PurpleJeans) | earlier four-node production run of the BeeOND integration; CI emulation |
 
@@ -172,33 +172,82 @@ Hercules tree are not supported.
 
 DynoStore `docker-compose.dev.yml` (gateway, authentication, metadata,
 catalog, ten data containers) on Docker Desktop, macOS 26.6.2 arm64; the MySQL
-5.7 image ran under amd64 emulation. The workflow attached to the running
-gateway (no managed compose lifecycle). Each file is one object; 16 x 4 MiB,
-4 readers ([raw](raw/dynostore_macos_2026-11-18.json)):
+5.7 image ran under amd64 emulation. Each file is one object; 16 x 4 MiB,
+4 readers. The gateway erasure-codes each upload into five chunks
+synchronously, so write throughput reflects that work on one laptop, not a
+distributed deployment.
 
-| Backend | Workflow (s) | Write (MiB/s) | Aggregate read (MiB/s) | Start (s) | Stop (s) |
-|---|---:|---:|---:|---:|---:|
-| local | 4.94 | 607.3 | 8586.1 | — | — |
-| dynostore | 18.54 | 6.9 | 59.7 | 0.01 | 0.00 |
+### As released: hand-repaired deployment
 
-A separate probe verified `put`, `exists`, `get` (SHA-256 identical),
-`evict`, and `exists` returning false afterwards. The gateway erasure-codes
-each upload into five chunks synchronously, so write throughput reflects that
-work on one laptop, not a distributed deployment.
+The first run (18 November, 07:05 UTC) used DynoStore at upstream commit `b9dedd7` with
+site steps outside DAGonStar: creating the metadata tables from the service's
+SQLAlchemy models, registering the data containers directly with the
+metadata service, setting `ENABLE_KAGIO=false`, and patching the gateway's
+`DELETE` route and the metadata `exists` route in a scratch clone. The
+workflow attached to the running gateway
+([raw](raw/dynostore_macos_2026-11-18.json)). It also found two adapter
+defects, both fixed with tests: the metadata service answers
+`200 {"exists": false}` for absent objects (the adapter had treated any 200
+as present), and the catalog service accepts only keys of 32 to 256 letters,
+digits, or hyphens, while the gateway stores other keys before failing (the
+adapter now refuses such keys before any request).
 
-The live run found two adapter defects, both fixed with tests: the metadata
-service answers `200 {"exists": false}` for absent objects (the adapter had
-treated any 200 as present), and the catalog service accepts only keys of 32
-to 256 letters, digits, or hyphens, while the gateway stores other keys before
-failing (the adapter now refuses such keys before any request). The test
-deployment also needed site steps outside DAGonStar: creating the metadata
-tables from the service's SQLAlchemy models, registering the data containers
-directly with the metadata service (the gateway posts to `/api/servers`, which
-the FastAPI service does not route, and reports success regardless), setting
-`ENABLE_KAGIO=false` (placement otherwise waits on an unreachable analytics
-host), and patching, in the scratch clone only, the gateway's `DELETE` route
-(wrong call signature) and the metadata `exists` route (unreachable
-"not found" branch). These are upstream DynoStore defects as of this date.
+### Diagnosis and fixes
+
+Later the same day the deployment was repeated from a fresh clone, fixing each
+defect in DynoStore instead of working around it. The resulting
+`tools/adhoc/dynostore-b9dedd7-fixes.patch` (15 files) applies with
+`git apply --check` to a clean checkout of `b9dedd7`;
+[the guide](../adhoc_filesystems.md#dynostore) lists the eight fixes. Two
+were found only in this round:
+
+- a fresh `up -d` raced the metadata start-up against MySQL, and the
+  service exited ("Application startup failed") once table creation moved
+  into its lifespan; it now retries;
+- a managed workflow that re-used an object key left by an earlier failed run
+  read back the **earlier** run's bytes: the producer's SHA-256 was
+  `bb2a21cf…`, the consumer's `852c92a5…`, equal to the earlier input. The
+  metadata service appended new chunk records to the old ones, and reads used
+  the first. With the fix, the same workflow verified on both the replacing
+  run and a re-put after `evict`.
+
+### Verification with the patch
+
+All on 18 November after the patch, MacBook (macOS 26.6.2 arm64, 16 CPUs, Docker Desktop),
+Python 3.12.10, user token only in `$DYNOSTORE_TOKEN`:
+
+1. `docker compose -f docker-compose.dev.yml -p dynofix down -v`, then
+   `up -d`, `configure_services.sh`, `generate_admin.sh`, and
+   `create_nodes.sh` exactly as in the patched README: ten data containers
+   registered; running `create_nodes.sh` again left ten rows, not twenty.
+2. Gateway checks: a 2-character key is refused with 400; `exists` on an
+   absent key answers `200 {"exists": false}`; `DELETE` of an absent key
+   answers 404.
+3. `DynoStore.put/exists/get/evict` probe (4 MiB): SHA-256 identical, `exists`
+   false after `evict`.
+4. Task CLI (`python -m dagon.adhoc dynostore put|exists|get|evict`, 1 MiB):
+   `cmp` identical, `exists` exit status 0 before and 1 after `evict`.
+5. Managed lifecycle: a two-task workflow with
+   `compose_file=docker-compose.dev.yml`, `compose_project="dynofix"`, and
+   `setup_commands=[["bash", "configure_services.sh"]]` brought the stopped
+   stack up, ran the producer (`put`, `exists`) and the consumer (`get`,
+   SHA-256 against `workflow:///producer/in.sha`, `evict`, `exists` false),
+   and brought the stack down (no container left). Run twice with the same key:
+   17.7 s and 19.9 s, both verified.
+6. Benchmark ([raw](raw/dynostore_macos_fixed_2026-11-18.json)):
+
+| Run | Backend | Workflow (s) | Write (MiB/s) | Aggregate read (MiB/s) | Start (s) | Stop (s) |
+|---|---|---:|---:|---:|---:|---:|
+| hand-repaired (07:05 UTC) | local | 4.94 | 607.3 | 8586.1 | — | — |
+| hand-repaired (07:05 UTC) | dynostore | 18.54 | 6.9 | 59.7 | 0.01 | 0.00 |
+| patched | local | 5.03 | 565.6 | 8655.7 | — | — |
+| patched | dynostore | 21.30 | 5.5 | 56.1 | 0.01 | 0.00 |
+
+The patched write path adds an ownership and placement lookup per upload; we
+did not isolate its cost, and the difference between two laptop runs with
+other load is not evidence either way. Neither row is a DynoStore capability
+claim. The token
+never appeared in the reports, logs printed here, or the patch.
 
 ## Interface overhead and limitations
 

@@ -684,6 +684,25 @@ class DynoStoreTests(AdHocTestCase):
         self.assertEqual(lines, ["compose -f %s -p dagon up -d" % compose, "compose exec metadata true",
                                  "compose -f %s -p dagon down" % compose])
 
+    def test_setup_commands_learn_the_compose_file_and_project(self):
+        server = self.gateway()
+        log = os.path.join(self.scratch, "setup.log")
+        docker = write_script(self.scratch, "docker", "")
+        setup = write_script(self.scratch, "setup", """
+            import os
+            with open(%r, "w") as stream:
+                stream.write(os.environ["DYNOSTORE_COMPOSE_FILE"] + "|" + os.environ["DYNOSTORE_PROJECT"])
+        """ % log)
+        compose = os.path.join(self.scratch, "docker-compose.dev.yml")
+        open(compose, "w").close()
+        store = DynoStore(self.workflow(portable=False), server=server, compose_file=compose,
+                          compose_project="dagon", docker=docker, setup_commands=[[setup]])
+        with patch.dict(os.environ, {"DYNOSTORE_TOKEN": "secret-token-value"}):
+            store.start()
+            store.stop()
+        with open(log, encoding="utf-8") as stream:
+            self.assertEqual(stream.read(), os.path.abspath(compose) + "|dagon")
+
     def test_failed_setup_brings_the_stack_down(self):
         log = os.path.join(self.scratch, "docker.log")
         docker = write_script(self.scratch, "docker", """
