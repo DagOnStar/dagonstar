@@ -12,7 +12,6 @@ import os
 import pickle
 import shutil
 import stat
-import struct
 import sys
 import tempfile
 import textwrap
@@ -56,6 +55,11 @@ while True:
         os.unlink(path)
         sys.exit(0)
 '''
+
+
+# DAGonFS, CAPIO, and Hercules run on POSIX hosts only, and the provider and
+# Docker stand-ins below are shebang scripts, which Windows cannot execute.
+POSIX_ONLY = unittest.skipIf(os.name == "nt", "POSIX-only providers and executable stand-ins")
 
 
 def write_script(directory, name, body):
@@ -111,6 +115,7 @@ class CommonContractTests(AdHocTestCase):
         with self.assertRaises(ValueError):
             workflow.create_adhoc_filesystem("dagonfs", name="shared")
 
+    @POSIX_ONLY
     def test_common_and_per_name_variables(self):
         workflow = self.workflow()
         task = DagonTask(TaskType.BATCH, "producer", "true")
@@ -191,6 +196,7 @@ class CommonContractTests(AdHocTestCase):
         run.assert_not_called()
 
 
+@POSIX_ONLY
 class DAGonFSTests(AdHocTestCase):
     def test_commands_follow_the_dagonfs_cli(self):
         workflow = self.workflow()
@@ -286,6 +292,7 @@ class DAGonFSTests(AdHocTestCase):
         self.assertIsNone(volume._process)
 
 
+@POSIX_ONLY
 class CapioTests(AdHocTestCase):
     def config(self, name="capio-wf"):
         path = os.path.join(self.scratch, "capio.json")
@@ -365,6 +372,7 @@ class CapioTests(AdHocTestCase):
         self.assertFalse(capio.started)
 
 
+@POSIX_ONLY
 class HerculesTests(AdHocTestCase):
     def config(self):
         path = os.path.join(self.scratch, "hercules.conf")
@@ -604,10 +612,11 @@ class DynoStoreTests(AdHocTestCase):
         with open(local, "wb") as stream:
             stream.write(payload)
         with patch.dict(os.environ, {"DYNOSTORE_TOKEN": "tok"}):
-            key = store.put(local, key="obj-00000000000000000000000000000001")
-            self.assertEqual(LoopbackDynoStore.metadata["obj-00000000000000000000000000000001"]["key"], "obj-00000000000000000000000000000001")
-            self.assertEqual(LoopbackDynoStore.metadata["obj-00000000000000000000000000000001"]["is_encrypted"], 0)
-            self.assertEqual(pickle.loads(zlib.decompress(LoopbackDynoStore.objects["obj-00000000000000000000000000000001"])), payload)
+            name = "obj-00000000000000000000000000000001"
+            key = store.put(local, key=name)
+            self.assertEqual(LoopbackDynoStore.metadata[name]["key"], name)
+            self.assertEqual(LoopbackDynoStore.metadata[name]["is_encrypted"], 0)
+            self.assertEqual(pickle.loads(zlib.decompress(LoopbackDynoStore.objects[name])), payload)
             self.assertTrue(store.exists(key))
             out = os.path.join(self.scratch, "out.bin")
             self.assertEqual(store.get(key, out), len(payload))
@@ -664,6 +673,7 @@ class DynoStoreTests(AdHocTestCase):
             store.start()
         self.assertFalse(store.started)
 
+    @POSIX_ONLY
     def test_managed_compose_deployment(self):
         server = self.gateway()
         log = os.path.join(self.scratch, "docker.log")
@@ -684,6 +694,7 @@ class DynoStoreTests(AdHocTestCase):
         self.assertEqual(lines, ["compose -f %s -p dagon up -d" % compose, "compose exec metadata true",
                                  "compose -f %s -p dagon down" % compose])
 
+    @POSIX_ONLY
     def test_setup_commands_learn_the_compose_file_and_project(self):
         server = self.gateway()
         log = os.path.join(self.scratch, "setup.log")
@@ -703,6 +714,7 @@ class DynoStoreTests(AdHocTestCase):
         with open(log, encoding="utf-8") as stream:
             self.assertEqual(stream.read(), os.path.abspath(compose) + "|dagon")
 
+    @POSIX_ONLY
     def test_failed_setup_brings_the_stack_down(self):
         log = os.path.join(self.scratch, "docker.log")
         docker = write_script(self.scratch, "docker", """
@@ -722,7 +734,8 @@ class DynoStoreTests(AdHocTestCase):
 
     def test_portable_task_sees_object_store_variables(self):
         workflow = self.workflow()
-        task = DagonTask(TaskType.BATCH, "t", 'test "$DAGON_ADHOC_ACCESS" = object && test -d "$DYNOSTORE_EMULATED_DIR"')
+        task = DagonTask(TaskType.BATCH, "t",
+                         'test "$DAGON_ADHOC_ACCESS" = object && test -d "$DYNOSTORE_EMULATED_DIR"')
         workflow.add_task(task)
         workflow.create_adhoc_filesystem("dynostore", catalog="c").bind(task)
         workflow.run()

@@ -99,6 +99,14 @@ platform, the pre-staging unit tests and `pre_stage_mock.py` (part of the local
 examples) use a mock `sbatch`. The RemoteSlurm tests use a loopback SSH double
 and are skipped on Windows.
 
+### Ad-hoc file systems
+
+DAGonFS, CAPIO, and Hercules run on POSIX hosts only. On Windows, the ad-hoc
+interface's portable emulation, BeeOND command generation, and DynoStore
+client tests run; the DAGonFS, CAPIO, and Hercules lifecycle tests and the
+managed DynoStore Docker Compose tests are skipped, because their stand-in
+executables are shebang scripts and they check POSIX paths.
+
 ## Local execution on each platform
 
 DAGonStar launchers are POSIX `bash` scripts. The interpreter is chosen by
