@@ -42,5 +42,6 @@ The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) has 
 - [Compute continuum](compute_continuum.md)
 - [CWL export](cwl_export.md)
 - [Examples](examples/README.md)
+- [Presentations](presentations/README.md): a 20-minute scientific talk and a 20-minute hands-on tutorial deck
 
 Documentation follows the implementation-first rule: source and passing tests define supported behavior. Infrastructure and experimental integrations are labelled explicitly and are never prerequisites for the local core track.
