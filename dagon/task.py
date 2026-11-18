@@ -261,7 +261,8 @@ class Task(Thread):
 
     def get_execution_metadata(self) -> Dict[str, Any]:
         """Return sanitized backend metadata for optional provenance recorders."""
-        return {}
+        filesystems = [filesystem.metadata() for filesystem in getattr(self, "adhoc_filesystems", [])]
+        return {"adhoc_filesystems": filesystems} if filesystems else {}
 
     # -- Scheduler-aware pre-staging -------------------------------------
 
@@ -1488,7 +1489,21 @@ class Task(Thread):
         Backends override this to prepare execution-time resources (for
         example a BeeOND volume) before staging and the command run.
         """
-        return ""
+        lines = []
+        for filesystem in getattr(self, "adhoc_filesystems", []):
+            for key, value in filesystem.task_environment(self).items():
+                lines.append("export %s=%s" % (key, quote(str(value))))
+            # Path lists (for example LD_LIBRARY_PATH) are prepended, not replaced.
+            for key, value in filesystem.path_environment(self).items():
+                lines.append('export %s=%s"${%s:+:$%s}"' % (key, quote(str(value)), key, key))
+        return ("\n".join(lines) + "\n") if lines else ""
+
+    def adhoc_late_prologue(self) -> str:
+        """Launcher lines that refer to resources prepared by a backend prologue."""
+        lines = []
+        for filesystem in getattr(self, "adhoc_filesystems", []):
+            lines.extend(getattr(filesystem, "launcher_environment_lines", lambda: [])())
+        return ("\n".join(lines) + "\n") if lines else ""
 
     def launcher_epilogue(self) -> str:
         """Return launcher lines run after the command and before post-processing."""
@@ -1496,7 +1511,13 @@ class Task(Thread):
 
     def portable_environment(self) -> Dict[str, str]:
         """Return extra environment variables for portable local emulation."""
-        return {}
+        environment: Dict[str, str] = {}
+        for filesystem in getattr(self, "adhoc_filesystems", []):
+            environment.update(filesystem.portable_environment(self))
+            for key, value in filesystem.path_environment(self).items():
+                current = environment.get(key, os.environ.get(key, ""))
+                environment[key] = os.pathsep.join(item for item in (str(value), current) if item)
+        return environment
 
     # process the command to execute
     def include_command(self, body):

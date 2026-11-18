@@ -1,0 +1,472 @@
+{
+  "availability": {
+    "beeond": {
+      "available": true,
+      "commands": {
+        "sbatch": "/opt/share/sw/gcc-8.5.0/slurm-23.11.3/bin/sbatch"
+      },
+      "missing": []
+    },
+    "capio": {
+      "available": false,
+      "commands": {
+        "capio_server": null
+      },
+      "missing": [
+        "capio_server"
+      ]
+    },
+    "dagonfs": {
+      "available": false,
+      "commands": {
+        "dagonfs": null,
+        "mpirun": "/opt/share/comps/gcc-12.2.1/ompi-4.1.4_nccl/bin/mpirun"
+      },
+      "missing": [
+        "dagonfs"
+      ]
+    },
+    "dynostore": {
+      "available": false,
+      "commands": {
+        "docker": null
+      },
+      "missing": [
+        "docker"
+      ]
+    },
+    "hercules": {
+      "available": false,
+      "commands": {
+        "hercules": null
+      },
+      "missing": [
+        "hercules"
+      ]
+    }
+  },
+  "environment": {
+    "cpus": 32,
+    "platform": "Linux-4.18.0-553.104.1.el8_10.x86_64-x86_64-with-glibc2.28",
+    "python": "3.11.13"
+  },
+  "generated_at": "2026-11-17T00:36:18Z",
+  "interface": {
+    "baseline": {
+      "maximum": 2.016695272177458,
+      "median": 2.0133424289524555,
+      "minimum": 2.012522555887699,
+      "samples": [
+        2.0133424289524555,
+        2.016695272177458,
+        2.012522555887699
+      ]
+    },
+    "beeond": {
+      "maximum": 2.0261094719171524,
+      "median": 2.025753892958164,
+      "minimum": 2.025048218667507,
+      "samples": [
+        2.025048218667507,
+        2.025753892958164,
+        2.0261094719171524
+      ]
+    },
+    "capio": {
+      "maximum": 2.0268812589347363,
+      "median": 2.026475388556719,
+      "minimum": 2.025961797684431,
+      "samples": [
+        2.026475388556719,
+        2.0268812589347363,
+        2.025961797684431
+      ]
+    },
+    "dagonfs": {
+      "maximum": 2.0277137719094753,
+      "median": 2.0269634909927845,
+      "minimum": 2.0224942676723003,
+      "samples": [
+        2.0277137719094753,
+        2.0224942676723003,
+        2.0269634909927845
+      ]
+    },
+    "dynostore": {
+      "maximum": 2.0265260376036167,
+      "median": 2.0264673195779324,
+      "minimum": 2.022550083696842,
+      "samples": [
+        2.0264673195779324,
+        2.022550083696842,
+        2.0265260376036167
+      ]
+    },
+    "hercules": {
+      "maximum": 2.028509631752968,
+      "median": 2.024774704128504,
+      "minimum": 2.023351240903139,
+      "samples": [
+        2.023351240903139,
+        2.028509631752968,
+        2.024774704128504
+      ]
+    }
+  },
+  "live": {
+    "dagonfs-fuse3": {
+      "aggregate_read_mib_s": {
+        "maximum": 1755.055464052165,
+        "median": 1733.2730078354193,
+        "minimum": 1295.5604589900995,
+        "samples": [
+          1295.5604589900995,
+          1733.2730078354193,
+          1755.055464052165
+        ]
+      },
+      "options": {
+        "frontend": "fuse3",
+        "ranks": 8
+      },
+      "read_seconds_max": {
+        "maximum": 3.1615660786628723,
+        "median": 2.363159168511629,
+        "minimum": 2.333829376846552,
+        "samples": [
+          3.1615660786628723,
+          2.363159168511629,
+          2.333829376846552
+        ]
+      },
+      "start_seconds": {
+        "maximum": 1.1034460999071598,
+        "median": 0.7027974836528301,
+        "minimum": 0.702319510281086,
+        "samples": [
+          1.1034460999071598,
+          0.7027974836528301,
+          0.702319510281086
+        ]
+      },
+      "stop_seconds": {
+        "maximum": 0.3141382224857807,
+        "median": 0.2651081308722496,
+        "minimum": 0.26439861953258514,
+        "samples": [
+          0.3141382224857807,
+          0.26439861953258514,
+          0.2651081308722496
+        ]
+      },
+      "workflow_seconds": {
+        "maximum": 20.265644136816263,
+        "median": 19.12401221692562,
+        "minimum": 18.851219318807125,
+        "samples": [
+          20.265644136816263,
+          19.12401221692562,
+          18.851219318807125
+        ]
+      },
+      "write_mib_s": {
+        "maximum": 205.57770464576453,
+        "median": 205.2252387245444,
+        "minimum": 203.90979516259435,
+        "samples": [
+          203.90979516259435,
+          205.2252387245444,
+          205.57770464576453
+        ]
+      },
+      "write_seconds": {
+        "maximum": 2.510914199054241,
+        "median": 2.4948198534548283,
+        "minimum": 2.490542449057102,
+        "samples": [
+          2.510914199054241,
+          2.4948198534548283,
+          2.490542449057102
+        ]
+      }
+    },
+    "dagonfs-native": {
+      "aggregate_read_mib_s": {
+        "maximum": 1831.5156937638533,
+        "median": 1711.180350970506,
+        "minimum": 1710.8470777153505,
+        "samples": [
+          1711.180350970506,
+          1710.8470777153505,
+          1831.5156937638533
+        ]
+      },
+      "options": {
+        "frontend": "native",
+        "ranks": 8
+      },
+      "read_seconds_max": {
+        "maximum": 2.3941356614232063,
+        "median": 2.3936693742871284,
+        "minimum": 2.236399073153734,
+        "samples": [
+          2.3936693742871284,
+          2.3941356614232063,
+          2.236399073153734
+        ]
+      },
+      "start_seconds": {
+        "maximum": 0.702681839466095,
+        "median": 0.702204953879118,
+        "minimum": 0.6018113344907761,
+        "samples": [
+          0.702204953879118,
+          0.6018113344907761,
+          0.702681839466095
+        ]
+      },
+      "stop_seconds": {
+        "maximum": 0.26432354375720024,
+        "median": 0.2643207088112831,
+        "minimum": 0.2641777768731117,
+        "samples": [
+          0.2643207088112831,
+          0.26432354375720024,
+          0.2641777768731117
+        ]
+      },
+      "workflow_seconds": {
+        "maximum": 19.04367323219776,
+        "median": 19.015746250748634,
+        "minimum": 18.846024502068758,
+        "samples": [
+          19.04367323219776,
+          18.846024502068758,
+          19.015746250748634
+        ]
+      },
+      "write_mib_s": {
+        "maximum": 190.54884331576423,
+        "median": 190.29663384083352,
+        "minimum": 188.9996182038376,
+        "samples": [
+          190.29663384083352,
+          188.9996182038376,
+          190.54884331576423
+        ]
+      },
+      "write_seconds": {
+        "maximum": 2.7090001814067364,
+        "median": 2.690536294132471,
+        "minimum": 2.6869751140475273,
+        "samples": [
+          2.690536294132471,
+          2.7090001814067364,
+          2.6869751140475273
+        ]
+      }
+    },
+    "dagonfs-preload": {
+      "aggregate_read_mib_s": {
+        "maximum": 1623.9964827399742,
+        "median": 1489.180306990996,
+        "minimum": 1338.4022993233232,
+        "samples": [
+          1338.4022993233232,
+          1489.180306990996,
+          1623.9964827399742
+        ]
+      },
+      "options": {
+        "frontend": "preload",
+        "ranks": 8
+      },
+      "read_seconds_max": {
+        "maximum": 3.0603653341531754,
+        "median": 2.7505064234137535,
+        "minimum": 2.522172950208187,
+        "samples": [
+          3.0603653341531754,
+          2.7505064234137535,
+          2.522172950208187
+        ]
+      },
+      "start_seconds": {
+        "maximum": 0.7020357586443424,
+        "median": 0.602026242762804,
+        "minimum": 0.6018722392618656,
+        "samples": [
+          0.602026242762804,
+          0.6018722392618656,
+          0.7020357586443424
+        ]
+      },
+      "stop_seconds": {
+        "maximum": 0.2644299529492855,
+        "median": 0.264338381588459,
+        "minimum": 0.2641732767224312,
+        "samples": [
+          0.2641732767224312,
+          0.2644299529492855,
+          0.264338381588459
+        ]
+      },
+      "workflow_seconds": {
+        "maximum": 19.97979675978422,
+        "median": 19.371277891099453,
+        "minimum": 18.279942236840725,
+        "samples": [
+          19.97979675978422,
+          19.371277891099453,
+          18.279942236840725
+        ]
+      },
+      "write_mib_s": {
+        "maximum": 206.07556392653612,
+        "median": 205.768212706916,
+        "minimum": 205.5804801594838,
+        "samples": [
+          205.5804801594838,
+          205.768212706916,
+          206.07556392653612
+        ]
+      },
+      "write_seconds": {
+        "maximum": 2.4905088245868683,
+        "median": 2.4882366098463535,
+        "minimum": 2.4845255315303802,
+        "samples": [
+          2.4905088245868683,
+          2.4882366098463535,
+          2.4845255315303802
+        ]
+      }
+    },
+    "local": {
+      "aggregate_read_mib_s": {
+        "maximum": 2851.376064012013,
+        "median": 2840.871384030772,
+        "minimum": 2835.1766478187646,
+        "samples": [
+          2840.871384030772,
+          2851.376064012013,
+          2835.1766478187646
+        ]
+      },
+      "options": {},
+      "read_seconds_max": {
+        "maximum": 1.4447071589529514,
+        "median": 1.4418111369013786,
+        "minimum": 1.436499398201704,
+        "samples": [
+          1.4418111369013786,
+          1.436499398201704,
+          1.4447071589529514
+        ]
+      },
+      "start_seconds": {
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0,
+        "samples": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "stop_seconds": {
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0,
+        "samples": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "workflow_seconds": {
+        "maximum": 16.64586355164647,
+        "median": 16.606007806956768,
+        "minimum": 16.46496055647731,
+        "samples": [
+          16.64586355164647,
+          16.46496055647731,
+          16.606007806956768
+        ]
+      },
+      "write_mib_s": {
+        "maximum": 258.3773053979444,
+        "median": 256.70613935636464,
+        "minimum": 255.36703548972005,
+        "samples": [
+          255.36703548972005,
+          258.3773053979444,
+          256.70613935636464
+        ]
+      },
+      "write_seconds": {
+        "maximum": 2.004957292228937,
+        "median": 1.994498461484909,
+        "minimum": 1.981598187237978,
+        "samples": [
+          2.004957292228937,
+          1.981598187237978,
+          1.994498461484909
+        ]
+      }
+    }
+  },
+  "local_io": {
+    "fanout_copy": {
+      "aggregate_mib_s": 2574.0372555774384,
+      "copies": 4,
+      "seconds": 0.09945465996861458,
+      "source_mib": 64
+    },
+    "sequential": {
+      "read_mib_s": 7001.820949481456,
+      "read_seconds": 0.03656191751360893,
+      "size_mib": 256,
+      "write_mib_s": 417.8510078622379,
+      "write_seconds": 0.6126585677266121
+    },
+    "small_files": {
+      "bytes_per_file": 4096,
+      "create_files_s": 39475.98521963741,
+      "create_seconds": 0.05066371336579323,
+      "files": 2000,
+      "scan_files_s": 299013.3040003342,
+      "scan_seconds": 0.006688665598630905
+    }
+  },
+  "parameters": {
+    "capio_library": "libcapio_posix.so",
+    "capio_server": null,
+    "dagonfs": "~/devel/DAGonFS-test/build/dagonfs",
+    "dagonfs_frontends": "fuse3,native,preload",
+    "dagonfs_preload": "~/devel/DAGonFS-test/build/libdagonfs_preload.so",
+    "dagonfs_python": "~/devel/DAGonFS-test/python",
+    "dagonfs_ranks": 8,
+    "hercules_config": null,
+    "hercules_launcher": "hercules",
+    "hercules_library_dir": null,
+    "live_files": 32,
+    "live_only": false,
+    "live_readers": 8,
+    "live_repeats": 3,
+    "live_size_mib": 16,
+    "mpirun": "mpirun",
+    "mpirun_arg": [
+      "--map-by",
+      "node"
+    ],
+    "output": "~/devel/adhoc-results/purplejeans-dagonfs-2n-19787.json",
+    "repeats": 3,
+    "size_mib": 256,
+    "skip_interface": false,
+    "small_files": 2000,
+    "socket_dir": "/tmp",
+    "tasks": 32
+  },
+  "schema_version": 1
+}

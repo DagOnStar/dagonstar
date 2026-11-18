@@ -127,6 +127,7 @@ The full documentation set is available in `docs/`:
 - [Task-type interoperability](docs/tasktype_interoperability.md)
 - [Checkpoints](docs/checkpoints.md)
 - [BeeOND on-demand file systems](docs/beeond.md)
+- [Common ad-hoc file-system interface](docs/adhoc_filesystems.md)
 - [Scheduler-aware pre-staging](docs/scheduler_prestaging.md)
 - [Exporting workflows to CWL](docs/cwl_export.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
@@ -144,6 +145,10 @@ The full documentation set is available in `docs/`:
 - Remote SSH tasks.
 - Slurm tasks, optionally on BeeOND (BeeGFS On Demand) volumes created per task
   or per workflow, with verified copies to persistent storage.
+- Opt-in workflow resources for DAGonFS (FUSE3, native-socket, or preload
+  frontends), BeeOND, Hercules, CAPIO, and DynoStore through a common
+  lifecycle, readiness, and task-environment interface
+  (`Workflow.create_adhoc_filesystem`).
 - Opt-in scheduler-aware pre-staging (`Workflow(pre_stage=True)` or
   `pre_stage=True` per Slurm task). Slurm and RemoteSlurm tasks stage and verify
   their `workflow://` inputs on the submission host before `sbatch`, so
@@ -202,6 +207,19 @@ cluster whose Prolog and Epilog emulate a BeeOND site; real BeeGFS and
 multi-node sites are not exercised by CI. A manual run on a four-node production
 BeeOND site (Slurm 23.11.3) passed the same checks and the live example in both
 scopes.
+The common ad-hoc file-system interface gives DAGonFS, BeeOND, Hercules,
+CAPIO, and DynoStore one opt-in workflow lifecycle and task-binding API.
+Provider command generation, readiness, environment injection, failure
+cleanup, the DynoStore client and its non-unpickling object decoder, and
+credential-free metadata are unit tested against local stand-ins on every CI
+platform, without the optional runtimes. Live runs through DAGonStar workflows
+(November 2026, recorded in `docs/performance/`) exercised DAGonFS (three
+frontends; macOS and one- and two-node Slurm), CAPIO (one Slurm node), and
+DynoStore (Docker Compose on macOS) with byte-verified data. Hercules was
+attempted on one to three Slurm nodes but never reached a usable state; the
+adapter's readiness check stopped those workflows before their tasks ran.
+BeeOND relies on the earlier production-site run and CI emulation. These live
+runs are manual and are not part of CI.
 Scheduler-aware pre-staging is opt-in and leaves the default lifecycle
 unchanged: the legacy launcher is guarded by a byte-for-byte fixture. Its
 ordering, `sbatch` gate, typed failure phases (from `sbatch --parsable` job
@@ -243,6 +261,7 @@ The repository has a sound baseline for changes to the core behavior:
   command generation, Docker and remote-container construction, SSH-port
   forwarding, packaging extras, optional integration boundaries,
   BeeOND command generation, launcher persistence, and holder lifecycle,
+  ad-hoc file-system provider contracts, task environments, and cleanup,
   scheduler-aware pre-staging (configuration, ordering, failure gating,
   retries, checkpoints, and local and remote Slurm paths),
   command exit-status propagation through the launcher's output capture

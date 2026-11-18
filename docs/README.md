@@ -25,6 +25,7 @@ The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) has 
 - [Workflow schema](the_workflow_schema.md)
 - [Checkpointing](checkpoints.md)
 - [BeeOND on-demand file systems](beeond.md)
+- [Common ad-hoc file-system interface](adhoc_filesystems.md)
 - [Scheduler-aware pre-staging](scheduler_prestaging.md)
 - [Asynchronous launch](asynch_launch.md)
 - [Native tasks](native_tasks.md)

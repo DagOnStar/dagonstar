@@ -181,6 +181,7 @@ class Workflow(object):
         # Workflow-scope BeeOND volumes, created on demand (see dagon.beeond).
         self.beeond_volumes: Dict[str, Any] = {}
         self._beeond_lock = threading.Lock()
+        self.adhoc_filesystems: Dict[str, Any] = {}
         self._event_hooks = {
             name: EventHook(self, name) for name in (
                 "on_workflow_start", "on_workflow_end", "on_task_start",
@@ -445,6 +446,33 @@ class Workflow(object):
             volume = BeeONDVolume(self, config)
             self.beeond_volumes[name] = volume
             return volume
+
+    def create_adhoc_filesystem(self, provider: str, name: str = "default", **options: Any) -> Any:
+        """Create and register a DAGonFS, BeeOND, Hercules, or CAPIO resource."""
+        from dagon.adhoc import create
+        if name in self.adhoc_filesystems:
+            raise ValueError("ad-hoc file system %r already exists" % name)
+        filesystem = create(self, provider, name=name, **options)
+        self.adhoc_filesystems[name] = filesystem
+        return filesystem
+
+    def stop_adhoc_filesystems(self, raise_errors: bool = True) -> Dict[str, Optional[int]]:
+        """Stop all workflow-scoped ad-hoc resources, continuing after errors."""
+        results: Dict[str, Optional[int]] = {}
+        errors = []
+        for name, filesystem in reversed(list(self.adhoc_filesystems.items())):
+            if not filesystem.started:
+                results[name] = None
+                continue
+            try:
+                results[name] = filesystem.stop()
+            except Exception as exc:
+                results[name] = None
+                errors.append(str(exc))
+                self.logger.error("%s", exc)
+        if errors and raise_errors:
+            raise RuntimeError("; ".join(errors))
+        return results
 
     def add_beeond_volume(self, volume: Any) -> Any:
         """Register an existing :class:`dagon.beeond.BeeONDVolume` and return it."""
@@ -800,6 +828,8 @@ class Workflow(object):
         start_time = time()
         self._fire_event("on_workflow_start", self)
         try:
+            for filesystem in self.adhoc_filesystems.values():
+                filesystem.start()
             for task in self.tasks:
                 try:
                     task.start()
@@ -818,6 +848,11 @@ class Workflow(object):
                 self.stop_beeond_volumes()
             except RuntimeError as exc:
                 beeond_error = exc
+            adhoc_error = None
+            try:
+                self.stop_adhoc_filesystems()
+            except RuntimeError as exc:
+                adhoc_error = exc
 
             completed_in = (time() - start_time)
             self.logger.info("Workflow '" + self.name + "' completed in %s seconds ---" % completed_in)
@@ -828,10 +863,13 @@ class Workflow(object):
                     fp.write(json.dumps(self.checkpoints, sort_keys=True, indent=4))
             if beeond_error is not None:
                 raise beeond_error
+            if adhoc_error is not None:
+                raise adhoc_error
         finally:
             # Idempotent: only volumes still running (for example after an
             # interruption) are persisted and released here.
             self.stop_beeond_volumes(raise_errors=False)
+            self.stop_adhoc_filesystems(raise_errors=False)
             self._fire_event("on_workflow_end", self)
 
     def launch(self, resume_checkpoint_file=None) -> threading.Thread:

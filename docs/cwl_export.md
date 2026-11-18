@@ -51,7 +51,8 @@ The export describes commands and graph ordering; it is not a lossless
 translation of every DAGonStar executor. CWL runs exported commands in its own
 working directories. DAGonStar scratch management, checkpointing, remote SSH,
 Slurm, cloud, Kubernetes, Nomad, service registration, and specialized staging
-are not reproduced. BeeOND volumes (see [BeeOND](beeond.md)) are DAGonStar
+are not reproduced. BeeOND volumes (see [BeeOND](beeond.md)) and the common
+[ad-hoc file-system resources](adhoc_filesystems.md) are DAGonStar
 execution behavior and are not exported. A command that refers to
 `$DAGON_BEEOND` needs that variable from the CWL runner's environment.
 Scheduler-aware pre-staging (`pre_stage`, see

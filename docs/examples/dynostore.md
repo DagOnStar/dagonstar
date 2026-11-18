@@ -17,3 +17,16 @@ This is currently a task-level integration, not an automatic DAGonStar stager.
 `DataMover.DYNOSTORE` is reserved in the enum, but `Stager.stage_in` does not
 execute it on the repository's documented branch. See the [optional DynoStore case study](../tutorial/integrations/dynostore.md)
 and the example README for setup, security, durability, and verification.
+
+The common [ad-hoc file-system interface](../adhoc_filesystems.md) adds a
+`dynostore` workflow resource: it can bring a Docker Compose deployment up and
+down with the workflow, waits for the gateway, gives bound tasks
+`DYNOSTORE_SERVER`, `DYNOSTORE_URL`, `DYNOSTORE_CATALOG`, and
+`DYNOSTORE_AUTH_VARIABLE` (the name of the token variable, never the token),
+and offers `put`/`get`/`exists`/`evict` helpers that read the token from an
+environment variable at call time; tasks can use the same client through
+`python -m dagon.adhoc dynostore put|get|exists|evict`. It reuses the
+`[dynostore]` host and port of `dagon.ini` when no server is given. A live run
+against the repository's Docker Compose deployment, and the deployment steps it
+needed, are recorded in
+[`docs/performance/adhoc_filesystems_2026-11-18.md`](../performance/adhoc_filesystems_2026-11-18.md).

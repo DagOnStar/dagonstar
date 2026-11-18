@@ -21,6 +21,9 @@ verification strategy.
   checkpointing, and `workflow://` file references.
 - [Docker dataflow examples](dataflow_docker.md): container-backed tasks.
 - [Slurm dataflow examples](dataflow_slurm.md): HPC scheduler-backed tasks.
+- [Ad-hoc file-system example](../../examples/adhoc/README.md): DAGonFS, BeeOND,
+  Hercules, CAPIO, and DynoStore bound through one interface under portable
+  emulation; source: `examples/adhoc/portable.py`.
 - [Cloud dataflow examples](dataflow_cloud.md): Apache Libcloud-backed virtual
   machine tasks.
 - [Globus dataflow example](dataflow_globus.md): endpoint-based scientific data

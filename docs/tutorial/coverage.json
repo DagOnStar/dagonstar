@@ -888,6 +888,28 @@
       "limitations": "Emulation omits volume speed, multi-node sharing, and the holder job; CI adds single-node Slurm evidence."
     },
     {
+      "feature_id": "storage.adhoc-filesystems",
+      "category": "infrastructure",
+      "task_types": [
+        "batch",
+        "slurm"
+      ],
+      "source_paths": [
+        "dagon/adhoc.py"
+      ],
+      "lessons": [
+        24
+      ],
+      "example_paths": [
+        "examples/adhoc/portable.py"
+      ],
+      "test_targets": [
+        "tests.test_adhoc_filesystems"
+      ],
+      "evidence_level": "mock-contract",
+      "limitations": "Lifecycles run against local stand-ins (DAGonFS native protocol, CAPIO/Hercules scripts, docker recorder, loopback DynoStore gateway); the example uses portable emulation. Live runs (manual, not CI) are recorded in docs/performance/adhoc_filesystems_2026-11-18.md: DAGonFS, CAPIO, and DynoStore passed byte-verified workflows; Hercules deployments failed on the test site and were stopped by the readiness check; BeeOND relies on the earlier site run and CI emulation."
+    },
+    {
       "feature_id": "slurm.scheduler-prestaging",
       "category": "infrastructure",
       "task_types": [

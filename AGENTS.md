@@ -63,6 +63,8 @@ local, remote, Slurm, Docker, cloud, and data-staging environments.
   `dagon-agent-runner` CLI used by CWL export.
 - `docs/tutorial/coverage.json`: machine-checked map from every `TaskType` and
   inventoried feature to lessons, examples, and tests.
+- `dagon/adhoc.py`: common lifecycle for DAGonFS, BeeOND, Hercules, CAPIO,
+  and DynoStore resources (`Workflow.create_adhoc_filesystem`).
 - `dagon/communication/`: SSH/SCP/Globus/SKYCDS transfer helpers.
 - `examples/`: runnable examples and tutorial material.
 - `dagon.ini.sample`: safe sample configuration.
@@ -153,6 +155,24 @@ configuration validation separately from live integration behavior.
   `examples/dataflow/slurm/pre_stage_*.py`
   examples, `docs/scheduler_prestaging.md`, and tutorial Lessons 23 and 25
   (with `examples/tutorial/lesson_25_scheduler_prestaging.py`) to stay consistent.
+
+## Ad-hoc file-system maintenance
+
+- `dagon/adhoc.py` is opt-in: workflows that create no resource must behave
+  exactly as before, and the legacy Slurm launcher fixture must stay unchanged.
+- Providers stay external programs. Never vendor them; keep readiness checks
+  real (mount, socket answer, HTTP answer, or a configured command) and make a
+  failed start clean up everything it started.
+- Task environments are credential-free: `_check_environment` rejects
+  token-like names. The DynoStore token is read from `token_env` only inside
+  `put`/`get`/`exists`/`evict` and must never appear in errors, logs, metadata,
+  or launchers (it is a URL path segment).
+- The DAGonFS native readiness/shutdown requests mirror DAGonFS protocol
+  version 2; update them together with DAGonFS's `Protocol.h`.
+- Changes require `tests/test_adhoc_filesystems.py`, `examples/adhoc/`,
+  `docs/adhoc_filesystems.md`, Lesson 24, the coverage entry
+  `storage.adhoc-filesystems`, and `tools/benchmark_adhoc_filesystems.py` to
+  stay consistent; record live runs, with host and date, in `docs/performance/`.
 
 ## FaaS maintenance
 

@@ -1,0 +1,256 @@
+{
+  "availability": {
+    "beeond": {
+      "available": false,
+      "commands": {
+        "sbatch": null
+      },
+      "missing": [
+        "sbatch"
+      ]
+    },
+    "capio": {
+      "available": false,
+      "commands": {
+        "capio_server": null
+      },
+      "missing": [
+        "capio_server"
+      ]
+    },
+    "dagonfs": {
+      "available": false,
+      "commands": {
+        "dagonfs": null,
+        "mpirun": "/opt/homebrew/bin/mpirun"
+      },
+      "missing": [
+        "dagonfs"
+      ]
+    },
+    "dynostore": {
+      "available": true,
+      "commands": {
+        "docker": "/usr/local/bin/docker"
+      },
+      "missing": []
+    },
+    "hercules": {
+      "available": false,
+      "commands": {
+        "hercules": null
+      },
+      "missing": [
+        "hercules"
+      ]
+    }
+  },
+  "environment": {
+    "cpus": 16,
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "python": "3.12.10"
+  },
+  "generated_at": "2026-11-18T07:05:24Z",
+  "interface": {},
+  "live": {
+    "dynostore": {
+      "aggregate_read_mib_s": {
+        "maximum": 60.63314442987008,
+        "median": 59.66098345294532,
+        "minimum": 59.149645860162025,
+        "samples": [
+          59.66098345294532,
+          60.63314442987008,
+          59.149645860162025
+        ]
+      },
+      "options": {},
+      "read_seconds_max": {
+        "maximum": 4.3280056250077905,
+        "median": 4.290911500007496,
+        "minimum": 4.222113208990777,
+        "samples": [
+          4.290911500007496,
+          4.222113208990777,
+          4.3280056250077905
+        ]
+      },
+      "start_seconds": {
+        "maximum": 0.015473457999178208,
+        "median": 0.008196458002203144,
+        "minimum": 0.0076253330043982714,
+        "samples": [
+          0.015473457999178208,
+          0.0076253330043982714,
+          0.008196458002203144
+        ]
+      },
+      "stop_seconds": {
+        "maximum": 2.5000001187436283e-05,
+        "median": 9.875002433545887e-06,
+        "minimum": 5.333000444807112e-06,
+        "samples": [
+          2.5000001187436283e-05,
+          9.875002433545887e-06,
+          5.333000444807112e-06
+        ]
+      },
+      "workflow_seconds": {
+        "maximum": 18.778496458995505,
+        "median": 18.54293024999788,
+        "minimum": 18.508450541994534,
+        "samples": [
+          18.54293024999788,
+          18.508450541994534,
+          18.778496458995505
+        ]
+      },
+      "write_mib_s": {
+        "maximum": 6.97401701443315,
+        "median": 6.865728389444036,
+        "minimum": 6.825657470454192,
+        "samples": [
+          6.97401701443315,
+          6.865728389444036,
+          6.825657470454192
+        ]
+      },
+      "write_seconds": {
+        "maximum": 9.376386125004501,
+        "median": 9.32166208299168,
+        "minimum": 9.176920541998697,
+        "samples": [
+          9.176920541998697,
+          9.32166208299168,
+          9.376386125004501
+        ]
+      }
+    },
+    "local": {
+      "aggregate_read_mib_s": {
+        "maximum": 8611.108576381464,
+        "median": 8586.102088068554,
+        "minimum": 8535.265714982314,
+        "samples": [
+          8586.102088068554,
+          8611.108576381464,
+          8535.265714982314
+        ]
+      },
+      "options": {},
+      "read_seconds_max": {
+        "maximum": 0.02999320800881833,
+        "median": 0.029815624991897494,
+        "minimum": 0.02972904100897722,
+        "samples": [
+          0.029815624991897494,
+          0.02972904100897722,
+          0.02999320800881833
+        ]
+      },
+      "start_seconds": {
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0,
+        "samples": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "stop_seconds": {
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0,
+        "samples": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "workflow_seconds": {
+        "maximum": 4.983364250001614,
+        "median": 4.944785750005394,
+        "minimum": 4.9333275410026545,
+        "samples": [
+          4.9333275410026545,
+          4.983364250001614,
+          4.944785750005394
+        ]
+      },
+      "write_mib_s": {
+        "maximum": 612.654913750225,
+        "median": 607.319863103917,
+        "minimum": 605.0250163448951,
+        "samples": [
+          612.654913750225,
+          607.319863103917,
+          605.0250163448951
+        ]
+      },
+      "write_seconds": {
+        "maximum": 0.10578075000375975,
+        "median": 0.10538104199804366,
+        "minimum": 0.10446337499888614,
+        "samples": [
+          0.10446337499888614,
+          0.10538104199804366,
+          0.10578075000375975
+        ]
+      }
+    }
+  },
+  "local_io": {
+    "fanout_copy": {
+      "aggregate_mib_s": 1581.001734559843,
+      "copies": 4,
+      "seconds": 0.00506008299998939,
+      "source_mib": 2
+    },
+    "sequential": {
+      "read_mib_s": 6814.0662690838935,
+      "read_seconds": 0.0011740420013666153,
+      "size_mib": 8,
+      "write_mib_s": 2754.8607689450423,
+      "write_seconds": 0.0029039580113021657
+    },
+    "small_files": {
+      "bytes_per_file": 4096,
+      "create_files_s": 12035.866893031427,
+      "create_seconds": 0.004154249996645376,
+      "files": 50,
+      "scan_files_s": 144265.16562573265,
+      "scan_seconds": 0.00034658401273190975
+    }
+  },
+  "parameters": {
+    "capio_library": "libcapio_posix.so",
+    "capio_library_dir": null,
+    "capio_server": null,
+    "dagonfs": null,
+    "dagonfs_frontends": "fuse3,native,preload",
+    "dagonfs_preload": null,
+    "dagonfs_python": null,
+    "dagonfs_ranks": 4,
+    "dynostore_catalog": "dagonstar-benchmark",
+    "dynostore_server": "127.0.0.1:8070",
+    "hercules_config": null,
+    "hercules_launcher": "hercules",
+    "hercules_library_dir": null,
+    "live_files": 16,
+    "live_only": true,
+    "live_readers": 4,
+    "live_repeats": 3,
+    "live_size_mib": 4,
+    "mpirun": "mpirun",
+    "mpirun_arg": [],
+    "output": "<scratch>",
+    "repeats": 1,
+    "size_mib": 8,
+    "skip_interface": true,
+    "small_files": 50,
+    "socket_dir": "/tmp",
+    "tasks": 2
+  },
+  "schema_version": 1
+}

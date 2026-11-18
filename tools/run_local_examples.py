@@ -62,6 +62,7 @@ EXAMPLES = [
     "examples/iot/observe_mock.py",
     "examples/llm/local_mock_llm.py",
     "examples/dataflow/slurm/beeond_local_emulation.py",
+    "examples/adhoc/portable.py",
     "examples/dataflow/slurm/pre_stage_mock.py",
     "examples/agentic/tool_free.py",
     "examples/agentic/guarded_repair.py",
