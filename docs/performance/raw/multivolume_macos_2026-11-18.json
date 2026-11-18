@@ -1,0 +1,73 @@
+{
+  "failed": {},
+  "generated_at": "2026-11-18T18:25:01Z",
+  "hops": [
+    "hop-0",
+    "hop-1",
+    "hop-2",
+    "hop-3",
+    "hop-4"
+  ],
+  "host": "MacBook-Pro-410",
+  "overlapping_stream_consumers": [
+    "consume-v0-dagonfs-fuse3",
+    "consume-v1-dagonfs-native",
+    "consume-v2-dagonfs-preload",
+    "consume-v3-dynostore"
+  ],
+  "passed": true,
+  "streams": [
+    "consume-v0-dagonfs-fuse3",
+    "consume-v1-dagonfs-native",
+    "consume-v2-dagonfs-preload",
+    "consume-v3-dynostore"
+  ],
+  "volumes": [
+    {
+      "access": "posix",
+      "frontend": "fuse3",
+      "model": "client-server",
+      "name": "v0-dagonfs-fuse3",
+      "path": "/tmp/dfs457m_gkx",
+      "provider": "dagonfs",
+      "ranks": 2,
+      "scope": "workflow"
+    },
+    {
+      "access": "client",
+      "frontend": "native",
+      "model": "client-server",
+      "name": "v1-dagonfs-native",
+      "path": "/tmp/dfsp6z278wx.sock",
+      "provider": "dagonfs",
+      "ranks": 2,
+      "scope": "workflow"
+    },
+    {
+      "access": "preload",
+      "frontend": "preload",
+      "model": "client-server",
+      "name": "v2-dagonfs-preload",
+      "path": "/dagonfs",
+      "provider": "dagonfs",
+      "ranks": 2,
+      "scope": "workflow"
+    },
+    {
+      "access": "object",
+      "catalog": "dagonstar-multivolume",
+      "managed": false,
+      "name": "v3-dynostore",
+      "path": "dynostore://127.0.0.1:8070/dagonstar-multivolume",
+      "provider": "dynostore",
+      "scope": "workflow"
+    },
+    {
+      "access": "posix",
+      "name": "private",
+      "provider": "scratch-directory",
+      "scope": "task"
+    }
+  ],
+  "workflow_seconds": 13.17922545800684
+}

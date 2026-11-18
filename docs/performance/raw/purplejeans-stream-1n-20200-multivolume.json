@@ -1,0 +1,88 @@
+{
+  "failed": {
+    "hop-4": "Prefetching is not enable.\nmkdir: cannot create directory \u2018/tmp/tmp4joldbwp\u2019: Invalid argument\nPrefetching is not enable.\ncp: cannot create regular file '/tmp/tmp4joldbwp/scratch/1795042949482-hop-4/.dagon/inputs/adhoc-multivolume-54f1ab57/hop-3//': No such file or directory\nPrefetching is not enable.\nPrefetching is not enable.\n",
+    "hop-5": ""
+  },
+  "generated_at": "2026-11-18T23:02:35Z",
+  "hops": [
+    "hop-0",
+    "hop-1",
+    "hop-2",
+    "hop-3",
+    "hop-4",
+    "hop-5"
+  ],
+  "host": "wn01",
+  "overlapping_stream_consumers": [
+    "consume-v0-dagonfs-fuse3",
+    "consume-v1-dagonfs-native",
+    "consume-v2-dagonfs-preload",
+    "consume-v3-capio",
+    "consume-v4-hercules"
+  ],
+  "passed": false,
+  "streams": [
+    "consume-v0-dagonfs-fuse3",
+    "consume-v1-dagonfs-native",
+    "consume-v2-dagonfs-preload",
+    "consume-v3-capio",
+    "consume-v4-hercules"
+  ],
+  "volumes": [
+    {
+      "access": "posix",
+      "frontend": "fuse3",
+      "model": "client-server",
+      "name": "v0-dagonfs-fuse3",
+      "path": "/tmp/dfsfuoo4c97",
+      "provider": "dagonfs",
+      "ranks": 2,
+      "scope": "workflow"
+    },
+    {
+      "access": "client",
+      "frontend": "native",
+      "model": "client-server",
+      "name": "v1-dagonfs-native",
+      "path": "/tmp/dfs4rg2_k4p.sock",
+      "provider": "dagonfs",
+      "ranks": 2,
+      "scope": "workflow"
+    },
+    {
+      "access": "preload",
+      "frontend": "preload",
+      "model": "client-server",
+      "name": "v2-dagonfs-preload",
+      "path": "/dagonfs",
+      "provider": "dagonfs",
+      "ranks": 2,
+      "scope": "workflow"
+    },
+    {
+      "access": "preload",
+      "backend": "default",
+      "configured": false,
+      "name": "v3-capio",
+      "path": "/tmp/tmp4joldbwp/scratch/.capio-v3-capio",
+      "provider": "capio",
+      "scope": "workflow",
+      "stream_rules": true
+    },
+    {
+      "access": "preload",
+      "hostfiles": "scheduler",
+      "name": "v4-hercules",
+      "path": "/mnt/hercules",
+      "provider": "hercules",
+      "scope": "workflow"
+    },
+    {
+      "access": "posix",
+      "name": "private",
+      "provider": "scratch-directory",
+      "scope": "task"
+    }
+  ],
+  "workflow_seconds": 20.818126868456602
+}

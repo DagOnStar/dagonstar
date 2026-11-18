@@ -40,9 +40,10 @@ From the repository root:
 python examples/tutorial/lesson_29_cwl_export.py
 python -m unittest tests.test_cwl_example -v
 python examples/agentic/cwl_local.py
+python examples/cwl/export_streaming_workflow.py --output /tmp/streaming.cwl
 ~~~
 
-The Lesson 29 script exports the same graph twice, checks byte-identical output, a file edge and an ordering-only edge, and the absence of scratch paths, and runs `cwltool --validate` when it is installed. `cwl_local.py` exports an agentic step as a `dagon-agent-runner` invocation that takes `dagon_config` as a workflow input, and executes the graph with `cwltool --no-container` when both tools are present.
+The Lesson 29 script exports the same graph twice, checks byte-identical output, a file edge and an ordering-only edge, and the absence of scratch paths, and runs `cwltool --validate` when it is installed. `cwl_local.py` exports an agentic step as a `dagon-agent-runner` invocation that takes `dagon_config` as a workflow input, and executes the graph with `cwltool --no-container` when both tools are present. `export_streaming_workflow.py` exports a `workflow:///produce/items?stream` edge: CWL has no concurrent steps, so the stream becomes a `Directory` passed from producer to consumer, and a `dagon:Stream` hint keeps the intent.
 
 ## Expected result
 
@@ -53,6 +54,7 @@ The test regenerates and checks deterministic CWL structure.
 ~~~bash
 python examples/tutorial/lesson_29_cwl_export.py
 python -m unittest tests.test_cwl_example tests.test_agentic_cwl -v
+python -m unittest tests.test_adhoc_streaming -k cwl -v
 ~~~
 
 Schema validation does not prove identical runtime behavior on every runner.

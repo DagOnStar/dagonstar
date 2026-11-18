@@ -10,6 +10,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 import dagon
+from dagon.streaming import reject_stream_reference
 from dagon.task import ExecutionResult, Task
 
 
@@ -32,6 +33,8 @@ class LLMTask(Task):
     ``input_files`` maps a placeholder name to a ``workflow://`` file reference;
     the staged UTF-8 file content is made available to that placeholder.
     """
+    # No command launcher: streams (dagon.streaming) need a command task.
+    stream_capable = False
 
     def __init__(
             self,
@@ -91,6 +94,7 @@ class LLMTask(Task):
 
     @staticmethod
     def _parse_reference(reference: str) -> Tuple[str, str, str]:
+        reject_stream_reference(reference, 'LLM')
         value = reference[len(dagon.Workflow.SCHEMA):]
         pieces = value.split("/")
         if len(pieces) < 3 or not pieces[1] or not "/".join(pieces[2:]):

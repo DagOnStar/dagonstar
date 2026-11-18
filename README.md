@@ -145,10 +145,15 @@ The full documentation set is available in `docs/`:
 - Remote SSH tasks.
 - Slurm tasks, optionally on BeeOND (BeeGFS On Demand) volumes created per task
   or per workflow, with verified copies to persistent storage.
-- Opt-in workflow resources for DAGonFS (FUSE3, native-socket, or preload
-  frontends), BeeOND, Hercules, CAPIO, and DynoStore through a common
+- Opt-in ad-hoc storage resources for DAGonFS (FUSE3, native-socket, or
+  preload frontends), BeeOND, Hercules, CAPIO, and DynoStore through a common
   lifecycle, readiness, and task-environment interface
-  (`Workflow.create_adhoc_filesystem`).
+  (`Workflow.create_adhoc_filesystem`), at workflow or task scope, any number
+  per task, and extensible with adapter classes registered without changing
+  DAGonStar or the storage software.
+- Streaming between selected tasks over a streaming-capable ad-hoc resource:
+  `workflow:///producer/path?stream` lets the consumer process verified items
+  while the producer still runs; other edges keep file staging.
 - Opt-in scheduler-aware pre-staging (`Workflow(pre_stage=True)` or
   `pre_stage=True` per Slurm task). Slurm and RemoteSlurm tasks stage and verify
   their `workflow://` inputs on the submission host before `sbatch`, so
@@ -224,6 +229,18 @@ README steps, and keeps object overwrites consistent, only with
 Compose lifecycle was also verified live.
 BeeOND relies on the earlier production-site run and CI emulation. These live
 runs are manual and are not part of CI.
+Ad-hoc resources have workflow and task scopes and a provider registry
+(entry-point group `dagon.adhoc_providers`); several resources, also of
+different providers, can be bound to one task. Streams between tasks
+(`workflow://…?stream`, an RFC 3986 query that leaves non-stream references
+unchanged) use a rename-free marker protocol with per-item SHA-256
+verification, end-of-stream status, a producer-ended signal with a grace
+period, CAPIO-CL rules generated for CAPIO, and a materialized CWL export with
+a `dagon:Stream` hint. They are unit tested (planning errors, failures,
+concurrency, object and DAGonFS-native stores, CWL with `cwltool` when
+installed, FAIR, JSON, checkpoints, pre-staging) and were run live over
+DAGonFS, CAPIO, Hercules, and DynoStore (`docs/performance/`); BeeOND
+streaming is covered by launcher-text tests only.
 Scheduler-aware pre-staging is opt-in and leaves the default lifecycle
 unchanged: the legacy launcher is guarded by a byte-for-byte fixture. Its
 ordering, `sbatch` gate, typed failure phases (from `sbatch --parsable` job
@@ -265,7 +282,8 @@ The repository has a sound baseline for changes to the core behavior:
   command generation, Docker and remote-container construction, SSH-port
   forwarding, packaging extras, optional integration boundaries,
   BeeOND command generation, launcher persistence, and holder lifecycle,
-  ad-hoc file-system provider contracts, task environments, and cleanup,
+  ad-hoc file-system provider contracts, scopes, the adapter registry,
+  multi-volume task environments, cleanup, and inter-task streaming,
   scheduler-aware pre-staging (configuration, ordering, failure gating,
   retries, checkpoints, and local and remote Slurm paths),
   command exit-status propagation through the launcher's output capture

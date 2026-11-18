@@ -539,7 +539,9 @@ class Slurm(Batch):
         common = super().launcher_prologue()
         volume = self.beeond_volume()
         if volume is not None:
-            return common + volume.task_prologue() + self.adhoc_late_prologue()
+            # Streams on the BeeOND volume refer to $DAGON_BEEOND: export them after it.
+            return (self.adhoc_prologue() + volume.task_prologue() + self.adhoc_late_prologue()
+                    + self.stream_prologue())
         config = self.beeond_task_config()
         if config is None:
             return common

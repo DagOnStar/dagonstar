@@ -125,6 +125,28 @@ index 1e799ca..c6a78a4 100755
  fi
  
  # Index file
+diff --git a/src/hercules.cpp b/src/hercules.cpp
+index 6dc64dc..a0a3581 100644
+--- a/src/hercules.cpp
++++ b/src/hercules.cpp
+@@ -850,7 +850,7 @@ int getConfiguration(struct arguments *args)
+ 	else
+ 	{
+ 		args->prefetch_size = 0;
+-		printf("Prefetching is not enable.\n");
++		fprintf(stderr, "Prefetching is not enable.\n");
+ 	}
+ 
+ 	if (args->prefetch_size < 0)
+@@ -861,7 +861,7 @@ int getConfiguration(struct arguments *args)
+ 	// Convert from GB to bytes.
+ 	if (args->prefetch_size > 0)
+ 	{
+-		printf("Prefetching of %" PRIu64 " MB enable.\n", args->prefetch_size);
++		fprintf(stderr, "Prefetching of %" PRIu64 " MB enable.\n", args->prefetch_size);
+ 		args->prefetch_size *= MB;
+ 	}
+ 
 diff --git a/src/workers.c b/src/workers.c
 index 146f83a..b3d4687 100644
 --- a/src/workers.c

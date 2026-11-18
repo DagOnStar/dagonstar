@@ -26,6 +26,8 @@ class AgenticTask(Task):
     them), ``budgets`` may only lower the profile's budgets, and ``guardrails``
     are added to the profile's guardrails.  See ``docs/agentic_tasks.md``.
     """
+    # No command launcher: streams (dagon.streaming) need a command task.
+    stream_capable = False
 
     task_type = TaskType.AGENTIC
 

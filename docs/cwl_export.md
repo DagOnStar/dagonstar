@@ -53,7 +53,8 @@ working directories. DAGonStar scratch management, checkpointing, remote SSH,
 Slurm, cloud, Kubernetes, Nomad, service registration, and specialized staging
 are not reproduced. BeeOND volumes (see [BeeOND](beeond.md)) and the common
 [ad-hoc file-system resources](adhoc_filesystems.md) are DAGonStar
-execution behavior and are not exported. A command that refers to
+execution behavior and are not exported; streams between tasks are exported
+in materialized form ([Streams](#streams)). A command that refers to
 `$DAGON_BEEOND` needs that variable from the CWL runner's environment.
 Scheduler-aware pre-staging (`pre_stage`, see
 [Scheduler-aware pre-staging](scheduler_prestaging.md)) is a DAGonStar
@@ -78,6 +79,37 @@ before sharing, and never place credentials in commands.
 IoT tools invoke `dagon-iot-runner`, embed a redacted portable specification,
 declare scratch outputs, and retain semantics in `dagon:IoTTask`. Execution
 still needs the selected provider and device access. See [IoT and CWL](iot_cwl.md).
+
+## Streams
+
+CWL v1.2 has no concurrency between steps, so a
+[stream](adhoc_filesystems.md#streaming-between-tasks) between two tasks is
+exported in materialized form, and the document stays standards-valid:
+
+- the producer's command is wrapped so that the stream is ended with the
+  command's status (`dagon.adhoc stream close`), and its stream is written to
+  `$(runtime.outdir)/.dagon-streams/<path>`, exposed as a `Directory` output
+  `stream_<producer>_<path>`;
+- the consumer's `workflow:///P/path?stream` reference becomes that
+  directory (a `Directory` input; with portable emulation the path inside the
+  producer's `task_dir` input, because cwltool does not reliably stage a
+  directory nested in another staged one), so the consumer runs after the
+  producer and reads the complete stream with the same `dagon.adhoc stream`
+  commands;
+- an `EnvVarRequirement` provides the `DAGON_STREAM_*` variables,
+  `DAGON_PYTHON=python3`, and, for consumers, `DAGON_STREAM_IDLE_TIMEOUT=60`
+  (the materialized stream is complete, so a missing marker is an error);
+- a `dagon:Stream` hint (namespace `https://dagonstar.org/cwl#`) on the
+  consumer records `producer`, `stream`, `adhoc`, and `provider`. Generic
+  runners report it as an unknown hint and ignore it.
+
+The steps need DAGonStar importable by `python3` in the runner's environment.
+The ad-hoc resource itself is not exported. `$(...)` in a command is a CWL
+expression, so exported commands should use backticks for shell command
+substitution. [`examples/cwl/export_streaming_workflow.py`](../examples/cwl/export_streaming_workflow.py)
+exports a portable stream workflow whose consumer verifies the items;
+`tests/test_adhoc_streaming.py` runs it with `cwltool` when it is installed
+(observed on 18 November 2026 with cwltool on macOS).
 
 ## Agentic tasks
 

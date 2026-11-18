@@ -32,3 +32,19 @@ complete interoperability boundary.
 Agentic tasks export to an executable `dagon-agent-runner` step with a
 workflow-level `dagon_config: File` input; see the agentic section of the
 [CWL export guide](../../docs/cwl_export.md) and `examples/agentic/cwl_local.py`.
+
+## Streams
+
+`export_streaming_workflow.py` exports a two-task workflow whose consumer
+reads `workflow:///produce/items?stream`. CWL runs the steps one after the
+other, so the stream is materialized as a `Directory` and the intent is kept
+in a `dagon:Stream` hint. With DAGonStar installed (`pip install -e .`):
+
+```bash
+python3 examples/cwl/export_streaming_workflow.py --output /tmp/streaming.cwl
+cwltool --validate /tmp/streaming.cwl
+cwltool /tmp/streaming.cwl
+```
+
+The consumer checks that all three items arrived, so a successful run
+verifies the stream. See [Streams](../../docs/cwl_export.md#streams).

@@ -64,7 +64,10 @@ local, remote, Slurm, Docker, cloud, and data-staging environments.
 - `docs/tutorial/coverage.json`: machine-checked map from every `TaskType` and
   inventoried feature to lessons, examples, and tests.
 - `dagon/adhoc.py`: common lifecycle for DAGonFS, BeeOND, Hercules, CAPIO,
-  and DynoStore resources (`Workflow.create_adhoc_filesystem`).
+  and DynoStore resources (`Workflow.create_adhoc_filesystem`), scopes, and the
+  adapter registry.
+- `dagon/streaming.py`: `workflow://…?stream` references, the stream marker
+  protocol, stores, and the `python -m dagon.adhoc stream` CLI.
 - `dagon/communication/`: SSH/SCP/Globus/SKYCDS transfer helpers.
 - `examples/`: runnable examples and tutorial material.
 - `dagon.ini.sample`: safe sample configuration.
@@ -178,10 +181,28 @@ configuration validation separately from live integration behavior.
   `docs/adhoc_filesystems.md`, and record its verification in
   `docs/performance/`. Inside an allocation, stop Hercules with the per-job
   configuration only: `hercules stop -d FILE` deletes hosts from `FILE`.
-- Changes require `tests/test_adhoc_filesystems.py`, `examples/adhoc/`,
-  `docs/adhoc_filesystems.md`, Lesson 24, the coverage entry
-  `storage.adhoc-filesystems`, and `tools/benchmark_adhoc_filesystems.py` to
-  stay consistent; record live runs, with host and date, in `docs/performance/`.
+- New storage systems are supported by adapters (`register_provider` or the
+  `dagon.adhoc_providers` entry-point group), never by special cases in the
+  core or changes to the storage software. Built-in names stay protected.
+- Task-scope resources start and stop around their single task; workflow-scope
+  resources around the run. Path-list variables (`LD_PRELOAD`,
+  `LD_LIBRARY_PATH`) are combined across resources, never overwritten.
+- Streams: only `?stream[=name]` is a `workflow://` query; any other `?` stays
+  part of the path, so older references keep their meaning. Keep the marker
+  protocol rename-free and verified (size and SHA-256), end every produced
+  stream with the command status (launcher `EXIT` trap, then the host), write
+  the producer-ended signal before any host-side store access, and keep stream
+  specs, markers, and CAPIO-CL rules credential-free (DynoStore specs name the
+  token variable only). Streaming tasks stay ineligible for pre-staging, and
+  structured task types refuse stream references.
+- Changes require `tests/test_adhoc_filesystems.py`,
+  `tests/test_adhoc_streaming.py`, `examples/adhoc/`,
+  `examples/cwl/export_streaming_workflow.py`, `docs/adhoc_filesystems.md`,
+  `docs/the_workflow_schema.md`, `docs/cwl_export.md`, Lessons 24 and 29, the
+  coverage entries `storage.adhoc-filesystems` and `storage.adhoc-streaming`,
+  `tools/benchmark_adhoc_filesystems.py`, `tools/benchmark_adhoc_streaming.py`,
+  and `tools/check_adhoc_multivolume.py` to stay consistent; record live runs,
+  with host and date, in `docs/performance/`.
 
 ## FaaS maintenance
 

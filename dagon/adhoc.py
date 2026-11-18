@@ -23,6 +23,15 @@ states how the path is used:
     the resource is reached through a client protocol (DAGonFS native socket);
 ``object``
     an object store addressed by keys within a catalog (DynoStore).
+
+Adapters are registered by name (:func:`register_provider`, or the
+``dagon.adhoc_providers`` entry-point group), so a new storage system is
+supported by an adapter class alone, without changing DAGonStar or the
+storage software.  A resource has workflow scope (started before the first
+task, optionally bound to every task with ``default=True``) or task scope
+(started right before its single task runs and stopped right after it).  An
+adapter that sets :attr:`AdHocFileSystem.supports_streaming` can carry
+streams between concurrently running tasks (see :mod:`dagon.streaming`).
 """
 
 from __future__ import annotations
@@ -54,6 +63,8 @@ from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Seque
 LOGGER = logging.getLogger("dagon.adhoc")
 
 ACCESS_MODES = ("posix", "preload", "client", "object")
+SCOPES = ("workflow", "task")
+PRELOAD_VARIABLES = ("LD_PRELOAD", "DYLD_INSERT_LIBRARIES")
 
 # Object keys accepted by the DynoStore catalog service (pub_sub/.htaccess):
 # other keys are stored by the gateway but rejected when catalogued.
@@ -107,6 +118,8 @@ class AdHocFileSystem(ABC):
 
     provider = "generic"
     access = "posix"
+    #: True when the adapter can carry :mod:`dagon.streaming` streams.
+    supports_streaming = False
 
     def __init__(self, workflow: Any, name: str = "default") -> None:
         if not name or not re.match(r"^[A-Za-z0-9][A-Za-z0-9._-]*$", str(name)):
@@ -117,6 +130,10 @@ class AdHocFileSystem(ABC):
         self.name = str(name)
         self.tasks: List[Any] = []
         self._started = False
+        # Set by Workflow.create_adhoc_filesystem; adapters need not handle them.
+        self.scope = "workflow"
+        self.default = False
+        self.streams: List[Any] = []
 
     @property
     def started(self) -> bool:
@@ -131,6 +148,9 @@ class AdHocFileSystem(ABC):
         """Expose this resource to *task* and return the task for fluent use."""
         if task.workflow not in (None, self.workflow):
             raise ValueError("task belongs to a different workflow")
+        if self.scope == "task" and self.tasks and task not in self.tasks:
+            raise ValueError("task-scope ad-hoc file system %r is already bound to task %s; "
+                             "use a workflow-scope resource to share it" % (self.name, self.tasks[0].name))
         resources = task.__dict__.setdefault("adhoc_filesystems", [])
         if self not in resources:
             resources.append(self)
@@ -149,6 +169,31 @@ class AdHocFileSystem(ABC):
         """True when the resource can serve tasks; providers refine this."""
         return self.started
 
+    # -- streaming (see dagon.streaming) -------------------------------
+    def stream_location(self, channel: Any) -> str:
+        """Where the stream lives, as tasks address it (a path for POSIX and preload)."""
+        root = self.emulated_path() if channel.emulated else self.task_path
+        return "%s/.dagon-streams/%s" % (root.rstrip("/"), channel.relative)
+
+    def stream_parameters(self) -> Dict[str, str]:
+        """Credential-free values a task needs to open this resource's stream store."""
+        return {"base": self.task_path} if self.access in ("posix", "preload") else {}
+
+    @classmethod
+    def open_stream_store(cls, spec: Mapping[str, Any]) -> Any:
+        """Task-side store for a stream; POSIX and preload resources use plain file calls.
+
+        Adapters with ``client`` or ``object`` access override this.
+        """
+        from dagon.streaming import PosixStreamStore, StreamError
+        if spec.get("access") in ("posix", "preload"):
+            return PosixStreamStore(str(spec["location"]), spec.get("parameters", {}).get("base"))
+        raise StreamError("%s does not implement streams with %s access" % (cls.__name__, spec.get("access")))
+
+    def prepare_streams(self, channels: Sequence[Any]) -> None:
+        """Called before :meth:`start` with the run's streams on this resource."""
+        self.streams = list(channels)
+
     # -- task environment ----------------------------------------------
     def common_environment(self, path: Optional[str] = None) -> Dict[str, str]:
         location = self.task_path if path is None else path
@@ -156,14 +201,20 @@ class AdHocFileSystem(ABC):
         return {"DAGON_ADHOC_PROVIDER": self.provider, "DAGON_ADHOC_NAME": self.name,
                 "DAGON_ADHOC_PATH": location, "DAGON_ADHOC_ACCESS": self.access,
                 "DAGON_ADHOC_%s_PATH" % suffix: location,
-                "DAGON_ADHOC_%s_ACCESS" % suffix: self.access}
+                "DAGON_ADHOC_%s_ACCESS" % suffix: self.access,
+                "DAGON_ADHOC_%s_PROVIDER" % suffix: self.provider}
 
     def provider_environment(self, task: Any) -> Dict[str, str]:
         """Provider-specific variables; never credentials."""
         return {}
 
     def path_environment(self, task: Any) -> Dict[str, str]:
-        """Path-list variables prepended to the task's existing value."""
+        """Path-list variables prepended to the task's existing value.
+
+        Preload libraries (``LD_PRELOAD``, ``DYLD_INSERT_LIBRARIES``) belong
+        here, so that several preload resources bound to one task compose
+        instead of replacing each other.
+        """
         return {}
 
     def path_variables(self) -> Sequence[str]:
@@ -172,8 +223,14 @@ class AdHocFileSystem(ABC):
 
     def task_environment(self, task: Any) -> Dict[str, str]:
         environment = self.common_environment()
-        environment.update(self.provider_environment(task))
-        _check_environment(environment)
+        # The generated per-resource names carry only paths, access modes, and
+        # provider names, whatever the resource is called (for example "private").
+        for key in environment:
+            if not _VARIABLE.match(key):
+                raise ValueError("invalid environment variable name %r" % key)
+        provided = self.provider_environment(task)
+        _check_environment(provided)
+        environment.update(provided)
         return environment
 
     def emulated_path(self) -> str:
@@ -189,7 +246,7 @@ class AdHocFileSystem(ABC):
         external file system ran.
         """
         environment = self.task_environment(task)
-        for variable in ("LD_PRELOAD", "DYLD_INSERT_LIBRARIES"):
+        for variable in PRELOAD_VARIABLES:
             environment.pop(variable, None)
         if self.access in ("posix", "preload"):
             emulated = self.emulated_path()
@@ -201,8 +258,13 @@ class AdHocFileSystem(ABC):
         return environment
 
     def metadata(self) -> Dict[str, Any]:
-        return {"provider": self.provider, "name": self.name, "scope": "workflow",
-                "access": self.access}
+        record = {"provider": self.provider, "name": self.name, "scope": self.scope,
+                  "access": self.access}
+        if self.default:
+            record["default"] = True
+        if self.streams:
+            record["streams"] = [channel.metadata() for channel in self.streams]
+        return record
 
 
 def _check_environment(environment: Mapping[str, str]) -> None:
@@ -362,6 +424,9 @@ class DAGonFS(ProcessFileSystem):
 
     provider = "dagonfs"
     FRONTENDS = ("fuse3", "native", "preload")
+    # Close-to-open consistency in both models: a file closed by one client is
+    # complete for any open that starts afterwards (DAGonFS ARCHITECTURE.md).
+    supports_streaming = True
 
     def __init__(self, workflow: Any, name: str = "default", mountpoint: Optional[str] = None,
                  model: str = "client-server", ranks: int = 2, executable: str = "dagonfs",
@@ -474,10 +539,37 @@ class DAGonFS(ProcessFileSystem):
             environment["DAGONFS_SOCKET"] = self.mountpoint
         if self.frontend == "preload":
             environment["DAGONFS_PRELOAD_ROOT"] = self.preload_root
-            environment[preload_variable()] = str(self.preload_library)
         if self.python_path:
             environment["DAGONFS_PYTHON"] = str(self.python_path)
         return environment
+
+    def path_environment(self, task: Any) -> Dict[str, str]:
+        if self.frontend == "preload":
+            return {preload_variable(): str(self.preload_library)}
+        return {}
+
+    def stream_location(self, channel: Any) -> str:
+        if self.frontend == "native" and not channel.emulated:
+            # A path inside the volume's namespace, opened through the socket.
+            return "/.dagon-streams/" + channel.relative
+        return super().stream_location(channel)
+
+    def stream_parameters(self) -> Dict[str, str]:
+        if self.frontend == "native":
+            parameters = {"socket": self.mountpoint}
+            if self.python_path:
+                parameters["python_path"] = str(self.python_path)
+            return parameters
+        return super().stream_parameters()
+
+    @classmethod
+    def open_stream_store(cls, spec: Mapping[str, Any]) -> Any:
+        if spec.get("access") == "client":
+            from dagon.streaming import DagonFSNativeStreamStore
+            parameters = spec.get("parameters", {})
+            return DagonFSNativeStreamStore(parameters["socket"], str(spec["location"]),
+                                            parameters.get("python_path") or os.environ.get("DAGONFS_PYTHON"))
+        return super().open_stream_store(spec)
 
     def path_variables(self) -> Sequence[str]:
         return ("DAGONFS_MOUNTPOINT", "DAGONFS_PRELOAD_ROOT")
@@ -520,6 +612,9 @@ class Capio(ProcessFileSystem):
 
     provider = "capio"
     access = "preload"
+    # Streaming needs CAPIO-CL commit-on-close rules for the stream paths;
+    # prepare_streams() writes them when no configuration is given.
+    supports_streaming = True
 
     def __init__(self, workflow: Any, name: str = "default", directory: Optional[str] = None,
                  server: str = "capio_server", library: str = "libcapio_posix.so",
@@ -550,7 +645,11 @@ class Capio(ProcessFileSystem):
         if workflow_name and declared and workflow_name != declared:
             raise ValueError("CAPIO workflow_name %r differs from the configuration name %r"
                              % (workflow_name, declared))
-        self.capio_workflow_name = workflow_name or declared or workflow.name
+        # Distinct resources must not share shared-memory channels: only the
+        # resource named "default" keeps the plain workflow name.
+        self.capio_workflow_name = (workflow_name or declared
+                                    or (workflow.name if name == "default" else "%s-%s" % (workflow.name, name)))
+        self.generated_config: Optional[str] = None
         if isinstance(server_launcher, str):
             raise ValueError("server_launcher must be a sequence of arguments")
         # For example ["srun", "--ntasks-per-node=1"]: CAPIO needs one server per node.
@@ -571,6 +670,7 @@ class Capio(ProcessFileSystem):
         server_environment["CAPIO_WORKFLOW_NAME"] = self.capio_workflow_name
         super().__init__(workflow, name, command, environment=server_environment,
                          startup_delay=startup_delay, startup_timeout=startup_timeout, log=log)
+        self._configless_command = list(self.start_command)
 
     @property
     def task_path(self) -> str:
@@ -578,6 +678,39 @@ class Capio(ProcessFileSystem):
 
     def app_name(self, task: Any) -> str:
         return self.app_names.get(getattr(task, "name", ""), getattr(task, "name", "default_app"))
+
+    def stream_rules(self, channels: Sequence[Any]) -> Dict[str, Any]:
+        """CAPIO-CL document making stream files visible as soon as they are closed."""
+        steps = []
+        for task in self.tasks:
+            produced = [channel.location for channel in channels if channel.producer is task]
+            consumed = [channel.location for channel in channels if task in channel.consumers]
+            step: Dict[str, Any] = {"name": self.app_name(task), "input_stream": consumed,
+                                    "output_stream": produced}
+            if produced:
+                # fnmatch without FNM_PATHNAME: "*" also matches the marker directory.
+                step["streaming"] = [{"name": [location + "/*" for location in produced],
+                                      "committed": "on_close", "mode": "no_update"}]
+            steps.append(step)
+        return {"name": self.capio_workflow_name, "IO_Graph": steps}
+
+    def prepare_streams(self, channels: Sequence[Any]) -> None:
+        super().prepare_streams(channels)
+        if not channels or self.workflow.portable_emulation:
+            return
+        if self.config is not None:
+            LOGGER.warning("CAPIO resource %s carries streams with the user configuration %s: it must "
+                           "commit stream files on close (committed: on_close)", self.name, self.config)
+            return
+        path = os.path.join(self.workflow.get_scratch_dir_base(), ".capio-%s-streams.json" % self.name)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as stream:
+            json.dump(self.stream_rules(channels), stream, indent=2, sort_keys=True)
+        self.generated_config = path
+        self.graph_steps = {self.app_name(task) for task in self.tasks}
+        command = list(self._configless_command)
+        index = command.index("--no-config")
+        self.start_command = command[:index] + ["-c", path] + command[index + 1:]
 
     def bind(self, task: Any) -> Any:
         if self.graph_steps is not None and self.app_name(task) not in self.graph_steps:
@@ -603,21 +736,24 @@ class Capio(ProcessFileSystem):
             return False
 
     def provider_environment(self, task: Any) -> Dict[str, str]:
+        return {"CAPIO_DIR": self.directory, "CAPIO_WORKFLOW_NAME": self.capio_workflow_name,
+                "CAPIO_APP_NAME": self.app_name(task)}
+
+    def path_environment(self, task: Any) -> Dict[str, str]:
         library = self.library
         if self.library_dir and os.sep not in library:
             library = os.path.join(self.library_dir, library)
-        return {"CAPIO_DIR": self.directory, "CAPIO_WORKFLOW_NAME": self.capio_workflow_name,
-                "CAPIO_APP_NAME": self.app_name(task), "LD_PRELOAD": library}
-
-    def path_environment(self, task: Any) -> Dict[str, str]:
-        return {"LD_LIBRARY_PATH": self.library_dir} if self.library_dir else {}
+        environment = {"LD_PRELOAD": library}
+        if self.library_dir:
+            environment["LD_LIBRARY_PATH"] = self.library_dir
+        return environment
 
     def path_variables(self) -> Sequence[str]:
         return ("CAPIO_DIR",)
 
     def metadata(self) -> Dict[str, Any]:
         return dict(super().metadata(), path=self.directory, configured=self.config is not None,
-                    backend=self.backend or "default")
+                    stream_rules=self.generated_config is not None, backend=self.backend or "default")
 
 
 # -- Hercules ------------------------------------------------------------------
@@ -649,6 +785,7 @@ class Hercules(ProcessFileSystem):
 
     provider = "hercules"
     access = "preload"
+    supports_streaming = True
 
     def __init__(self, workflow: Any, config: str, name: str = "default",
                  launcher: str = "hercules", library: str = "libhercules_posix.so",
@@ -693,14 +830,16 @@ class Hercules(ProcessFileSystem):
         return self.config
 
     def provider_environment(self, task: Any) -> Dict[str, str]:
+        return {"HERCULES_CONF": self.client_config(), "HERCULES_MOUNT_POINT": self.path}
+
+    def path_environment(self, task: Any) -> Dict[str, str]:
         library = self.library
         if self.library_dir and os.sep not in library:
             library = os.path.join(self.library_dir, library)
-        return {"HERCULES_CONF": self.client_config(), "HERCULES_MOUNT_POINT": self.path,
-                "LD_PRELOAD": library}
-
-    def path_environment(self, task: Any) -> Dict[str, str]:
-        return {"LD_LIBRARY_PATH": self.library_dir} if self.library_dir else {}
+        environment = {"LD_PRELOAD": library}
+        if self.library_dir:
+            environment["LD_LIBRARY_PATH"] = self.library_dir
+        return environment
 
     def path_variables(self) -> Sequence[str]:
         return ("HERCULES_MOUNT_POINT",)
@@ -710,9 +849,8 @@ class Hercules(ProcessFileSystem):
             return True
         environment = self._environment()
         environment.update(self.provider_environment(None))
-        if self.library_dir:
-            environment["LD_LIBRARY_PATH"] = os.pathsep.join(
-                item for item in (self.library_dir, environment.get("LD_LIBRARY_PATH")) if item)
+        for key, value in self.path_environment(None).items():
+            environment[key] = ":".join(item for item in (value, environment.get(key)) if item)
         return subprocess.run(self.ready_command, env=environment, check=False,
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 
@@ -766,10 +904,21 @@ class BeeOND(AdHocFileSystem):
 
     provider = "beeond"
     access = "posix"
+    # BeeGFS is a coherent POSIX file system across the allocation's nodes.
+    supports_streaming = True
 
     def __init__(self, workflow: Any, name: str = "default", **options: Any) -> None:
         super().__init__(workflow, name)
         self.volume = workflow.create_beeond_volume(name, **options)
+
+    def stream_location(self, channel: Any) -> str:
+        if channel.emulated:
+            return super().stream_location(channel)
+        # The mount exists only inside the allocation: resolved by the launcher.
+        return "$DAGON_BEEOND/.dagon-streams/" + channel.relative
+
+    def stream_parameters(self) -> Dict[str, str]:
+        return {}
 
     @property
     def task_path(self) -> str:
@@ -794,7 +943,8 @@ class BeeOND(AdHocFileSystem):
         suffix = _variable_suffix(self.name)
         return ['export DAGON_ADHOC_PATH="$DAGON_BEEOND"',
                 'export DAGON_ADHOC_%s_PATH="$DAGON_BEEOND"' % suffix,
-                'export DAGON_ADHOC_%s_ACCESS=posix' % suffix]
+                'export DAGON_ADHOC_%s_ACCESS=posix' % suffix,
+                'export DAGON_ADHOC_%s_PROVIDER=beeond' % suffix]
 
     def portable_environment(self, task: Any) -> Dict[str, str]:
         environment = self.task_environment(task)
@@ -825,6 +975,8 @@ class DynoStore(AdHocFileSystem):
 
     provider = "dynostore"
     access = "object"
+    # Streams are objects with deterministic keys (dagon.streaming.ObjectStreamStore).
+    supports_streaming = True
 
     def __init__(self, workflow: Any, name: str = "default", server: Optional[str] = None,
                  catalog: Optional[str] = None, token_env: str = "DYNOSTORE_TOKEN",
@@ -941,6 +1093,28 @@ class DynoStore(AdHocFileSystem):
         os.makedirs(emulated, exist_ok=True)
         environment["DYNOSTORE_EMULATED_DIR"] = emulated
         return environment
+
+    def stream_location(self, channel: Any) -> str:
+        if channel.emulated:
+            return super().stream_location(channel)
+        return "dynostore://%s/%s/%s" % (self.server, self.catalog, channel.relative)
+
+    def stream_parameters(self) -> Dict[str, str]:
+        # The variable *name* of the token, never its value.
+        return {"url": self.base_url, "catalog": self.catalog, "auth_variable": self.token_env,
+                "resiliency": str(self.resiliency)}
+
+    @classmethod
+    def open_stream_store(cls, spec: Mapping[str, Any]) -> Any:
+        if spec.get("access") != "object":
+            return super().open_stream_store(spec)
+        from dagon.streaming import ObjectStreamStore
+        parameters = spec.get("parameters", {})
+        client = DynoStoreClient(parameters["url"], parameters["catalog"],
+                                 parameters.get("auth_variable", "DYNOSTORE_TOKEN"),
+                                 resiliency=int(parameters.get("resiliency", 1)))
+        prefix = str(spec["location"]).split("://", 1)[-1]
+        return ObjectStreamStore(client, prefix)
 
     # -- data operations (REST routes used by the dynostore client) --------
     def client(self) -> "DynoStoreClient":
@@ -1105,13 +1279,82 @@ def decode_dynostore_object(payload: bytes, limit: int = 1 << 34) -> bytes:
     return bytes(values[0])
 
 
-PROVIDERS = {"dagonfs": DAGonFS, "beeond": BeeOND, "hercules": Hercules, "capio": Capio,
-             "dynostore": DynoStore}
+PROVIDERS: Dict[str, type] = {"dagonfs": DAGonFS, "beeond": BeeOND, "hercules": Hercules, "capio": Capio,
+                               "dynostore": DynoStore}
+BUILTIN_PROVIDERS = tuple(PROVIDERS)
+ENTRY_POINT_GROUP = "dagon.adhoc_providers"
+_ENTRY_POINTS_LOADED = False
 
 
-def create(workflow: Any, provider: str, name: str = "default", **options: Any) -> AdHocFileSystem:
-    """Create a provider by its stable, case-insensitive name."""
+def register_provider(name: str, implementation: type, replace: bool = False) -> type:
+    """Register an adapter class under *name* (case-insensitive); return the class.
+
+    This is the only step a new storage system needs: neither DAGonStar nor
+    the storage software is modified.  Usable as ``@register_provider("x")``
+    through :func:`provider`.
+    """
+    key = str(name).lower()
+    if not re.match(r"^[a-z0-9][a-z0-9._-]*$", key):
+        raise ValueError("provider names may contain letters, digits, '.', '_' and '-'")
+    if not (isinstance(implementation, type) and issubclass(implementation, AdHocFileSystem)):
+        raise TypeError("ad-hoc providers must subclass dagon.adhoc.AdHocFileSystem")
+    if implementation.access not in ACCESS_MODES:
+        raise ValueError("unknown access mode %r" % implementation.access)
+    if key in PROVIDERS and PROVIDERS[key] is not implementation and not replace:
+        raise ValueError("ad-hoc provider %r is already registered" % key)
+    PROVIDERS[key] = implementation
+    return implementation
+
+
+def provider(name: str, replace: bool = False) -> Callable[[type], type]:
+    """Class decorator form of :func:`register_provider`."""
+    return lambda implementation: register_provider(name, implementation, replace)
+
+
+def unregister_provider(name: str) -> None:
+    key = str(name).lower()
+    if key in BUILTIN_PROVIDERS:
+        raise ValueError("built-in provider %r cannot be unregistered" % key)
+    PROVIDERS.pop(key, None)
+
+
+def _load_entry_points() -> None:
+    """Register adapters that installed packages declare in ``dagon.adhoc_providers``."""
+    global _ENTRY_POINTS_LOADED
+    if _ENTRY_POINTS_LOADED:
+        return
+    _ENTRY_POINTS_LOADED = True
+    try:
+        from importlib.metadata import entry_points
+        found = entry_points()
+        group = (found.select(group=ENTRY_POINT_GROUP) if hasattr(found, "select")
+                 else found.get(ENTRY_POINT_GROUP, ()))
+    except Exception as exc:  # pragma: no cover - broken metadata must not break workflows
+        LOGGER.warning("ad-hoc provider entry points could not be listed: %s", exc)
+        return
+    for entry in group:
+        if entry.name.lower() in PROVIDERS:
+            continue
+        try:
+            register_provider(entry.name, entry.load())
+        except Exception as exc:
+            LOGGER.warning("ad-hoc provider %s could not be loaded: %s", entry.name, exc)
+
+
+def available_providers() -> List[str]:
+    _load_entry_points()
+    return sorted(PROVIDERS)
+
+
+def create(workflow: Any, provider: Any, name: str = "default", **options: Any) -> AdHocFileSystem:
+    """Create a provider by its registered, case-insensitive name or by adapter class."""
+    if isinstance(provider, type):
+        if not issubclass(provider, AdHocFileSystem):
+            raise TypeError("ad-hoc providers must subclass dagon.adhoc.AdHocFileSystem")
+        return provider(workflow, name=name, **options)
     key = str(provider).lower()
+    if key not in PROVIDERS:
+        _load_entry_points()
     try:
         implementation = PROVIDERS[key]
     except KeyError as exc:
@@ -1128,6 +1371,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ``DYNOSTORE_TOKEN``), which the task inherits from its own environment.
     """
     import argparse
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if arguments[:1] == ["stream"]:
+        from dagon.streaming import main as stream_main
+        return stream_main(arguments[1:])
     parser = argparse.ArgumentParser(prog="python -m dagon.adhoc")
     providers = parser.add_subparsers(dest="provider", required=True)
     dyno = providers.add_parser("dynostore").add_subparsers(dest="operation", required=True)
@@ -1139,7 +1386,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     get.add_argument("local")
     dyno.add_parser("exists").add_argument("key")
     dyno.add_parser("evict").add_argument("key")
-    options = parser.parse_args(argv)
+    providers.add_parser("stream", help="publish or read streams (python -m dagon.adhoc stream -h)")
+    options = parser.parse_args(arguments)
     try:
         client = DynoStoreClient.from_environment()
         if options.operation == "put":

@@ -103,7 +103,8 @@ class AdHocTestCase(unittest.TestCase):
 
 class CommonContractTests(AdHocTestCase):
     def test_factory_knows_every_provider(self):
-        self.assertEqual(sorted(PROVIDERS), ["beeond", "capio", "dagonfs", "dynostore", "hercules"])
+        # Further adapters may be registered (dagon.adhoc.register_provider); these are built in.
+        self.assertTrue({"beeond", "capio", "dagonfs", "dynostore", "hercules"} <= set(PROVIDERS))
         with self.assertRaises(ValueError):
             create(self.workflow(), "lustre")
         with self.assertRaises(ValueError):
@@ -130,7 +131,8 @@ class CommonContractTests(AdHocTestCase):
         self.assertEqual(environment["DAGON_ADHOC_ACCESS"], "preload")
         self.assertEqual(environment["DAGON_ADHOC_FAST_PATH"], "/scratch/capio")
         self.assertEqual(environment["CAPIO_APP_NAME"], "producer")
-        self.assertEqual(environment["CAPIO_WORKFLOW_NAME"], "adhoc-test")
+        # Distinct CAPIO resources get distinct shared-memory channel names.
+        self.assertEqual(environment["CAPIO_WORKFLOW_NAME"], "adhoc-test-fast")
         prologue = task.launcher_prologue()
         self.assertIn("export DAGON_ADHOC_FAST_PATH=/scratch/capio", prologue)
         self.assertIn("export DAGON_ADHOC_RAM_PATH=/scratch/dfs", prologue)
@@ -233,7 +235,9 @@ class DAGonFSTests(AdHocTestCase):
                 preload = DAGonFS(workflow, mountpoint="/tmp/p.sock", frontend="preload",
                                   preload_library="/opt/libdagonfs_preload.so", preload_root="/dfs/")
                 environment = preload.task_environment(None)
-            self.assertEqual(environment[variable], "/opt/libdagonfs_preload.so")
+                # Preload libraries are path lists, so several resources compose.
+                self.assertEqual(preload.path_environment(None), {variable: "/opt/libdagonfs_preload.so"})
+            self.assertNotIn(variable, environment)
             self.assertEqual(environment["DAGON_ADHOC_PATH"], "/dfs")
             self.assertEqual(environment["DAGON_ADHOC_ACCESS"], "preload")
 
@@ -322,8 +326,9 @@ class CapioTests(AdHocTestCase):
         with self.assertRaises(ValueError):
             Capio(workflow, config=config, workflow_name="other")
         installed = Capio(workflow, library_dir="/opt/capio/lib64")
-        self.assertEqual(installed.task_environment(task)["LD_PRELOAD"], "/opt/capio/lib64/libcapio_posix.so")
-        self.assertEqual(installed.path_environment(task), {"LD_LIBRARY_PATH": "/opt/capio/lib64"})
+        self.assertNotIn("LD_PRELOAD", installed.task_environment(task))
+        self.assertEqual(installed.path_environment(task), {"LD_PRELOAD": "/opt/capio/lib64/libcapio_posix.so",
+                                                            "LD_LIBRARY_PATH": "/opt/capio/lib64"})
 
     def test_unknown_app_is_reported(self):
         workflow = self.workflow()
@@ -389,7 +394,7 @@ class HerculesTests(AdHocTestCase):
         self.assertEqual(hercules.start_command, ["hercules", "start", "-m", "meta", "-d", "data", "-f", config])
         self.assertEqual(hercules.stop_command, ["hercules", "stop", "-m", "meta", "-d", "data", "-f", config])
         environment = hercules.task_environment(None)
-        self.assertEqual(environment["LD_PRELOAD"], "/opt/hercules/lib/libhercules_posix.so")
+        self.assertEqual(hercules.path_environment(None)["LD_PRELOAD"], "/opt/hercules/lib/libhercules_posix.so")
         self.assertEqual(environment["HERCULES_CONF"], config)
         with self.assertRaises(ValueError):
             Hercules(self.workflow(), config=config, meta_hostfile="meta")

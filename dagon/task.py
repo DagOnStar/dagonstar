@@ -5,10 +5,12 @@ import uuid
 import glob
 import os
 import subprocess
+import sys
 import shlex
 from json import loads, dumps
 from threading import Thread
 from threading import Semaphore
+from threading import Event
 from os import makedirs, path, chmod
 from time import time, sleep
 from enum import Enum
@@ -17,6 +19,8 @@ from dagon.ftp_publisher import FTP_API
 import dagon
 from dagon.shell import quote
 from dagon.platform_support import bash_executable, launcher_environment, shell_path
+from dagon.streaming import (StreamWriter, iter_command_references, open_store,
+                             state_file as stream_state_file, stream_environment)
 from dagon.prestage import (
     ALLOCATION_STARTED_NAME, COMPUTE_RECORD_NAME, DESTINATION_IDENTITY_NAME, IDENTITY_NAME, INTEGRITY_CONTENT, LOCK_BUSY_EXIT, INTEGRITY_EXISTENCE, MARKER_NAME,
     PRE_STAGE_POLICY_VERSION, PreparedTask, PreStageConfigurationError, ScheduledExecutionError,
@@ -142,6 +146,9 @@ class Task(Thread):
     # Backends whose scheduler submission can be separated from stage-in set
     # this to True and implement the submission-host helpers.
     pre_stage_capable: bool = False
+    # Command tasks run a launcher and can produce and consume streams
+    # (dagon.streaming); structured task types set this to False.
+    stream_capable: bool = True
     """
     **Represents a task executed by DagOn**
 
@@ -242,6 +249,13 @@ class Task(Thread):
         # True only while a pre-staged compute launcher is being submitted.
         self.pre_stage_submission = False
         self.failure_phase: Optional[str] = None
+        # Streams planned by Workflow.run() (dagon.streaming); empty otherwise.
+        self.stream_inputs: List[Any] = []
+        self.stream_outputs: Dict[str, Any] = {}
+        self.stream_prevs: List[Any] = []
+        self.stream_references: Dict[str, Any] = {}
+        self.stream_started = Event()
+        self.stream_launched = False
 
 
     def declare_inputs(self, *artifacts: Any) -> "Task":
@@ -261,8 +275,144 @@ class Task(Thread):
 
     def get_execution_metadata(self) -> Dict[str, Any]:
         """Return sanitized backend metadata for optional provenance recorders."""
+        metadata: Dict[str, Any] = {}
         filesystems = [filesystem.metadata() for filesystem in getattr(self, "adhoc_filesystems", [])]
-        return {"adhoc_filesystems": filesystems} if filesystems else {}
+        if filesystems:
+            metadata["adhoc_filesystems"] = filesystems
+        streams = ([dict(channel.metadata(), role="producer") for channel in getattr(self, "stream_outputs", {}).values()]
+                   + [dict(channel.metadata(), role="consumer") for channel in getattr(self, "stream_inputs", [])])
+        if streams:
+            metadata["streams"] = streams
+        return metadata
+
+    # -- ad-hoc file systems and streams ---------------------------------
+
+    def create_adhoc_filesystem(self, provider: Any, name: Optional[str] = None, **options: Any) -> Any:
+        """Create a task-scope ad-hoc resource bound to this task only; return it.
+
+        The resource starts right before this task executes and stops right
+        after it, whatever the outcome.  The task must belong to a workflow.
+        """
+        if self.workflow is None:
+            raise ValueError("add task %s to a workflow before creating its ad-hoc file system" % self.name)
+        label = name or "%s-%s" % (self.name, getattr(provider, "provider", provider))
+        filesystem = self.workflow.create_adhoc_filesystem(provider, name=label, scope="task", **options)
+        filesystem.bind(self)
+        return filesystem
+
+    def use_adhoc_filesystem(self, filesystem: Any) -> "Task":
+        """Bind an existing resource to this task; return the task."""
+        filesystem.bind(self)
+        return self
+
+    def task_scope_filesystems(self) -> List[Any]:
+        return [fs for fs in getattr(self, "adhoc_filesystems", []) if getattr(fs, "scope", "workflow") == "task"]
+
+    def stream_location_text(self, channel: Any) -> str:
+        """The location as shell text (BeeOND locations expand ``$DAGON_BEEOND``)."""
+        location = channel.location
+        if location.startswith("$DAGON_BEEOND/"):
+            return '"${DAGON_BEEOND}"' + quote(location[len("$DAGON_BEEOND"):])
+        return quote(location)
+
+    def resolve_stream_references(self, command: str) -> str:
+        """Replace this task's stream references with their stream locations."""
+        references = getattr(self, "stream_references", {})
+        if not references:
+            return command
+        for start, end, text in reversed(list(iter_command_references(command, dagon.Workflow.SCHEMA))):
+            channel = references.get(text)
+            if channel is not None:
+                command = command[:start] + self.stream_location_text(channel) + command[end:]
+        return command
+
+    def stream_python(self) -> str:
+        """Interpreter that runs the stream helper in the launcher."""
+        if self.ssh_connection is None and getattr(self, "ip", None) in (None, "localhost", "127.0.0.1"):
+            return sys.executable
+        return "python3"
+
+    def stream_prologue(self) -> str:
+        """Launcher lines exporting this task's streams (empty without streams)."""
+        environment = stream_environment(self)
+        if not environment:
+            return ""
+        python = self.stream_python()
+        lines = ["", "# Streams (dagon.streaming)",
+                 'export DAGON_STREAM_STATE_DIR="$PWD/.dagon/streams"',
+                 'export DAGON_PYTHON="${DAGON_PYTHON:-%s}"' % python.replace('"', '')]
+        if python == sys.executable:
+            package_root = os.path.dirname(os.path.dirname(os.path.abspath(dagon.__file__)))
+            lines.append('export PYTHONPATH=%s"${PYTHONPATH:+:$PYTHONPATH}"' % quote(package_root))
+        for key, value in sorted(environment.items()):
+            if value.startswith("$DAGON_BEEOND/"):
+                lines.append('export %s="${DAGON_BEEOND}"%s' % (key, quote(value[len("$DAGON_BEEOND"):])))
+            else:
+                lines.append("export %s=%s" % (key, quote(value)))
+        outputs = list(getattr(self, "stream_outputs", {}).values())
+        if outputs:
+            # A command that leaves the launcher early (``exit``) still ends its
+            # streams, with the status it exited with.
+            lines.append("dagon_close_streams() {")
+            lines.append("    DAGON_STREAMS_CLOSED=1; dagon_close_status=0")
+            for channel in outputs:
+                lines.append('    "$DAGON_PYTHON" -m dagon.adhoc stream close %s --status "$1" || dagon_close_status=1'
+                             % self.stream_location_text(channel))
+            lines.append("    return $dagon_close_status")
+            lines.append("}")
+            lines.append("trap 'dagon_exit=$?; [ -n \"$DAGON_STREAMS_CLOSED\" ] || dagon_close_streams \"$dagon_exit\"' EXIT")
+        return "\n".join(lines) + "\n"
+
+    def stream_epilogue(self) -> str:
+        """Launcher lines ending this task's streams with the command's status."""
+        outputs = list(getattr(self, "stream_outputs", {}).values())
+        if not outputs:
+            return ""
+        return ("# End the streams this task produces with the command status\n"
+                'dagon_close_streams "$code" || code=1\n')
+
+    def close_streams_from_host(self, status: int) -> None:
+        """End streams the launcher could not end, when the submission host reaches them."""
+        for channel in getattr(self, "stream_outputs", {}).values():
+            filesystem = channel.filesystem
+            if not channel.emulated and (filesystem.access == "preload" or channel.location.startswith("$")
+                                         or self.ssh_connection is not None):
+                continue
+            if self.working_dir is None or not os.path.isdir(self.working_dir):
+                continue
+            spec = channel.spec()
+            try:
+                writer = StreamWriter(open_store(spec),
+                                      stream_state_file(spec, os.path.join(self.working_dir, ".dagon", "streams")))
+                if not writer.closed:
+                    writer.close(status)
+            except Exception as exc:  # best effort: a store error must not kill the task thread
+                self.workflow.logger.debug("%s: stream %s not closed from the host: %s",
+                                           self.name, channel.path, exc)
+
+    def _wait_stream_producer(self, producer: Any) -> None:
+        while not producer.stream_started.wait(0.2):
+            if producer.status in (dagon.Status.FINISHED, dagon.Status.FAILED):
+                return
+
+    def _stream_producers_ready(self) -> bool:
+        """False when a stream producer ended without launching its command."""
+        for producer in getattr(self, "stream_prevs", []):
+            if producer.stream_launched or self.workflow.dry is not False:
+                continue
+            if producer.status == dagon.Status.FAILED:
+                return False
+            completed = self.workflow.checkpoints.get(self.checkpoint_key(), {}).get("code") == 0
+            if not completed:
+                self.workflow.logger.error(
+                    "%s: stream producer %s did not run in this execution; streams are not persistent",
+                    self.name, producer.name)
+                return False
+        return True
+
+    def _mark_stream_launch(self) -> None:
+        self.stream_launched = True
+        self.stream_started.set()
 
     # -- Scheduler-aware pre-staging -------------------------------------
 
@@ -277,6 +427,10 @@ class Task(Thread):
                     "only Slurm and RemoteSlurm tasks do" % type(self).__name__)
         if self.mode == "parallel":
             return "pre-staging is not supported for tasks in parallel mode"
+        if getattr(self, "stream_inputs", None) or getattr(self, "stream_outputs", None) \
+                or "?stream" in (self.command or ""):
+            return ("pre-staging is not supported for tasks that produce or consume streams: streamed "
+                    "data moves through an ad-hoc file system while the tasks run")
         stager_mover = self.stager_mover
         if stager_mover is not None and \
                 dagon.stager.base.StagerMover(stager_mover) == dagon.stager.base.StagerMover.SLURM:
@@ -688,6 +842,11 @@ class Task(Thread):
         checkpoint = self.workflow.checkpoints.get(self.checkpoint_key(), {})
         if checkpoint.get("code") != 0:
             return False
+        for channel in getattr(self, "stream_outputs", {}).values():
+            # Streams are not persistent: rerun while any consumer must still run.
+            if any(self.workflow.checkpoints.get(consumer.checkpoint_key(), {}).get("code") != 0
+                   for consumer in channel.consumers):
+                return False
         working_dir = checkpoint.get("working_dir")
         if not isinstance(working_dir, str) or not working_dir:
             return False
@@ -761,7 +920,7 @@ class Task(Thread):
 
     def portable_command(self) -> str:
         """Resolve workflow references to local producer artifacts."""
-        command = self.command
+        command = self.resolve_stream_references(self.command)
         checkpoint_task = type(self).__name__ in {"Checkpoint", "RemoteCheckpoint"}
         if checkpoint_task:
             command = command.split("checkpoint.sh ", 1)[-1]
@@ -794,11 +953,20 @@ class Task(Thread):
         if extra_environment:
             environment = dict(environment if environment is not None else os.environ)
             environment.update(extra_environment)
+        if self.stream_inputs or self.stream_outputs:
+            environment = dict(environment if environment is not None else os.environ)
+            environment["DAGON_STREAM_STATE_DIR"] = os.path.join(self.working_dir, ".dagon", "streams")
+            environment.setdefault("DAGON_PYTHON", sys.executable)
+            package_root = os.path.dirname(os.path.dirname(os.path.abspath(dagon.__file__)))
+            environment["PYTHONPATH"] = os.pathsep.join(
+                item for item in (package_root, environment.get("PYTHONPATH")) if item)
+        self._mark_stream_launch()
         completed = subprocess.run([bash_executable(), "-c", self.portable_command()],
                                    cwd=self.working_dir, text=True, capture_output=True,
                                    env=environment)
         self.result = {"code": completed.returncode, "message": completed.stderr,
                        "output": completed.stdout}
+        self.close_streams_from_host(completed.returncode)
         self.workflow.checkpoints[key]["code"] = completed.returncode
         if completed.returncode:
             raise RuntimeError("Portable task failed: " + completed.stderr)
@@ -1277,6 +1445,14 @@ class Task(Thread):
             # Extract the parameter string
             arg = command[pos1:pos2]
 
+            # A stream is read from its ad-hoc file system while the producer
+            # runs: it is never staged.
+            channel = getattr(self, "stream_references", {}).get(arg)
+            if channel is not None:
+                body = body.replace(arg, self.stream_location_text(channel))
+                pos = pos2
+                continue
+
             # Remove the dagon.Workflow.SCHEMA label
             arg = arg.replace(dagon.Workflow.SCHEMA, "")
 
@@ -1489,13 +1665,20 @@ class Task(Thread):
         Backends override this to prepare execution-time resources (for
         example a BeeOND volume) before staging and the command run.
         """
+        return self.adhoc_prologue() + self.stream_prologue()
+
+    def adhoc_prologue(self) -> str:
+        """Launcher lines exporting the environment of the bound ad-hoc resources."""
         lines = []
-        for filesystem in getattr(self, "adhoc_filesystems", []):
+        filesystems = getattr(self, "adhoc_filesystems", [])
+        for filesystem in filesystems:
             for key, value in filesystem.task_environment(self).items():
                 lines.append("export %s=%s" % (key, quote(str(value))))
-            # Path lists (for example LD_LIBRARY_PATH) are prepended, not replaced.
+            # Path lists (LD_LIBRARY_PATH, LD_PRELOAD, ...) are prepended, not replaced.
             for key, value in filesystem.path_environment(self).items():
                 lines.append('export %s=%s"${%s:+:$%s}"' % (key, quote(str(value)), key, key))
+        if len(filesystems) > 1:
+            lines.append("export DAGON_ADHOC_NAMES=%s" % quote(",".join(fs.name for fs in filesystems)))
         return ("\n".join(lines) + "\n") if lines else ""
 
     def adhoc_late_prologue(self) -> str:
@@ -1511,12 +1694,16 @@ class Task(Thread):
 
     def portable_environment(self) -> Dict[str, str]:
         """Return extra environment variables for portable local emulation."""
+        from dagon.adhoc import PRELOAD_VARIABLES
         environment: Dict[str, str] = {}
         for filesystem in getattr(self, "adhoc_filesystems", []):
             environment.update(filesystem.portable_environment(self))
             for key, value in filesystem.path_environment(self).items():
+                if key in PRELOAD_VARIABLES:
+                    continue  # nothing is preloaded in emulation
                 current = environment.get(key, os.environ.get(key, ""))
                 environment[key] = os.pathsep.join(item for item in (str(value), current) if item)
+        environment.update(stream_environment(self))
         return environment
 
     # process the command to execute
@@ -1543,6 +1730,7 @@ class Task(Thread):
         :return: Command post-processed
         """
         footer = command + "\n"
+        footer = footer + self.stream_epilogue()
         footer = footer + self.launcher_epilogue() + "\n"
         footer = footer + "# Perform post process\n"
 
@@ -1749,6 +1937,8 @@ class Task(Thread):
 
             # Invoke the actual executor
             start_time = time()
+            # Stream consumers may start from here on.
+            self._mark_stream_launch()
             self.result = self.on_execute(launcher_script, "launcher.sh")
             self.completetion_time = time() - start_time
             self.workflow.logger.debug(
@@ -1774,6 +1964,10 @@ class Task(Thread):
 
                 # Wait for each previous tasks
                 for task in self.prevs:
+                    if task in getattr(self, "stream_prevs", []):
+                        # A streaming edge: start once the producer runs.
+                        self._wait_stream_producer(task)
+                        continue
                     # if its a process from other workflow
                     if self.workflow.find_task_by_name(self.workflow.name, task.name) is None:
                         while True:
@@ -1810,13 +2004,17 @@ class Task(Thread):
                     if task.status == dagon.Status.FAILED:
                         self.set_status(dagon.Status.FAILED)
                         return
+                if not self._stream_producers_ready():
+                    self.failure_phase = "streaming"
+                    self.set_status(dagon.Status.FAILED)
+                    return
 
                 # Change the status
                 self.set_status(dagon.Status.RUNNING)
                 # Execute the task Job
                 self.workflow.logger.debug("%s: Executing...", self.name)
                 # self.semaphore.acquire()
-                self.execute()
+                self.execute_with_task_resources()
                 sleep(2)
                 # Start all next task
                 for task in self.nexts:
@@ -1837,7 +2035,43 @@ class Task(Thread):
                 self.workflow.logger.exception("%s: execution failed", self.name)
                 self.set_status(dagon.Status.FAILED)
             finally:
+                # Never leave stream consumers waiting on a producer that stopped.
+                self.stream_started.set()
+                if getattr(self, "stream_outputs", None):
+                    failed = self.status == dagon.Status.FAILED
+                    # The local signal first: closing from the host may wait on
+                    # an unreachable store, and readers must not wait with it.
+                    for channel in self.stream_outputs.values():
+                        try:
+                            channel.signal_ended(1 if failed else 0)
+                        except OSError as exc:
+                            self.workflow.logger.debug("%s: stream signal not written: %s", self.name, exc)
+                    if failed:
+                        self.close_streams_from_host(1)
                 self.workflow._fire_event("on_task_end", self)
+
+    def execute_with_task_resources(self) -> None:
+        """Run :meth:`execute` between the start and stop of task-scope ad-hoc resources."""
+        started = []
+        try:
+            for filesystem in self.task_scope_filesystems():
+                try:
+                    filesystem.start()
+                except Exception:
+                    self.failure_phase = "adhoc"
+                    raise
+                started.append(filesystem)
+            self.execute()
+        finally:
+            errors = []
+            for filesystem in reversed(started):
+                try:
+                    filesystem.stop()
+                except Exception as exc:
+                    errors.append(str(exc))
+            if errors:
+                self.failure_phase = self.failure_phase or "adhoc"
+                raise RuntimeError("task-scope ad-hoc file system stop failed: " + "; ".join(errors))
 
     def get_public_key(self):
         """

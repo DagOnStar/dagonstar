@@ -57,8 +57,15 @@ class FairRecorder:
                     text = json.dumps(task.contract, sort_keys=True)
                     if marker in text:
                         path = re.split(r"[\s\"']", text.split(marker, 1)[1], 1)[0]
-                edges.append({"producer": previous.name, "consumer": task.name,
-                              "path": path, "type": "workflow-edge"})
+                edge = {"producer": previous.name, "consumer": task.name,
+                        "path": path, "type": "workflow-edge"}
+                if path and "?" in path:
+                    # workflow:///producer/path?stream: the same edge, carried as a stream.
+                    path, _, query = path.partition("?")
+                    edge["path"] = path
+                    if query.split("=", 1)[0] == "stream":
+                        edge["transfer"] = "stream"
+                edges.append(edge)
         self.run["dependencies"] = edges
 
     def on_workflow_start(self, workflow: Any) -> None:

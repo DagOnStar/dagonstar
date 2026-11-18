@@ -40,6 +40,11 @@ Dependency construction fires `on_dependencies_made`. The recorder records task
 edges and recognizes same-workflow references such as
 `workflow:///prepare/data.nc` as a producer/consumer relationship. The existing
 parser is unchanged: its documented whitespace/path limitation still applies.
+A streaming reference (`workflow:///B1/frames?stream`, see
+[Ad-hoc file systems](adhoc_filesystems.md#streaming-between-tasks)) is
+recorded as the same relationship with the bare path and `"transfer":
+"stream"`; the edge states that the consumer read the producer's items while
+it ran, not that a finished file was staged.
 
 Task events capture type, original command and SHA-256 command hash, declared
 artifacts, annotations, predecessor/successor names, wait state, working

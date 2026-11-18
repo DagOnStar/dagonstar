@@ -49,6 +49,8 @@ def _unknown(value: Dict[str, Any], allowed: Iterable[str], label: str) -> None:
 
 def parse_reference(reference: str) -> Tuple[str, str, str]:
     """Split ``workflow://<wf>/<task>/<path>`` (``<wf>`` may be empty) and validate the path."""
+    from dagon.streaming import reject_stream_reference
+    reject_stream_reference(reference, "Agentic")
     if not reference.startswith("workflow://"):
         raise AgenticValidationError("not a workflow reference: %s" % reference)
     pieces = reference[len("workflow://"):].split("/")
