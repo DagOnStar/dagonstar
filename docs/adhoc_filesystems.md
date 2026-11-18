@@ -254,7 +254,9 @@ its user token across workflow runs; DAGonStar never creates users or tokens.
 **Required DynoStore fixes.** DynoStore as released (commit `b9dedd7`, November 2026) cannot be deployed
 from its `docker-compose.dev.yml` and README steps, and loses data integrity
 on overwrite. [`tools/adhoc/dynostore-b9dedd7-fixes.patch`](../tools/adhoc/dynostore-b9dedd7-fixes.patch)
-(apply with `git apply` in a DynoStore checkout at that commit) fixes:
+(apply with `git apply` in a DynoStore checkout at that commit; proposed
+upstream in [dynostore/dynostore#15](https://github.com/dynostore/dynostore/pull/15),
+open as of 18 November 2026; drop the patch once it is released) fixes:
 
 1. The metadata service never creates its tables (it assumed Laravel
    migrations); it now creates them at start-up, waiting for MySQL.
