@@ -167,7 +167,9 @@ hosts from `FILE`.
 2026) cannot serve a workflow as released. The fixes, verified on a Slurm
 cluster, are in
 [`tools/adhoc/hercules-a13da96-fixes.patch`](../tools/adhoc/hercules-a13da96-fixes.patch);
-apply them with `git apply` in the Hercules tree and rebuild:
+apply them with `git apply` in the Hercules tree and rebuild. They are
+proposed upstream in [arcos-uc3m-hercules/hercules#3](https://github.com/arcos-uc3m-hercules/hercules/pull/3)
+(open as of 18 November 2026); drop the patch once they are released:
 
 - the metadata server crashed when a data server registered (it connected to
   port 85000 instead of `DATA_PORT`, then formatted its error message from

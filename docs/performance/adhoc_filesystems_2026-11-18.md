@@ -112,7 +112,8 @@ running tasks against an absent file system.
 The failures were reproduced in a held two-node allocation and diagnosed with
 a debug build under `gdb`. The fixes are in
 [`tools/adhoc/hercules-a13da96-fixes.patch`](../../tools/adhoc/hercules-a13da96-fixes.patch),
-which applies cleanly to upstream `a13da96`:
+which applies cleanly to upstream `a13da96` and is proposed upstream in
+[arcos-uc3m-hercules/hercules#3](https://github.com/arcos-uc3m-hercules/hercules/pull/3):
 
 1. **Metadata-server crash** (`src/workers.c`, `SETSERVER`). When a data
    server registers, the metadata server connects back to it on port `85000`
