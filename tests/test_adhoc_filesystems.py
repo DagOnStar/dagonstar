@@ -411,6 +411,29 @@ class HerculesTests(AdHocTestCase):
         self.assertEqual(run.call_args_list[0].args[0][-1], config)
         self.assertEqual(run.call_args_list[-1].args[0], ["hercules", "stop", "-f", config + "_91"])
 
+    @patch("dagon.adhoc.subprocess.run")
+    def test_stop_never_hands_user_host_files_to_a_per_job_stop(self, run):
+        # ``hercules stop -d FILE`` deletes the stopped hosts from FILE; the
+        # per-job configuration already names the job's own copies.
+        run.return_value = Mock(returncode=0)
+        config = self.config()
+        with patch.dict(os.environ, {"SLURM_JOB_ID": "92"}):
+            hercules = Hercules(self.workflow(portable=False), config=config,
+                                meta_hostfile="meta", data_hostfile="data")
+            hercules.start()
+            open(config + "_92", "w").close()
+            hercules.stop()
+        self.assertEqual(run.call_args_list[0].args[0], ["hercules", "start", "-m", "meta", "-d", "data", "-f", config])
+        self.assertEqual(run.call_args_list[-1].args[0], ["hercules", "stop", "-f", config + "_92"])
+        run.reset_mock()
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("SLURM_JOB_ID", None)
+            outside = Hercules(self.workflow(portable=False), config=config,
+                               meta_hostfile="meta", data_hostfile="data")
+            outside.start()
+            outside.stop()
+        self.assertEqual(run.call_args_list[-1].args[0], ["hercules", "stop", "-m", "meta", "-d", "data", "-f", config])
+
     def test_library_path_is_prepended(self):
         workflow = self.workflow()
         task = DagonTask(TaskType.BATCH, "t", "true")

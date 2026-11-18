@@ -29,5 +29,8 @@ python tools/benchmark_adhoc_filesystems.py --live-only \
 Other live backends are named the same way: `--capio-server` with
 `--capio-library`, `--hercules-config` with `--hercules-launcher`, and
 `--dynostore-server HOST:PORT` with the user token in `$DYNOSTORE_TOKEN`.
+Hercules needs the fixes in
+[`tools/adhoc/hercules-a13da96-fixes.patch`](../../tools/adhoc/hercules-a13da96-fixes.patch)
+applied to its source tree.
 Measured results, with hosts, dates, and limitations, are recorded in
 [`docs/performance/adhoc_filesystems_2026-11-18.md`](../../docs/performance/adhoc_filesystems_2026-11-18.md).

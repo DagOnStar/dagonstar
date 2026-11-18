@@ -155,12 +155,34 @@ keeps its state in `HERCULES_PATH/tmp`). Hercules documents no readiness
 command, and its script can return 0 after a failed deployment: give
 `ready_command`, which runs with the task's preload environment, for example
 `["ls", "/mnt/hercules/"]`, so that the workflow waits for the servers and fails
-instead of running tasks against an absent file system. `stop` passes the
-per-job configuration to `hercules stop`, which does not derive it itself. In
-automatic Slurm mode the script places data servers only on nodes after the
-metadata nodes, so a one-node allocation needs explicit `meta_hostfile` and
-`data_hostfile`. Hercules did not reach a usable state on the test cluster;
-see the [performance record](performance/adhoc_filesystems_2026-11-18.md).
+instead of running tasks against an absent file system.
+
+`stop` runs `hercules stop -f <config>_<SLURM_JOB_ID>` inside an allocation:
+the script does not derive the per-job configuration when stopping, and that
+configuration already names the job's host files. The host files are passed to
+`stop` only outside Slurm, because `hercules stop -d FILE` deletes the stopped
+hosts from `FILE`.
+
+**Required Hercules fixes.** Hercules at upstream commit `a13da96` (November
+2026) cannot serve a workflow as released. The fixes, verified on a Slurm
+cluster, are in
+[`tools/adhoc/hercules-a13da96-fixes.patch`](../tools/adhoc/hercules-a13da96-fixes.patch);
+apply them with `git apply` in the Hercules tree and rebuild:
+
+- the metadata server crashed when a data server registered (it connected to
+  port 85000 instead of `DATA_PORT`, then formatted its error message from
+  uninitialised memory);
+- POSIX reads larger than one block returned bytes past end of file;
+- one-node allocations started no data server, and explicit `-m`/`-d` host
+  files under Slurm were never copied to the per-job host files that servers
+  and clients read;
+- `hercules stop` signalled every Hercules server on a node, read
+  half-written status files as failures, and edited the user's `-d` file.
+
+Hercules keeps its server status files in the shared `HERCULES_PATH/tmp`
+without a job identifier, so run one Hercules deployment per Hercules tree at a
+time. Live results are in the
+[performance record](performance/adhoc_filesystems_2026-11-18.md).
 
 ### BeeOND
 

@@ -672,6 +672,8 @@ class Hercules(ProcessFileSystem):
         hosts = ["-m", str(meta_hostfile), "-d", str(data_hostfile)] if meta_hostfile else []
         if client_hostfile:
             hosts += ["-c", str(client_hostfile)]
+        self._launcher = launcher
+        self._hosts = hosts
         super().__init__(workflow, name, [launcher, "start", *hosts, "-f", self.config],
                          [launcher, "stop", *hosts, "-f", self.config],
                          environment={"HERCULES_CONF": self.config}, startup_delay=startup_delay,
@@ -742,9 +744,14 @@ class Hercules(ProcessFileSystem):
 
     def stop(self) -> Optional[int]:
         # ``hercules stop`` ignores Slurm: inside an allocation it must be
-        # given the per-job configuration (and host files) that start wrote.
-        if self.stop_command:
-            self.stop_command[-1] = self.client_config()
+        # given the per-job configuration that start wrote, which already names
+        # the job's host files.  Host files are passed only without it, because
+        # stopping removes hosts from the data host file it is given.
+        configuration = self.client_config()
+        if configuration != self.config:
+            self.stop_command = [self._launcher, "stop", "-f", configuration]
+        else:
+            self.stop_command = [self._launcher, "stop", *self._hosts, "-f", self.config]
         return super().stop()
 
     def metadata(self) -> Dict[str, Any]:

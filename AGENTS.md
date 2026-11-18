@@ -169,6 +169,11 @@ configuration validation separately from live integration behavior.
   or launchers (it is a URL path segment).
 - The DAGonFS native readiness/shutdown requests mirror DAGonFS protocol
   version 2; update them together with DAGonFS's `Protocol.h`.
+- Hercules `a13da96` needs `tools/adhoc/hercules-a13da96-fixes.patch`. Keep the
+  patch applicable to the commit it names, list each fix in
+  `docs/adhoc_filesystems.md`, and record its verification in
+  `docs/performance/`. Inside an allocation, stop Hercules with the per-job
+  configuration only: `hercules stop -d FILE` deletes hosts from `FILE`.
 - Changes require `tests/test_adhoc_filesystems.py`, `examples/adhoc/`,
   `docs/adhoc_filesystems.md`, Lesson 24, the coverage entry
   `storage.adhoc-filesystems`, and `tools/benchmark_adhoc_filesystems.py` to

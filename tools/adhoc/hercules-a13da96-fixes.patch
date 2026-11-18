@@ -1,0 +1,150 @@
+diff --git a/fuse/imss_posix_api.c b/fuse/imss_posix_api.c
+index c7f7193..fa9ca04 100644
+--- a/fuse/imss_posix_api.c
++++ b/fuse/imss_posix_api.c
+@@ -802,6 +802,15 @@ extern "C"
+ 			return 0;
+ 		}
+ 
++		// POSIX read semantics: never transfer data past the end of the file.
++		// The per-block logic below clamps only the first block, so a request
++		// spanning several blocks would otherwise return bytes beyond EOF.
++		if ((size_t)offset + size > (size_t)stats.st_size)
++		{
++			size = (size_t)stats.st_size - (size_t)offset;
++			end_blk = ceil((double)(offset + size) / IMSS_DATA_BSIZE);
++		}
++
+ 		i_blk = 0;
+ 		while (curr_blk <= end_blk)
+ 		{
+@@ -826,6 +835,10 @@ extern "C"
+ 						to_read = IMSS_DATA_BSIZE - start_offset;
+ 					}
+ 				}
++				if ((size_t)to_read > size)
++				{
++					to_read = size;
++				}
+ 				slog_debug("[imss_read] FIRST BLOCK CASE, to_read=%ld, fd=%d, ds=%d", to_read, fd, ds);
+ 
+ 				++first;
+diff --git a/scripts/check-servers.sh b/scripts/check-servers.sh
+index 826e45d..47fc0d4 100755
+--- a/scripts/check-servers.sh
++++ b/scripts/check-servers.sh
+@@ -45,10 +45,19 @@ echo ${HERCULES_PATH}
+ CheckForStatusFile
+ # echo $STATUS > file-status.out
+ #echo "STATUS=$STATUS" >> ${HERCULES_PATH}/tmp/$SERVER_TYPE-hercules-$SERVER_NUMBER-$ACTION
+-# If the server is locked we will wait until it is unlocked.
+-until [ "$STATUS" != "LOCKED" ]; do
+-    echo "[+][$HOSTNAME] Server $SERVER_NUMBER is locked, $STATUS"
+-    CheckForStatusFile
++# Wait while the server is locked. The server rewrites the status file in
++# place (fopen "w+"), so an empty status means it is being written: wait too.
++polls=0
++until [ "$STATUS" = "OK" ] || [ "$STATUS" = "ERROR" ]; do
++    polls=$((polls + 1))
++    if [ $polls -gt $((ATTEMPS * 5)) ]; then
++        exit 1
++    fi
++    if [ $((polls % 25)) -eq 1 ]; then
++        echo "[+][$HOSTNAME] Server $SERVER_NUMBER status: ${STATUS:-<being written>}"
++    fi
++    sleep 0.2
++    CheckForStatusFile > /dev/null
+ done
+ 
+ 
+diff --git a/scripts/hercules b/scripts/hercules
+index 1e799ca..c6a78a4 100755
+--- a/scripts/hercules
++++ b/scripts/hercules
+@@ -97,11 +97,12 @@ StopServers() {
+         # echo "[+] Removing temporal files on ${node}"
+         echo "[+] Stopping server ID ${REAL_ID} on ${node}"
+ 
++        ## Signal only this server: metadata and data servers may share a node.
+         ## TODO: adapt this to ssh when slrum is not avaiable.
+         set -x 
+         # ( ssh $node "$RM" )
+         # ( ssh ${node} "pkill -SIGUSR1 hercules_server" )
+-        srun --nodelist="${node}" --ntasks=1 --nodes=1 --overlap --jobid="${SLURM_JOB_ID}" bash -c "rm -f ${FILE_TO_REMOVE}; pkill -SIGUSR1 hercules_server"
++        srun --nodelist="${node}" --ntasks=1 --nodes=1 --overlap --jobid="${SLURM_JOB_ID}" bash -c "rm -f ${FILE_TO_REMOVE}; pkill -SIGUSR1 -f \"hercules_server ${SERVER_TYPE} ${REAL_ID}( |\$)\""
+         set +x
+         i=$(($i+1))
+ 
+@@ -538,7 +539,10 @@ then
+             echo "Data server file ${DATA_SERVER_FILE} does not exist"
+             exit 0
+         fi
+-        HERCULES_DATA_HOSTFILE="${DATA_SERVER_FILE}"
++        ## StopServers removes stopped hosts from HERCULES_DATA_HOSTFILE:
++        ## work on a copy so that the user's host file is never modified.
++        HERCULES_DATA_HOSTFILE="${HERCULES_TEMPORAL_PATH}/data2stop_userfile_${SLURM_JOB_ID}"
++        cp "${DATA_SERVER_FILE}" "${HERCULES_DATA_HOSTFILE}"
+     fi
+ 
+     set -x
+@@ -825,6 +829,10 @@ else
+     ## determinate set of metadata servers.
+     echo "[+] Reading metadata server file - $META_SERVER_FILE"
+     readarray -t meta_hosts < "$META_SERVER_FILE"
++    ## The configuration names HERCULES_METADATA_HOSTFILE: keep it in step.
++    if [[ -n "${HERCULES_METADATA_HOSTFILE}" && "${META_SERVER_FILE}" != "${HERCULES_METADATA_HOSTFILE}" ]]; then
++        cp "${META_SERVER_FILE}" "${HERCULES_METADATA_HOSTFILE}"
++    fi
+ fi
+ 
+ ## The array is read to deploy the metadata servers.
+@@ -903,6 +911,15 @@ then
+         # echo ${HERCULES_ALLOC_DATA_HOSTFILE}
+         # echo ${MALLEABILITY}
+         tail -n +$((HERCULES_NUM_METADATA+1)) "${FULL_HOSTFILE}" | head -n "${HERCULES_NUM_DATA}" > "${HERCULES_DATA_HOSTFILE}"
++        ## Too few nodes after the metadata nodes (e.g., a one-node allocation):
++        ## complete the list with the other allocated nodes, one data server each.
++        if [[ $(wc -l < "${HERCULES_DATA_HOSTFILE}") -lt "${HERCULES_NUM_DATA}" ]]; then
++            awk -v n="${HERCULES_NUM_DATA}" "FILENAME==ARGV[1]{seen[\$0]=1; c++; next} c<n && !(\$0 in seen){print; seen[\$0]=1; c++}" "${HERCULES_DATA_HOSTFILE}" "${FULL_HOSTFILE}" >> "${HERCULES_DATA_HOSTFILE}"
++        fi
++        if [[ $(wc -l < "${HERCULES_DATA_HOSTFILE}") -lt "${HERCULES_NUM_DATA}" ]]; then
++            echo "[Error] NUM_DATA_SERVERS=${HERCULES_NUM_DATA} needs at least that many allocated nodes."
++            exit 1
++        fi
+     fi
+     ## To create an array with the data nodes.
+     readarray -t data_hosts < "${HERCULES_DATA_HOSTFILE}"
+@@ -912,6 +929,10 @@ else
+     ## determinate set of data servers.
+     echo "[+] Reading data server file."
+     readarray -t data_hosts < "${DATA_SERVER_FILE}"
++    ## The configuration and the index below use HERCULES_DATA_HOSTFILE.
++    if [[ -n "${HERCULES_DATA_HOSTFILE}" && "${DATA_SERVER_FILE}" != "${HERCULES_DATA_HOSTFILE}" ]]; then
++        cp "${DATA_SERVER_FILE}" "${HERCULES_DATA_HOSTFILE}"
++    fi
+ fi
+ 
+ # Index file
+diff --git a/src/workers.c b/src/workers.c
+index 146f83a..b3d4687 100644
+--- a/src/workers.c
++++ b/src/workers.c
+@@ -2891,12 +2891,15 @@ int stat_worker_helper(p_argv *arguments, char *req, void *map_server_eps)
+ 		// number  == client ip.
+ 		// uri_ == hostname.
+ 		char *added_hostname = uri_;
+-		slog_debug("connecting to %s:8500",number);
+-		oob_sock = connect_common(number, 85000, AF_INET);
++		// The joining data server answers on its configured DATA_PORT.
++		slog_debug("connecting to %s:%" PRIu64, number, arguments->args.data_port);
++		oob_sock = connect_common(number, arguments->args.data_port, AF_INET);
+ 		if (oob_sock < 0)
+ 		{
+ 			char err_msg[MAX_ERR_MSG_LEN] = {0};
+-			sprintf(err_msg, "HERCULES_ERR_STAT_WORKER_HELPER_CONNECT_COMMON - i=%d - %s:%d", server_id_request, new_imss.info.ips[server_id_request], new_imss.info.conn_port);
++			// new_imss is not initialised here: report the request itself.
++			sprintf(err_msg, "HERCULES_ERR_STAT_WORKER_HELPER_CONNECT_COMMON - i=%d - %s:%" PRIu64, server_id_request, number, arguments->args.data_port);
++			free(new_imss.conns.peer_addr);
+ 			slog_error("%s", err_msg);
+ 			perror(err_msg);
+ 			return -1;

@@ -215,9 +215,10 @@ credential-free metadata are unit tested against local stand-ins on every CI
 platform, without the optional runtimes. Live runs through DAGonStar workflows
 (November 2026, recorded in `docs/performance/`) exercised DAGonFS (three
 frontends; macOS and one- and two-node Slurm), CAPIO (one Slurm node), and
-DynoStore (Docker Compose on macOS) with byte-verified data. Hercules was
-attempted on one to three Slurm nodes but never reached a usable state; the
-adapter's readiness check stopped those workflows before their tasks ran.
+DynoStore (Docker Compose on macOS) and Hercules (one and two Slurm nodes)
+with byte-verified data. Hercules works only with the fixes recorded in
+`tools/adhoc/hercules-a13da96-fixes.patch`; unpatched deployments failed and
+were stopped by the adapter's readiness check.
 BeeOND relies on the earlier production-site run and CI emulation. These live
 runs are manual and are not part of CI.
 Scheduler-aware pre-staging is opt-in and leaves the default lifecycle

@@ -16,7 +16,7 @@ Values are medians of three runs unless stated. The raw reports are in
 | DAGonFS (FUSE3, native, preload) | yes: lifecycle, three frontends, byte verification | macOS 26.6 arm64 (macFUSE); PurpleJeans, 1 and 2 nodes |
 | CAPIO | yes: lifecycle, interception, byte verification | PurpleJeans, 1 node |
 | DynoStore | yes: put, exists, get, evict, workflow tasks | macOS 26.6 arm64, Docker Desktop |
-| Hercules | attempted; Hercules did not reach a usable state, and the adapter's readiness check failed each run cleanly | PurpleJeans, 1 and 3 nodes |
+| Hercules | yes, with the fixes in `tools/adhoc/hercules-a13da96-fixes.patch`: lifecycle, interception, byte verification | PurpleJeans, 1 and 2 nodes |
 | BeeOND | no new run (no BeeOND or Docker on PurpleJeans) | earlier four-node production run of the BeeOND integration; CI emulation |
 
 PurpleJeans: Rocky Linux 8 (kernel 4.18), 32 cores per node, Slurm partition
@@ -90,27 +90,82 @@ small run (job 19792, 4 x 2 MiB) is kept in [raw](raw/purplejeans-capio-1n-19792
 
 ## Hercules
 
-Hercules built from source on PurpleJeans (`hercules_server`,
-`libhercules_posix.so`, UCX 1.15), configuration from
-`conf/hercules.conf.sample` with `HERCULES_PATH` set to the source tree. No
-attempt produced a usable file system:
+Hercules built from source on PurpleJeans at upstream commit `a13da96`
+(`hercules_server`, `libhercules_posix.so`, UCX 1.15), configuration from
+`conf/hercules.conf.sample` with `HERCULES_PATH` set to the source tree.
+
+### As released: no usable deployment
 
 | Job | Nodes | Host selection | Observation |
 |---|---:|---|---|
-| 19790 | 2 | Slurm (automatic) | `hercules start` reported `STATUS = OK`; the metadata server crashed (segmentation fault in its UCX stat worker) and clients were refused on port 7500 |
-| 20024, 20027 | 1 | Slurm (automatic) | the script places data servers only on nodes after the metadata nodes, so a one-node allocation starts none; `hercules start` still returned 0 and clients failed to create their resources |
-| 20028 | 1 | Slurm, `UCX_TLS=tcp,self` | deployment did not finish within the 15-minute limit |
-| 20039 | 1 | explicit `-m`/`-d` host files (same node) | the data server never registered (`Waiting for server -1`); `hercules start` returned 1 |
-| 20040 | 3 | Slurm (automatic) | deployment did not finish within the 15-minute limit |
+| 19790 | 2 | Slurm (automatic) | `hercules start` reported `STATUS = OK`; the metadata server crashed and clients were refused on port 7500 |
+| 20024, 20027 | 1 | Slurm (automatic) | no data server was started; `hercules start` still returned 0 |
+| 20028 | 1 | Slurm, `UCX_TLS=tcp,self` | deployment did not finish within 15 minutes |
+| 20039 | 1 | explicit `-m`/`-d` host files | the data server never registered; clients could not read the metadata host file |
+| 20040 | 3 | Slurm (automatic) | deployment did not finish within 15 minutes |
 
-In every DAGonStar run the `ready_command` (a listing of the mount point under
-the Hercules preload library) kept the workflow from running tasks against an
-absent file system, and the workflow failed with the provider log. Two adapter
-improvements came from these runs: `hercules stop` is now given the per-job
-configuration (`<config>_<SLURM_JOB_ID>`), because the script does not derive
-it when stopping, and the benchmark keeps the last 40 kB of a failed
-provider's log. Whether the failures come from this site's UCX and Slurm setup
-or from Hercules itself was not determined; no Hercules throughput is claimed.
+In every DAGonStar run the adapter's `ready_command` kept the workflow from
+running tasks against an absent file system.
+
+### Diagnosis and fixes
+
+The failures were reproduced in a held two-node allocation and diagnosed with
+a debug build under `gdb`. The fixes are in
+[`tools/adhoc/hercules-a13da96-fixes.patch`](../../tools/adhoc/hercules-a13da96-fixes.patch),
+which applies cleanly to upstream `a13da96`:
+
+1. **Metadata-server crash** (`src/workers.c`, `SETSERVER`). When a data
+   server registers, the metadata server connects back to it on port `85000`
+   (above 65535, so port 19464 on the wire) instead of the configured
+   `DATA_PORT`, and its error path formats `new_imss.info.ips[...]` from an
+   uninitialised structure (`SIGSEGV` in `stat_worker_helper`). Fixed: connect
+   to `DATA_PORT`; report the request's own address on error.
+2. **Reads past end of file** (`fuse/imss_posix_api.c`, `imss_sread`). Only the
+   first block was clamped to the file size, so a 1 MiB `read` at the tail of a
+   3 MB file returned 1 MiB, and a 4 MB `read` returned 4 MB. Fixed: clamp the
+   request to the bytes remaining before the block loop.
+3. **Placement** (`scripts/hercules`). Automatic Slurm placement puts data
+   servers only on nodes after the metadata nodes, so one node started none;
+   it now completes the list with the other allocated nodes (one data server
+   per node). Explicit `-m`/`-d` files are now copied to the per-job host files
+   that the per-job configuration names, which servers and clients read.
+4. **Stop** (`scripts/hercules`, `scripts/check-servers.sh`). `stop` sent
+   `SIGUSR1` to every `hercules_server` on a node, so a co-located metadata
+   server stopped early and its status file was then deleted and awaited
+   forever; it now signals only `hercules_server <type> <id>`. The server
+   rewrites its status file in place, so a poll could read it empty and fail;
+   `check-servers.sh` now waits (with a sleep instead of a busy loop) until
+   the status is `OK` or `ERROR`. `stop -d FILE` deleted the stopped hosts from
+   the user's `FILE`; it now works on a copy.
+
+With the patch, a stand-alone start, client, stop cycle passed on one node
+(automatic and explicit host files), on two nodes, and on two nodes with two
+data servers: `cp`, `cat`, `stat`, `cmp`, `dd`, `mkdir`, listing, and nine
+write/read chunk-size combinations (128 KiB to 4 MB) returned exactly the
+written bytes, `hercules stop` returned 0, and no server was left running.
+
+### DAGonStar workflows
+
+The adapter needed one change found here: inside an allocation `stop` passes
+only the per-job configuration (never the user's host files). Jobs 20054 (one
+node, one data server) and 20056 (two nodes, two data servers), 32 x 16 MiB,
+8 readers ([raw 1 node](raw/purplejeans-hercules-1n-20054.json),
+[raw 2 nodes](raw/purplejeans-hercules-2n-20056.json)):
+
+| Run | Backend | Workflow (s) | Write (MiB/s) | Aggregate read (MiB/s) | Start (s) | Stop (s) |
+|---|---|---:|---:|---:|---:|---:|
+| 1 node | local | 16.37 | 257.8 | 2966.3 | — | — |
+| 1 node | hercules | 25.54 | 196.0 | 2226.9 | 3.23 | 2.50 |
+| 2 nodes | local | 16.47 | 258.0 | 2961.2 | — | — |
+| 2 nodes | hercules | 26.06 | 193.8 | 2300.7 | 3.79 | 2.46 |
+
+Start and stop (the deployment script's `srun` steps and status-file polling)
+account for about 6 s of the 9 s difference in workflow time. For about a
+minute, job 20054 overlapped with a job that was then cancelled and that used
+the same `HERCULES_PATH/tmp`; its results agree with the
+isolated job 20056. Hercules keeps server status files in that shared
+directory without a job identifier, so concurrent deployments from one
+Hercules tree are not supported.
 
 ## DynoStore
 
@@ -152,4 +207,4 @@ environment, ordering, and cleanup, never that a provider ran. Live runs used
 three repeats on shared nodes and one laptop; they are evidence
 that the integration works and of its relative cost on those hosts, not
 storage rankings. Multi-node CAPIO (one server per node through
-`server_launcher`) and multi-node Hercules were not run.
+`server_launcher`) was not run.
