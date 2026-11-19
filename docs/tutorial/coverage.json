@@ -1228,6 +1228,64 @@
       ],
       "evidence_level": "local-executed",
       "limitations": "Local runs are not CI runs; platform results come from the CI service."
+    },
+    {
+      "feature_id": "tasktype.meta",
+      "category": "task-type",
+      "task_types": [
+        "meta"
+      ],
+      "source_paths": [
+        "dagon/meta/task.py",
+        "dagon/meta/runner.py",
+        "dagon/meta/adapters/base.py"
+      ],
+      "lessons": [
+        28,
+        32
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_28_meta_workflows.py",
+        "examples/meta/meta_workflow_local.py",
+        "examples/tutorial/lesson_32_capstone.py"
+      ],
+      "test_targets": [
+        "tests.test_meta_task.MetaExecutionTests",
+        "tests.test_meta_task.MetaValidationTests",
+        "tests.test_tasktype_interoperability"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "Local executions use the generic command adapter with an engine-free stand-in or the mock engine; the engine runs on the DAGonStar host only."
+    },
+    {
+      "feature_id": "meta.external-engines",
+      "category": "composition",
+      "task_types": [
+        "meta"
+      ],
+      "source_paths": [
+        "dagon/meta/adapters/nextflow.py",
+        "dagon/meta/adapters/snakemake.py",
+        "dagon/meta/adapters/parsl.py",
+        "dagon/meta/adapters/streamflow.py",
+        "dagon/meta/adapters/cwl.py",
+        "dagon/meta/parsl_driver.py"
+      ],
+      "lessons": [
+        28
+      ],
+      "example_paths": [
+        "examples/meta/meta_engines.py",
+        "examples/cwl/export_meta_workflow.py"
+      ],
+      "test_targets": [
+        "tests.test_meta_task.MetaAdapterCommandTests",
+        "tests.test_meta_task.MetaLiveEngineTests",
+        "tests.test_meta_task.MetaRegistryTests",
+        "tests.test_meta_task.MetaCWLExportTests"
+      ],
+      "evidence_level": "live-optional",
+      "limitations": "Generated engine commands are always tested; real engines run only where installed. On 19 November 2026 Snakemake, Parsl, StreamFlow, and cwltool passed on macOS; Nextflow was not executed."
     }
   ],
   "exclusions": [

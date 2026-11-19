@@ -59,6 +59,9 @@ def all_tasks():
                                         inputs={"source": OBSERVATIONS},
                                         requirements=[{"id": "complete", "evaluator": "record_coverage",
                                                        "expected": {"count": 4}, "mandatory": True}]),
+            # An external Nextflow pipeline; portable emulation uses the mock engine, never Nextflow.
+            TaskType.META: DagonTask(TaskType.META, "meta", engine="nextflow", workflow="nextflow-io/hello",
+                                     inputs={"values": REF}, outputs={"summary": "results/summary.json"}),
         }
 
 

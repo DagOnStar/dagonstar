@@ -42,6 +42,9 @@ verification strategy.
 - [Agentic task examples](agentic.md): bounded agents with `dagon.ini` profiles,
   guardrails, independent evaluation, checkpoint identity, and CWL; source:
   [`examples/agentic/`](../../examples/agentic/README.md).
+- [Meta-task examples](meta.md): the same word count written for Snakemake,
+  Parsl, Nextflow, StreamFlow, and a CWL runner, each run unmodified as one
+  `TaskType.META` task; source: [`examples/meta/`](../../examples/meta/README.md).
 - [DynoStore examples](dynostore.md): offline command/graph inspection and an
   optional live catalog upload/download workflow.
 - [CWL interoperability](cwl.md): deterministic local export and a checked-in,

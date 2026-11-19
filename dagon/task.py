@@ -62,6 +62,7 @@ class TaskType(Enum):
     :cvar DOCKER: Task executed on a docker container (local or remote)
     :cvar APPTAINER: Task executed in an Apptainer container (HPC environments)
     :cvar AGENTIC: Bounded agent with independent evaluation (see dagon.agentic)
+    :cvar META: Workflow written for another engine, run through an adapter (see dagon.meta)
     """
 
     CHECKPOINT = "checkpoint"
@@ -78,6 +79,7 @@ class TaskType(Enum):
     FAAS = "faas"
     IOT = "iot"
     AGENTIC = "agentic"
+    META = "meta"
 
 
 # Different types os tasks and their module and class name
@@ -101,6 +103,7 @@ tasks_types: Dict[TaskType, TaskTypeSpec] = {
     TaskType.FAAS: ("dagon.faas", "FaaSTask"),
     TaskType.IOT: ("dagon.iot", "IoTTask"),
     TaskType.AGENTIC: ("dagon.agentic.task", "AgenticTask"),
+    TaskType.META: ("dagon.meta.task", "MetaTask"),
 }
 
 

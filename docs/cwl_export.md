@@ -140,6 +140,31 @@ consumer document with `cwltool --no-container` when both `cwltool` and
 [Lesson 29](tutorial/lesson_29_export_and_validate_common_workflow_language.md)
 show the same export. See [Agentic tasks](agentic_tasks.md).
 
+## Meta-tasks
+
+`TaskType.META` is exported as an executable step whose `baseCommand` is
+`dagon-meta-runner run` (installed by `pip install -e .`). The credential-free
+specification is embedded as `meta-task.json` through
+`InitialWorkDirRequirement`; each `workflow://` input is bound to the producer
+step's `File` output, or `Directory` output for inputs declared with
+`"type": "directory"`, through `--bind REFERENCE=$(inputs.in_N.path)`; each
+declared output is a CWL `File` or `Directory` output with glob
+`outputs/<path>`, so other meta or agentic steps can bind it; it is also a workflow-level output
+named `<step>_<output>`. A
+`dagon:MetaTask` hint records the schema version, engine, workflow location,
+and the SHA-256 of the external workflow definition.
+
+The portable boundary is explicit: CWL describes the DAGonStar graph and the
+meta step's inputs and outputs, not the steps inside the external workflow.
+The engine and the workflow definition named in the specification must be
+installed on the CWL execution host at the recorded location. Only producers in
+the same workflow can be bound; other references raise `ValueError` at export.
+With `portable_emulation=True` a meta step is exported like other structured
+task types (a placeholder command). `tests/test_meta_task.py` checks
+determinism, bindings, and `cwltool --validate`; `examples/cwl/export_meta_workflow.py`
+exports, validates, and with `--run` executes a producer → meta-task document.
+See [Meta-tasks](meta_tasks.md).
+
 ## Runnable interoperability material
 
 The [`examples/cwl/`](../examples/cwl/README.md) directory contains the Python

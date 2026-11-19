@@ -66,6 +66,8 @@ EXAMPLES = [
     "examples/adhoc/custom_adapter.py",
     "examples/adhoc/streaming.py",
     "examples/cwl/export_streaming_workflow.py",
+    "examples/cwl/export_meta_workflow.py",
+    "examples/meta/meta_workflow_local.py",
     "examples/dataflow/slurm/pre_stage_mock.py",
     "examples/agentic/tool_free.py",
     "examples/agentic/guarded_repair.py",

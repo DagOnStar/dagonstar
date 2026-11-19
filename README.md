@@ -125,6 +125,7 @@ The full documentation set is available in `docs/`:
 - [Running External Scientific Software](docs/running_external_software.md)
 - [The `workflow://` Schema](docs/the_workflow_schema.md)
 - [Task-type interoperability](docs/tasktype_interoperability.md)
+- [Meta-tasks: workflows from other engines, and writing adapters](docs/meta_tasks.md)
 - [Checkpoints](docs/checkpoints.md)
 - [BeeOND on-demand file systems](docs/beeond.md)
 - [Common ad-hoc file-system interface](docs/adhoc_filesystems.md)
@@ -182,6 +183,10 @@ The full documentation set is available in `docs/`:
 - Native, opt-in FAIR metadata and provenance recording with RO-Crate, PROV,
   DataCite, CodeMeta, local output fixity, validation, and reports.
 - Meta-workflows that coordinate multiple workflows.
+- Meta-tasks (`TaskType.META`) that run a workflow written for another engine
+  - Nextflow, Snakemake, Parsl, StreamFlow, a CWL runner, or any CLI - as one
+  task, unmodified, through adapters, with data passed in and out by
+  `workflow://` references; new engines need only an adapter class.
 
 ## Project status and quality assessment
 
@@ -277,6 +282,18 @@ quotes its scratch path, so shell syntax in that path is no longer executed. The
 pre-staging transfer loop is injection-safe, while the legacy launcher text
 is unchanged.
 
+Meta-tasks (`TaskType.META`) run workflows written for other engines through
+an adapter registry (entry-point group `dagon.meta_adapters`); the engines are
+never modified. The generated engine commands and parameter files for
+Nextflow, Snakemake, Parsl, StreamFlow, and CWL runners, staging, output
+containment, failure phases, timeouts, verified checkpoint reuse, portable
+emulation, FAIR records, JSON, and the `dagon-meta-runner` CWL step are unit
+tested without any engine. Live runs on macOS (19 November 2026,
+`docs/performance/meta_engines_2026-11-19.md`) passed with Snakemake 9.27.2,
+Parsl 2026.11.16, StreamFlow 0.2.0rc3, and cwltool; Nextflow has not been run
+live yet. The engine runs on the DAGonStar host; remote execution is delegated
+to each engine's own executors and has not been exercised.
+
 The repository has a sound baseline for changes to the core behavior:
 
 - unit tests cover configuration parsing, workflow defaults and dependency
@@ -326,6 +343,10 @@ The repository has a sound baseline for changes to the core behavior:
   loopback OpenAI-compatible adapter, JSON, FAIR, portable emulation, and CWL
   export executed with `cwltool`; tests use only the deterministic mock adapter
   or a loopback server, and live models are not evaluated.
+- meta-tasks have engine-free tests for validation, generated engine
+  commands, staging, output containment, failures and timeouts, checkpoint
+  identity, the adapter registry, FAIR, JSON, and CWL export, plus live tests
+  that run only where an engine is installed.
 - the Nomad backend has mocked HTTP lifecycle tests (submission, polling,
   timeout, logs, purge, and SSH ports).
 - native Python tasks have local staging, dependency, output, and runner tests;
@@ -344,7 +365,7 @@ external profile. Credential capture remains disabled by default.
 The test suite is intentionally fast and local: it validates command generation,
 failure propagation, and integration boundaries, not live Docker, Kubernetes,
 Nomad, Apptainer, SSH, Slurm, cloud, Globus, SKYCDS, FaaS, IoT, LLM, or agent
-providers. CI also runs focused style checks and a
+providers, or external workflow engines (their live tests are skipped when absent). CI also runs focused style checks and a
 progressive type check over the shell-command helper. Several legacy and
 site-specific code paths still construct shell commands, so changes around
 external execution should be kept small, quoted defensively, and verified at
@@ -500,6 +521,9 @@ Example groups:
 - `examples/agentic`: deterministic agentic tasks: tool-free revision, guarded
   repair, a failing mandatory gate, checkpoint identity, mixed graphs, and CWL;
   see the [example guide](docs/examples/agentic.md).
+- `examples/meta`: the same word count written for Snakemake, Parsl, Nextflow,
+  StreamFlow, and CWL, each run unmodified as a meta-task; `meta_workflow_local.py`
+  needs no engine. See the [example guide](docs/examples/meta.md).
 - `examples/tutorial`: one self-checking script for each of the 33 lessons.
 
 Generate and test the portable CWL example without a private configuration:
@@ -583,6 +607,29 @@ the environment variable named by `api_key_env` at invocation. See the
 [examples](examples/agentic/README.md), and tutorial
 [Lessons 14–16](docs/tutorial/lesson_14_specify_and_configure_an_agentic_task.md).
 
+## Meta-tasks
+
+`TaskType.META` runs a workflow written for another engine as one task. An
+adapter translates the task into the engine's own command line and parameter
+files; the engine is never modified:
+
+```python
+DagonTask(TaskType.META, "count", engine="nextflow", workflow="pipelines/main.nf",
+          inputs={"text": "workflow:///prepare/data/text.txt", "top": 10},
+          outputs={"counts": {"path": "counts.tsv", "source": "results/counts.tsv"}})
+DagonTask(TaskType.BATCH, "report", "sort workflow:///count/outputs/counts.tsv > report.tsv")
+```
+
+`workflow://` inputs are staged and passed as engine parameters (Nextflow
+`params`, Snakemake `config`, Parsl keyword arguments, a CWL job document);
+declared outputs are collected into `outputs/`, where downstream tasks read
+them. Built-in adapters: `nextflow`, `snakemake`, `parsl`, `streamflow`, `cwl`,
+`command` (any CLI), and `mock` (portable emulation). A new engine needs only
+a `MetaEngineAdapter` subclass registered with `register_adapter` or the
+`dagon.meta_adapters` entry point. See the [meta-task guide](docs/meta_tasks.md)
+(interface and adapter development), [examples](examples/meta/README.md), and
+[Lesson 28](docs/tutorial/lesson_28_compose_meta_workflows.md).
+
 ## Development
 
 Useful checks:
@@ -590,8 +637,8 @@ Useful checks:
 ```bash
 python -m unittest discover -s tests -v
 python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py
-python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic tests tools/run_local_examples.py
-python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic/*.py
+python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic dagon/meta tests tools/run_local_examples.py
+python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic/*.py dagon/meta/task.py dagon/meta/runner.py dagon/meta/adapters/*.py
 python tools/run_local_examples.py
 python tools/validate_tutorial.py
 python tools/validate_tutorial_coverage.py

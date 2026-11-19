@@ -33,6 +33,12 @@ Agentic tasks export to an executable `dagon-agent-runner` step with a
 workflow-level `dagon_config: File` input; see the agentic section of the
 [CWL export guide](../../docs/cwl_export.md) and `examples/agentic/cwl_local.py`.
 
+Meta-tasks export to an executable `dagon-meta-runner` step whose `workflow://`
+inputs are bound to producer `File` or `Directory` outputs; see the meta-task
+section of the [CWL export guide](../../docs/cwl_export.md) and `examples/cwl/export_meta_workflow.py`
+(`--run` executes it with `cwltool` when `dagon-meta-runner` is installed).
+
+
 ## Streams
 
 `export_streaming_workflow.py` exports a two-task workflow whose consumer

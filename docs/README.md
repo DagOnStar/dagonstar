@@ -6,6 +6,8 @@ Start with the [academic tutorial syllabus](tutorial/README.md). It presents the
 - workflow graph construction;
 - execution, staging, checkpointing, and lifecycle;
 - native Python, web, LLM, FaaS, IoT, and agentic task models;
+- meta-tasks that run workflows written for other engines (Nextflow,
+  Snakemake, Parsl, StreamFlow, CWL runners) through adapters;
 - optional Docker, Apptainer, Kubernetes, Nomad, SSH, cloud, Slurm, BeeOND,
   pre-staging, and data-mover infrastructure (taught with mocks and emulation);
 - FAIR metadata, meta-workflows, CWL interoperability, the compute continuum,
@@ -34,6 +36,8 @@ The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) has 
 - [Agentic tasks](agentic_tasks.md), with [configuration](agentic_configuration.md),
   [tools and guardrails](agentic_guardrails.md), and
   [evaluation, publication, and checkpoints](agentic_evaluation.md)
+- [Meta-tasks: workflows from other engines](meta_tasks.md), including the
+  adapter interface and how to develop new adapters
 - [FAIR principles](fair_principles.md)
 - [IoT tasks and compute-continuum operations](iot_tasks.md)
 - [IoT providers](iot_providers.md)

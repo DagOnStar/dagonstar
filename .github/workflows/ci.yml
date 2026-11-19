@@ -41,9 +41,9 @@ jobs:
           # The coverage validator derives the TaskType inventory from the package.
           python -m pip install -e .
       - name: Run focused style checks
-        run: python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/beeond.py dagon/prestage.py tests tools/run_local_examples.py tools/ci_beeond_slurm.py tools/ci_prestage_slurm.py tools/hpc_prestage_deep.py examples/dataflow/slurm/mock_scheduler.py examples/dataflow/slurm/pre_stage_mock.py examples/dataflow/slurm/pre_stage_local.py examples/dataflow/slurm/pre_stage_remote.py dagon/agentic examples/agentic tools/validate_tutorial_coverage.py examples/tutorial/lesson_00_environment_check.py examples/tutorial/lesson_1[2-9]_*.py examples/tutorial/lesson_2[0-9]_*.py examples/tutorial/lesson_3[0-2]_*.py
+        run: python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/beeond.py dagon/prestage.py tests tools/run_local_examples.py tools/ci_beeond_slurm.py tools/ci_prestage_slurm.py tools/hpc_prestage_deep.py examples/dataflow/slurm/mock_scheduler.py examples/dataflow/slurm/pre_stage_mock.py examples/dataflow/slurm/pre_stage_local.py examples/dataflow/slurm/pre_stage_remote.py dagon/agentic examples/agentic dagon/meta examples/meta examples/cwl/export_meta_workflow.py tools/validate_tutorial_coverage.py examples/tutorial/lesson_00_environment_check.py examples/tutorial/lesson_1[2-9]_*.py examples/tutorial/lesson_2[0-9]_*.py examples/tutorial/lesson_3[0-2]_*.py
       - name: Run progressive type checks
-        run: python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/beeond.py dagon/prestage.py dagon/agentic/*.py
+        run: python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/beeond.py dagon/prestage.py dagon/agentic/*.py dagon/meta/__init__.py dagon/meta/models.py dagon/meta/runner.py dagon/meta/task.py dagon/meta/adapters/*.py
       - name: Validate tutorial structure and notebook
         run: |
           python tools/validate_tutorial.py

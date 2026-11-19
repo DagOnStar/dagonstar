@@ -310,6 +310,17 @@ For scientific workflows:
 - Committing secrets in `dagon.ini`.
 - Assuming Docker, Slurm, Globus, or cloud credentials are available in CI.
 
+## Meta-tasks
+
+Use `TaskType.META` when a step already exists as a workflow for another
+engine - a Nextflow pipeline, a Snakefile, a Parsl program, a StreamFlow or CWL
+workflow. Name the `engine`, point `workflow` at the definition, bind its
+inputs to `workflow://` references, and declare the outputs to collect; the
+engine runs unmodified and downstream tasks read
+`workflow:///<task>/outputs/<path>`. Start with
+[Lesson 28](tutorial/lesson_28_compose_meta_workflows.md) and
+[Meta-tasks](meta_tasks.md).
+
 ## Agentic tasks
 
 Use `TaskType.AGENTIC` when a step needs an agent to propose a result that

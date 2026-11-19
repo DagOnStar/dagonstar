@@ -61,6 +61,10 @@ local, remote, Slurm, Docker, cloud, and data-staging environments.
   registry of tools, guardrails, evaluators, and adapters, bounded engine,
   sandboxed tool execution, publication, checkpoint identity, and the
   `dagon-agent-runner` CLI used by CWL export.
+- `dagon/meta/`: `TaskType.META` (`MetaTask`), the engine-neutral run model,
+  the adapter interface and registry (`adapters/base.py`), the built-in
+  Nextflow, Snakemake, Parsl, StreamFlow, CWL, command, and mock adapters, the
+  shared runner behind `dagon-meta-runner`, and the self-contained Parsl driver.
 - `docs/tutorial/coverage.json`: machine-checked map from every `TaskType` and
   inventoried feature to lessons, examples, and tests.
 - `dagon/adhoc.py`: common lifecycle for DAGonFS, BeeOND, Hercules, CAPIO,
@@ -78,7 +82,7 @@ At minimum, run:
 
 ```bash
 python -m unittest discover -s tests -v
-python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py
+python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py dagon/meta/*.py dagon/meta/adapters/*.py
 ```
 
 If packaging metadata changed, also run:
@@ -245,6 +249,40 @@ configuration validation separately from live integration behavior.
   all-type interoperability tests, `examples/agentic/`, Lessons 14–16, 30, and
   32, `docs/agentic_*.md`, CWL/FAIR/JSON documentation, and `coverage.json` to
   stay consistent.
+
+## Meta-task maintenance
+
+- `TaskType.META` runs workflows written for other engines. Never modify,
+  patch, vendor, or monkey-patch an engine: adapters use only the engine's
+  documented command line or public API, and write the engine's own parameter
+  files below `.dagon/`.
+- Engine-specific behavior lives only in adapters (`MetaEngineAdapter`
+  subclasses, `register_adapter`, or the `dagon.meta_adapters` entry-point
+  group). Built-in names stay protected; never special-case an engine in
+  `dagon/meta/task.py`, `runner.py`, or the core.
+- Keep the base installation engine-free: no engine import at module level,
+  and the Parsl driver must import nothing from DAGonStar.
+- Engines run without a shell from an argument vector. Outputs are collected
+  only from declared locations and refused when they resolve outside the task
+  scratch directory.
+- Specifications, parameter files, invocation records, results, checkpoints,
+  CWL, and FAIR metadata stay credential-free: credential-like option keys and
+  environment names are rejected, and only environment variable *names* are
+  recorded. Engines inherit credentials from the parent environment.
+- Reuse a meta-task checkpoint only after re-verifying the specification,
+  workflow-definition, input, and output digests; never relax this to
+  directory accessibility. Portable emulation uses the `mock` engine and never
+  starts a real engine.
+- Report engine versions and metadata only when read locally. Record live
+  engine runs, with host, versions, and date, in `docs/performance/`, and keep
+  the README status and `docs/meta_tasks.md` limitations accurate about which
+  engines were run.
+- Changes require `tests/test_meta_task.py` (engine-free tests must pass
+  without any engine; live tests skip when an engine is absent), the all-type
+  interoperability tests, `examples/meta/`, `examples/cwl/export_meta_workflow.py`,
+  `docs/meta_tasks.md`, `docs/cwl_export.md`, Lessons 28, 29, and 32, and the
+  coverage entries `tasktype.meta` and `meta.external-engines` to stay
+  consistent.
 
 ## Documentation standards
 

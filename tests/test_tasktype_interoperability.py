@@ -57,6 +57,9 @@ class TaskTypeInteroperabilityTests(unittest.TestCase):
                                             inputs={"value": {"uri": reference, "media_type": "text/plain"}},
                                             requirements=[{"id": "ran", "evaluator": "exact_match",
                                                            "expected": {}}]),
+                TaskType.META: DagonTask(TaskType.META, "meta", engine="nextflow", workflow="nextflow-io/hello",
+                                         inputs={"data": reference},
+                                         outputs={"summary": "results/summary.json"}),
             }
 
     @staticmethod
@@ -147,6 +150,11 @@ class TaskTypeInteroperabilityTests(unittest.TestCase):
                 if task_type is TaskType.IOT:
                     checkpoint.update({"task_type": "iot", "schema_version": 1, "outputs": []})
                 workflow.checkpoints[workflow.name + "." + task.name] = checkpoint
+                if task_type is TaskType.META:
+                    # Stricter contract: reuse needs a recorded spec, workflow, input, and output
+                    # identity (tests/test_meta_task.py), never a bare successful directory.
+                    self.assertFalse(task.reuse_checkpoint())
+                    continue
                 if task_type is TaskType.AGENTIC:
                     # Stricter contract: reuse needs a verified accepted commit and identity
                     # (tests/test_agentic_checkpoint.py), never a bare successful directory.

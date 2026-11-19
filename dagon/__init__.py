@@ -771,12 +771,16 @@ class Workflow(object):
         # Narrow file bindings for agentic tasks: producer -> {relative path: output id}.
         file_outputs: Dict[Any, Dict[str, str]] = {}
         agentic_bindings: Dict[Any, List[Any]] = {}
-        for task in agentic_tasks:
+        # Meta-tasks bind their workflow:// inputs the same way (File or Directory).
+        meta_tasks = [task for task in self.tasks if type(task).__name__ == "MetaTask"]
+        output_types: Dict[Any, Dict[str, str]] = {}
+        for task in agentic_tasks + (meta_tasks if not self.portable_emulation else []):
             bindings = []
+            kind = "agentic" if type(task).__name__ == "AgenticTask" else "meta"
             for reference, workflow_name, relative, producer in task._producers():
                 if workflow_name != self.name or producer not in task_ids:
-                    raise ValueError("CWL export of agentic task %s supports only producers in workflow %s: %s"
-                                     % (task.name, self.name, reference))
+                    raise ValueError("CWL export of %s task %s supports only producers in workflow %s: %s"
+                                     % (kind, task.name, self.name, reference))
                 produced = file_outputs.setdefault(producer, {})
                 if type(producer).__name__ == "AgenticTask":
                     names = {path: name for name, path in producer.outputs.items()}
@@ -786,6 +790,8 @@ class Workflow(object):
                 elif relative not in produced:
                     reserved = {"completed", "task_dir"} | set(produced.values())
                     produced[relative] = cwl_identifier("file_" + relative, reserved)
+                if kind == "meta" and task.input_kind(reference) == "Directory":
+                    output_types.setdefault(producer, {})[relative] = "Directory"
                 bindings.append((reference, producer, relative, produced[relative]))
             agentic_bindings[task] = bindings
         steps = {}
@@ -812,6 +818,10 @@ class Workflow(object):
             if type(task).__name__ == "AgenticTask":
                 steps[task_ids[task]] = self._agentic_cwl_step(task, task_ids, step_inputs, tool_inputs,
                                                                agentic_bindings[task])
+                continue
+            if type(task).__name__ == "MetaTask" and not self.portable_emulation:
+                steps[task_ids[task]] = self._meta_cwl_step(task, task_ids, step_inputs, tool_inputs,
+                                                            agentic_bindings[task])
                 continue
 
             bound_command = False
@@ -928,7 +938,12 @@ class Workflow(object):
                     continue
                 step = steps[task_ids[producer]]
                 for relative, output_id in sorted(produced.items(), key=lambda item: item[1]):
-                    step["run"]["outputs"][output_id] = {"type": "File", "outputBinding": {"glob": relative}}
+                    if output_id in step["run"]["outputs"]:
+                        continue
+                    output_type = output_types.get(producer, {}).get(relative, "File")
+                    if type(producer).__name__ == "MetaTask":
+                        output_type = producer.output_kind(relative) or output_type
+                    step["run"]["outputs"][output_id] = {"type": output_type, "outputBinding": {"glob": relative}}
                     step["out"].append(output_id)
 
         terminal_tasks = [task for task in self.tasks if not task.nexts]
@@ -939,6 +954,13 @@ class Workflow(object):
             }
             for task in terminal_tasks
         }
+        if not self.portable_emulation:
+            # The external workflow's declared outputs are workflow results.
+            for task in meta_tasks:
+                for output_name, declared in sorted(task.outputs.items()):
+                    outputs[task_ids[task] + "_" + output_name] = {
+                        "type": "Directory" if declared["type"] == "directory" else "File",
+                        "outputSource": task_ids[task] + "/" + output_name}
         for task in agentic_tasks:
             for output_name in ("result", "evaluation"):
                 outputs[task_ids[task] + "_" + output_name] = {
@@ -951,11 +973,53 @@ class Workflow(object):
             "outputs": outputs,
             "steps": steps,
         }
-        if streams or any(type(task).__name__ in {"FaaSTask", "IoTTask", "AgenticTask"} for task in self.tasks):
+        if streams or any(type(task).__name__ in {"FaaSTask", "IoTTask", "AgenticTask", "MetaTask"}
+                                for task in self.tasks):
             document["$namespaces"] = {"dagon": "https://dagonstar.org/cwl#"}
         with open(os.fspath(filename), "w", encoding="utf-8") as stream:
             json.dump(document, stream, indent=2, sort_keys=False)
             stream.write("\n")
+
+    def _meta_cwl_step(self, task: Any, task_ids: Dict[Any, str], step_inputs: Dict[str, str],
+                       tool_inputs: Dict[str, Any], bindings: List[Any]) -> Dict[str, Any]:
+        """Return the executable CWL step of a meta-task (``dagon-meta-runner``).
+
+        The credential-free specification is embedded; every ``workflow://``
+        input is bound to the producer step's File or Directory output.  The
+        external engine and the workflow definition named in the specification
+        must be installed on the CWL execution host: what the engine does
+        inside its run is outside the portable command-graph contract.
+        """
+        from dagon.meta.runner import workflow_identity
+        arguments = ["--spec", "meta-task.json", "--workdir", "."]
+        for index, (reference, producer, relative, output_id) in enumerate(bindings):
+            input_id = "in_%d" % index
+            tool_inputs[input_id] = task.input_kind(reference)
+            step_inputs[input_id] = task_ids[producer] + "/" + output_id
+            arguments += ["--bind", "%s=$(inputs.%s.path)" % (reference, input_id)]
+        outputs: Dict[str, Any] = {"completed": {"type": "boolean",
+                                                 "outputBinding": {"outputEval": "$(runtime.exitCode === 0)"}}}
+        for name, declared in sorted(task.outputs.items()):
+            outputs[name] = {"type": "Directory" if declared["type"] == "directory" else "File",
+                             "outputBinding": {"glob": "outputs/" + declared["path"]}}
+        spec = task.portable_spec()
+        identity = workflow_identity(spec["workflow"])
+        tool = {
+            "class": "CommandLineTool",
+            "label": str(task.name),
+            "requirements": {
+                "InlineJavascriptRequirement": {},
+                "InitialWorkDirRequirement": {"listing": [
+                    {"entryname": "meta-task.json", "entry": json.dumps(spec, sort_keys=True)}]},
+            },
+            "hints": {"dagon:MetaTask": {"schema_version": spec["schema_version"], "engine": spec["engine"],
+                                         "workflow": spec["workflow"], "workflow_sha256": identity["sha256"]}},
+            "baseCommand": ["dagon-meta-runner", "run"],
+            "arguments": arguments,
+            "inputs": tool_inputs,
+            "outputs": outputs,
+        }
+        return {"label": str(task.name), "in": step_inputs, "out": list(outputs), "run": tool}
 
     def _agentic_cwl_step(self, task: Any, task_ids: Dict[Any, str], step_inputs: Dict[str, str],
                           tool_inputs: Dict[str, Any], bindings: List[Any]) -> Dict[str, Any]:
@@ -1135,6 +1199,9 @@ class Workflow(object):
                 contract = dict(temp.get('agentic', {}))
                 contract.pop('schema_version', None)
                 tk = DagonTask(TaskType.AGENTIC, temp['name'], **contract)
+            elif temp['type'].upper() == 'META':
+                tk = DagonTask(TaskType.META, temp['name'], **{key: value for key, value in dict(
+                    temp.get('meta', {})).items() if key != 'schema_version'})
             elif temp['type'].upper() == 'IOT':
                 raw = dict(temp.get('iot', {}))
                 aliases = {'endpointRef': 'endpoint_ref', 'credentialRef': 'credential_ref',

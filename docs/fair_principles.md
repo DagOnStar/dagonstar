@@ -107,6 +107,18 @@ This is local export only. It does not yet validate a full Workflow Run RO-Crate
 profile, emit PROV-O Turtle, package/copy data, publish to repositories, provide
 a FAIR CLI, or calculate remote/container checksums.
 
+## Meta-task artifacts
+
+When FAIR recording is enabled, each output a meta-task collected below
+`outputs/` is recorded as an artifact with its SHA-256 checksum (directories by
+a digest of sorted relative paths and contents), the role `meta-file` or
+`meta-directory`, and an `emulated` flag. The RO-Crate action of the task names
+the external workflow as its `instrument`, a `ComputationalWorkflow`
+identified by engine and workflow-definition digest, with the engine version
+only when it was determined locally. The engine's own provenance files stay in
+the task scratch directory and are not interpreted. See
+[Meta-tasks](meta_tasks.md#fair-provenance).
+
 ## Agentic artifacts
 
 When FAIR recording is enabled, the files an agentic task writes (`result`,

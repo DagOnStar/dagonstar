@@ -164,7 +164,7 @@ waits for the producer to finish as for any other reference. A streaming
 reference is replaced, before execution, with the stream location (not a
 staged copy), and is never staged. The workflow name, when given, must be the
 current workflow: streams do not cross workflows. Task types without a command
-launcher (native, FaaS, LLM, web, IoT, agentic) refuse streaming references.
+launcher (native, FaaS, LLM, web, IoT, agentic, meta) refuse streaming references.
 CWL export, FAIR provenance, and checkpoints keep the reference meaningful
 without streaming support: see [Ad-hoc file systems](adhoc_filesystems.md#streaming-between-tasks).
 
@@ -235,6 +235,18 @@ dependency, and copies local UTF-8 text inputs into its `.dagon/inputs` folder
 before including their content in the API request. See [LLM Tasks](llm_tasks.md)
 for the provider configuration and prompt form.
 
+## Meta-task inputs and outputs
+
+`TaskType.META` reads `workflow://` references from its `inputs` mapping: each
+value that is a reference (or a `{"type": "file"|"directory", "path": ...}`
+descriptor naming one) infers the producer dependency once per producer, is
+staged below `inputs/<name>/`, and reaches the external engine as an absolute
+local path. A reference may name a file or a directory
+(`workflow:///prepare/data`). References embedded inside structured values are
+refused. The external workflow's declared outputs are collected below
+`outputs/`, so a downstream task reads them as
+`workflow:///<meta task>/outputs/<path>`. See [Meta-tasks](meta_tasks.md).
+
 ## FaaS structured inputs
 
 `TaskType.FAAS` discovers `workflow://` references recursively inside input
@@ -245,8 +257,8 @@ task-relative path, media type, size, SHA-256, and transport. Workflow JSON and
 CWL retain the logical reference and never embed the resolved scratch path.
 
 Every registered task type is covered by the mixed-factory interoperability
-contract. Command tasks scan their command; LLM, Native, Web, and FaaS scan
-structured fields. Any type can produce for or consume from any other type when
+contract. Command tasks scan their command; LLM, Native, Web, FaaS, IoT,
+Agentic, and Meta scan structured fields. Any type can produce for or consume from any other type when
 the configured stager bridges their backends. See
 [Task-type interoperability](tasktype_interoperability.md).
 
