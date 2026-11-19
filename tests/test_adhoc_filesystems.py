@@ -703,6 +703,12 @@ class DynoStoreTests(AdHocTestCase):
         self.assertEqual(lines, ["compose -f %s -p dagon up -d" % compose, "compose exec metadata true",
                                  "compose -f %s -p dagon down" % compose])
 
+    def test_metadata_service_is_recognised_without_credentials(self):
+        hint = DynoStore(self.workflow(), server=self.gateway(title="DynoStore-Metadata")).misdirected()
+        self.assertIn("metadata service, not the API gateway", hint)
+        self.assertIsNone(DynoStore(self.workflow(), server=self.gateway()).misdirected())
+
+    @POSIX_ONLY
     def test_metadata_service_port_is_reported_and_build_is_optional(self):
         server = self.gateway(title="DynoStore-Metadata")
         log = os.path.join(self.scratch, "docker.log")

@@ -624,14 +624,17 @@ def node_local_location(spec: Mapping[str, Any]) -> Tuple[str, Optional[str]]:
     parameters = spec.get("parameters", {}) or {}
     base = parameters.get("base")
     root, ranks = parameters.get("peer_root"), parameters.get("ranks")
-    if not (root and ranks and base) or not location.startswith(str(base).rstrip("/") + "/"):
+    if not (root and ranks and base):
+        return location, base
+    prefix = str(base).rstrip("/" + os.sep)
+    if not (location.startswith(prefix) and location[len(prefix):len(prefix) + 1] in ("/", os.sep)):
         return location, base
     if os.path.ismount(str(base)):
         return location, base
     for rank in range(int(ranks)):
         candidate = os.path.join(str(root), str(rank))
         if os.path.ismount(candidate):
-            return candidate + location[len(str(base).rstrip("/")):], candidate
+            return candidate + location[len(prefix):], candidate
     return location, base
 
 
