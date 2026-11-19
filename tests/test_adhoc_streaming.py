@@ -174,7 +174,8 @@ class ProtocolTest(unittest.TestCase):
         writer, reader = self.pair(store)
 
         def produce():
-            os.remove(marker)
+            # The producer's first marker replaces the partial one in place
+            # (removing it would fail on Windows while the reader polls it).
             for index in range(3):
                 writer.publish_bytes("f%d" % index, b"%d" % index)
             writer.close()

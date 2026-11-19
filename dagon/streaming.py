@@ -697,6 +697,14 @@ def reader(stream: str, idle_timeout: Optional[float] = None,
 def main(argv: List[str]) -> int:
     """``python -m dagon.adhoc stream publish|commit|close|items``."""
     import argparse
+    # One item path per line for shell readers: "\n" also on Windows, where a
+    # "\r" would end up in every path that ``read`` returns.
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if reconfigure is not None:
+        try:
+            reconfigure(newline="\n")
+        except (ValueError, OSError):
+            pass
     parser = argparse.ArgumentParser(prog="python -m dagon.adhoc stream")
     operations = parser.add_subparsers(dest="operation", required=True)
     publish = operations.add_parser("publish", help="copy a local file into the stream and publish it")

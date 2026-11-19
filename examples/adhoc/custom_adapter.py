@@ -86,7 +86,7 @@ def main() -> None:
         read = DagonTask(TaskType.BATCH, "read",
                          'echo workflow:///write/ > /dev/null; '
                          'cp "$DAGON_ADHOC_SHARED_PATH/greeting.txt" "$DAGON_ADHOC_PRIVATE_PATH/copy.txt" && '
-                         'cmp "$DAGON_ADHOC_SHARED_PATH/greeting.txt" "$DAGON_ADHOC_PRIVATE_PATH/copy.txt" && '
+                         '[ "$(cat "$DAGON_ADHOC_SHARED_PATH/greeting.txt")" = "$(cat "$DAGON_ADHOC_PRIVATE_PATH/copy.txt")" ] && '
                          'echo "$DAGON_ADHOC_NAMES" > names.txt')
         workflow.add_task(write)
         workflow.add_task(read)
