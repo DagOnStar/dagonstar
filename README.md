@@ -150,7 +150,8 @@ The full documentation set is available in `docs/`:
   preload frontends), BeeOND, Hercules, CAPIO, and DynoStore through a common
   lifecycle, readiness, and task-environment interface
   (`Workflow.create_adhoc_filesystem`), at workflow or task scope, any number
-  per task, and extensible with adapter classes registered without changing
+  per task, each optionally exported under a developer-chosen variable
+  (`export="MYVOLUME"`), and extensible with adapter classes registered without changing
   DAGonStar or the storage software.
 - Streaming between selected tasks over a streaming-capable ad-hoc resource:
   `workflow:///producer/path?stream` lets the consumer process verified items
@@ -232,11 +233,15 @@ were stopped by the adapter's readiness check. DynoStore deploys from its
 README steps, and keeps object overwrites consistent, only with
 `tools/adhoc/dynostore-b9dedd7-fixes.patch`; with it, the managed Docker
 Compose lifecycle was also verified live.
-BeeOND relies on the earlier production-site run and CI emulation. These live
-runs are manual and are not part of CI.
+BeeOND, also as an ad-hoc resource with streaming and `export=` names, passed
+`tools/ci_beeond_slurm.py` on a real two-node BeeOND site (30 checks,
+19 November 2026) besides CI emulation. These live runs are manual and are not
+part of CI.
 Ad-hoc resources have workflow and task scopes and a provider registry
 (entry-point group `dagon.adhoc_providers`); several resources, also of
-different providers, can be bound to one task. Streams between tasks
+different providers, can be bound to one task, and `export=` names the
+variable that carries a resource's path (validated against credential-like,
+`DAGON*`, shell, and loader names). Streams between tasks
 (`workflow://…?stream`, an RFC 3986 query that leaves non-stream references
 unchanged) use a rename-free marker protocol with per-item SHA-256
 verification, end-of-stream status, a producer-ended signal with a grace
@@ -246,8 +251,8 @@ concurrency, object and DAGonFS-native stores, CWL with `cwltool` when
 installed, FAIR, JSON, checkpoints, pre-staging) and were run live over
 DAGonFS, CAPIO, Hercules, and DynoStore (`docs/performance/`), including
 producer and consumer on different Slurm nodes over DAGonFS peer-to-peer and
-Hercules; BeeOND streaming is covered by launcher-text tests and the CI's
-emulated BeeOND site. Interception libraries that cannot share a process
+Hercules; BeeOND streaming is covered by launcher-text tests, the CI's
+emulated BeeOND site, and a live two-node BeeOND run. Interception libraries that cannot share a process
 (CAPIO and Hercules) are refused in one task when the workflow is built.
 Scheduler-aware pre-staging is opt-in and leaves the default lifecycle
 unchanged: the legacy launcher is guarded by a byte-for-byte fixture. Its

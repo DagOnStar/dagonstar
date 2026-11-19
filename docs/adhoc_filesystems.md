@@ -49,6 +49,7 @@ Every bound task receives:
 | `DAGON_ADHOC_ACCESS` | `posix`, `preload`, `client`, or `object` |
 | `DAGON_ADHOC_<NAME>_PATH`, `DAGON_ADHOC_<NAME>_ACCESS`, `DAGON_ADHOC_<NAME>_PROVIDER` | The same for one named resource (name upper-cased, other characters replaced by `_`), so a task bound to several resources can address each of them |
 | `DAGON_ADHOC_NAMES` | Comma-separated names of all bound resources, set only when there are several |
+| *export name* (optional) | The resource's path under a variable chosen by the developer with `export=` (see below) |
 
 When a task is bound to several resources, the generic `DAGON_ADHOC_*`
 variables refer to the last one bound. Path-list variables that several
@@ -61,6 +62,31 @@ Resource variables never carry credentials: a variable supplied by an adapter
 whose name looks like a token, secret, password, or key is rejected (the
 generated `DAGON_ADHOC_<NAME>_*` names are exempt, so a resource may be called
 `private`).
+
+`create_adhoc_filesystem(..., export="NAME")` (on the workflow or on a task)
+also exports the resource's path as `NAME` in every task the resource is bound
+to. It receives the value of the resource's `DAGON_ADHOC_<NAME>_PATH`, including the
+node-local DAGonFS peer-to-peer mount and the allocation's BeeOND mount, which
+the launcher resolves first; in portable emulation it names the emulation
+directory. The generated variables are still exported. `export` must be a
+valid variable name and is refused with `ValueError` when it looks like a
+credential, starts with `DAGON` (DAGonStar's own variables), or is a shell,
+loader, or Python variable (`PATH`, `HOME`, `PWD`, `LD_PRELOAD`,
+`LD_LIBRARY_PATH`, `DYLD_INSERT_LIBRARIES`, `PYTHONPATH`, and the others in
+`dagon.adhoc.RESERVED_EXPORTS`). Two resources bound to the same task cannot
+share an export name, and a name that another bound resource sets itself (for
+example `CAPIO_DIR` of a bound CAPIO resource) fails the task when its
+environment is built. Resources of different tasks may reuse a name. Without
+`export`, the task environment and the launcher are unchanged.
+
+```python
+v1 = b.create_adhoc_filesystem("dagonfs", name="b-scratch-1", export="MYVOLUME_1")
+v2 = b.create_adhoc_filesystem("dagonfs", name="b-scratch-2", export="MYVOLUME_2")
+# B's command uses "$MYVOLUME_1" and "$MYVOLUME_2"
+```
+
+[`examples/adhoc/task_scope_volume.py`](../examples/adhoc/task_scope_volume.py)
+runs `A → B → C` with these two task-scope volumes on B only.
 
 The access mode tells a task how to use `DAGON_ADHOC_PATH`:
 
@@ -178,9 +204,10 @@ workflow.create_adhoc_filesystem(
 - `fuse3` (default) mounts `mountpoint` (client-server) or `mountpoint/<rank>`
   (peer-to-peer). Needs FUSE on the host (`fusermount3`, or macFUSE on
   macOS). In peer-to-peer mode every rank mounts its own directory on its own
-  node, and the exported paths name rank 0's mount. On Linux the launcher
-  replaces `DAGON_ADHOC_<NAME>_PATH`, `DAGONFS_MOUNTPOINT`, and (when this
-  resource is the last bound) `DAGON_ADHOC_PATH` with the
+  node, and the exported paths name rank 0's mount. On Linux the launcher of
+  every task type replaces `DAGON_ADHOC_<NAME>_PATH`, `DAGONFS_MOUNTPOINT`,
+  the resource's `export` name, and (when this resource is the last bound)
+  `DAGON_ADHOC_PATH` with the
   `mountpoint/<rank>` listed in `/proc/mounts` on the node that runs it, and
   the stream helper does the same when it opens a stream, so a producer and a
   consumer on different nodes share one stream
@@ -317,10 +344,13 @@ implementation (workflow scope). Its options are those of
 `Workflow.create_beeond_volume`. Because the mount exists only inside the
 allocation, the launcher sets `DAGON_ADHOC_PATH="$DAGON_BEEOND"` after the
 BeeOND prologue. BeeOND tasks remain ineligible for scheduler-aware
-pre-staging. Streaming over BeeOND is exercised by the `stream` scenario of
-`tools/ci_beeond_slurm.py` on the CI's emulated BeeOND site (single node,
-the site directory stands in for BeeGFS); no real BeeOND deployment was
-available.
+pre-staging. Streaming over BeeOND and `export=` names are exercised by the
+`stream` and `export` scenarios of `tools/ci_beeond_slurm.py`, on the CI's
+emulated BeeOND site (single node, the site directory stands in for BeeGFS)
+and, on 19 November 2026, on a real two-node BeeOND site, where all 30 checks
+passed ([record](performance/beeond_live_2026-11-19.md)). A site may run its
+BeeOND Prolog on partitions whose nodes cannot mount BeeGFS; tasks there fail
+at `mount_timeout`.
 
 ### DynoStore
 
@@ -527,7 +557,8 @@ verifies planning and the protocol but not the external system.
 **Restrictions.** Streaming is defined for command tasks. It is verified live
 for local batch tasks (also inside Slurm jobs, with producer and consumer on
 different nodes for DAGonFS `fuse3` peer-to-peer and Hercules, see the
-performance record), and for Slurm tasks on the CI's emulated BeeOND site;
+performance record), and for Slurm tasks over BeeOND on the CI's emulated
+site and on a real two-node BeeOND site;
 Slurm, remote, and Docker tasks generate the same launcher lines (unit-tested
 for Slurm, including BeeOND locations), and remote execution hosts need
 `python3` with DAGonStar importable. Structured task types (native, FaaS, LLM,
@@ -555,8 +586,8 @@ of all five providers.
 - **CWL.** Ad-hoc storage is execution behaviour and is absent from CWL v1.2
   command graphs. CWL export keeps the task commands and dependencies but does
   not provision MPI or FUSE daemons, Slurm allocations, Docker deployments, or
-  preload libraries; a command referring to `$DAGON_ADHOC_PATH` needs that
-  variable from the CWL runner's environment. A stream is exported as an
+  preload libraries; a command referring to `$DAGON_ADHOC_PATH` or to an
+  `export` name needs that variable from the CWL runner's environment. A stream is exported as an
   ordinary `Directory` output of the producer consumed by the consumer, so the
   CWL graph is valid and sequential; the intent is kept in a `dagon:Stream`
   hint ([CWL export](cwl_export.md#streams)).
@@ -564,7 +595,8 @@ of all five providers.
   bound resources' `metadata()` (provider, name, access mode, path, and
   provider settings such as the DAGonFS model and frontend). This records that
   the resource was configured, not that data was published or validated.
-  Metadata also records the scope, `default`, and the streams of each task
+  Metadata also records the scope, `default`, the `export` name when one was
+  chosen (a variable name, never its value), and the streams of each task
   (producer, path, resource, consumers, role); FAIR provenance marks a
   streaming dependency edge with `"transfer": "stream"`.
 - **JSON workflows and checkpoints.** Resources are created in the workflow
@@ -583,7 +615,9 @@ lifecycle against local stand-ins: a process speaking the DAGonFS native
 protocol, CAPIO and Hercules scripts, a `docker` recorder, and a loopback
 DynoStore gateway. Live results are recorded in
 [`docs/performance/adhoc_filesystems_2026-11-18.md`](performance/adhoc_filesystems_2026-11-18.md),
-which states for every provider whether it was exercised live and where.
+which states for every provider whether it was exercised live and where;
+BeeOND through this interface is recorded in
+[`docs/performance/beeond_live_2026-11-19.md`](performance/beeond_live_2026-11-19.md).
 
 For reproducible measurements, run
 

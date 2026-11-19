@@ -16,6 +16,8 @@ were manual; none is part of CI. Raw results are in [`raw/`](raw/).
 No real BeeOND deployment was available. BeeOND streaming is covered by the
 launcher-text unit tests and by the `stream` scenario of
 `tools/ci_beeond_slurm.py`, which runs on the CI's emulated BeeOND site.
+(Update: BeeOND streaming was run live on 19 November 2026, see
+[the BeeOND record](beeond_live_2026-11-19.md).)
 
 In the two-node jobs of the tables below, the DAGonFS ranks and the Hercules
 servers span both nodes (`mpirun --map-by node`, Hercules's Slurm steps),

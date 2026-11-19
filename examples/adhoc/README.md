@@ -21,6 +21,17 @@ workflow-scope default volume and a task-scope volume to the same task:
 python examples/adhoc/custom_adapter.py
 ```
 
+`task_scope_volume.py` runs `A → B → C` with two task-scope DAGonFS volumes
+bound to B only. Each is created with `export=` (`MYVOLUME_1`, `MYVOLUME_2`),
+so B's command addresses the volumes by names the developer chose; A and C see
+neither. It runs under portable emulation by default and prints
+`Verification: ok`; `--live --option executable=/path/to/dagonfs` (plus any
+other DAGonFS options) starts real volumes.
+
+```bash
+python examples/adhoc/task_scope_volume.py
+```
+
 `streaming.py` runs the workflow `A → {B1, C}`, `B1 → B2`, `{B2, C} → D` in
 which only `B1 → B2` is a stream (`workflow:///B1/frames?stream`): B2 starts
 while B1 runs and processes each frame as soon as it is published. It uses the
@@ -78,4 +89,6 @@ dataflow sequentially and as a stream on each backend, and
 workflow at the same time; both take the backend options above.
 Measured results, with hosts, dates, and limitations, are recorded in
 [`docs/performance/adhoc_filesystems_2026-11-18.md`](../../docs/performance/adhoc_filesystems_2026-11-18.md)
-and [`docs/performance/adhoc_streaming_2026-11-18.md`](../../docs/performance/adhoc_streaming_2026-11-18.md).
+[`docs/performance/adhoc_streaming_2026-11-18.md`](../../docs/performance/adhoc_streaming_2026-11-18.md),
+and, for BeeOND on a real site (including `export=`),
+[`docs/performance/beeond_live_2026-11-19.md`](../../docs/performance/beeond_live_2026-11-19.md).

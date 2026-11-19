@@ -1668,7 +1668,29 @@ class Task(Thread):
         Backends override this to prepare execution-time resources (for
         example a BeeOND volume) before staging and the command run.
         """
-        return self.adhoc_prologue() + self.stream_prologue()
+        return self.adhoc_prologue() + self.adhoc_late_prologue() + self.stream_prologue()
+
+    def adhoc_export_names(self) -> Dict[str, str]:
+        """Developer-chosen variables of the bound resources: ``{export: per-resource path variable}``.
+
+        Raises :class:`ValueError` when a chosen name would replace a variable
+        that one of the bound resources sets itself.
+        """
+        from dagon.adhoc import _variable_suffix
+        filesystems = getattr(self, "adhoc_filesystems", [])
+        exports = {fs.export: "DAGON_ADHOC_%s_PATH" % _variable_suffix(fs.name)
+                   for fs in filesystems if getattr(fs, "export", None)}
+        if exports:
+            provided = set()
+            for filesystem in filesystems:
+                provided.update(filesystem.task_environment(self))
+                provided.update(filesystem.path_environment(self))
+                provided.update(getattr(filesystem, "path_variables", lambda: ())())
+            clashes = sorted(set(exports) & provided)
+            if clashes:
+                raise ValueError("task %s: export name %s is already set by a bound ad-hoc resource"
+                                 % (self.name, ", ".join(clashes)))
+        return exports
 
     def adhoc_prologue(self) -> str:
         """Launcher lines exporting the environment of the bound ad-hoc resources."""
@@ -1689,6 +1711,10 @@ class Task(Thread):
         lines = []
         for filesystem in getattr(self, "adhoc_filesystems", []):
             lines.extend(getattr(filesystem, "launcher_environment_lines", lambda: [])())
+        # Developer-chosen names copy the final per-resource path (node-local
+        # DAGonFS mount, allocation BeeOND mount), so they are exported last.
+        for export, variable in self.adhoc_export_names().items():
+            lines.append('export %s="${%s-}"' % (export, variable))
         return ("\n".join(lines) + "\n") if lines else ""
 
     def launcher_epilogue(self) -> str:
@@ -1707,6 +1733,12 @@ class Task(Thread):
                 current = environment.get(key, os.environ.get(key, ""))
                 environment[key] = os.pathsep.join(item for item in (str(value), current) if item)
         environment.update(stream_environment(self))
+        return self.apply_adhoc_exports(environment)
+
+    def apply_adhoc_exports(self, environment: Dict[str, str]) -> Dict[str, str]:
+        """Set the developer-chosen variables from the per-resource paths in *environment*."""
+        for export, variable in self.adhoc_export_names().items():
+            environment[export] = environment.get(variable, "")
         return environment
 
     # process the command to execute

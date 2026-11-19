@@ -18,6 +18,9 @@ survives, so the checks below exercise the real persistence path:
   ``srun --jobid`` steps, and the holder persists it when the workflow ends;
 * ``stream``: a producer and a consumer step of one holder allocation stream
   items through the volume (``workflow:///produce/items?stream``);
+* ``export``: an ad-hoc BeeOND resource created with ``export="JOBFS"`` gives
+  both of its tasks ``$JOBFS``, equal to ``$DAGON_BEEOND`` in the task and in
+  ``dagon_beeond_srun`` steps on every node of the volume;
 * ``signal``: Slurm's ``--signal=B:USR1@<grace>`` warning before the time limit
   stops the command and persists the volume (takes about two minutes).
 
@@ -206,6 +209,43 @@ def scenario_stream(scratch: str, partition: Optional[str]) -> List[Check]:
     ]
 
 
+def scenario_export(scratch: str, partition: Optional[str]) -> List[Check]:
+    """A developer-chosen variable (``export=``) names the allocation's BeeOND mount."""
+    workflow = Workflow("ci-beeond-export", config=site_config(scratch, partition))
+    volume = workflow.create_adhoc_filesystem("beeond", name="jobfs", export="JOBFS", nodes=NODES,
+                                              ntasks_per_node=1, time="00:20:00")
+    write = DagonTask(TaskType.SLURM, "write",
+                      'test -n "$JOBFS" && test "$JOBFS" = "$DAGON_BEEOND" && '
+                      'test "$JOBFS" = "$DAGON_ADHOC_JOBFS_PATH" && '
+                      'dagon_beeond_srun --nodes="$DAGON_BEEOND_NODES" --ntasks-per-node=1 '
+                      'bash -c \'test "$JOBFS" = "$DAGON_BEEOND" && echo "$JOBFS" > "$JOBFS/node-$(hostname).txt"\'')
+    read_back = DagonTask(TaskType.SLURM, "read",
+                          'echo workflow:///write/ > /dev/null; test "$JOBFS" = "$DAGON_BEEOND" && '
+                          'ls "$JOBFS"/node-*.txt | wc -l | tr -d " " > count.txt && '
+                          'cat "$JOBFS"/node-*.txt | sort -u > paths.txt && echo "$JOBFS" > seen.txt')
+    for task in (write, read_back):
+        workflow.add_task(task)
+        volume.bind(task)
+    workflow.make_dependencies()
+    error = run_workflow(workflow)
+    paths = (read(read_back.working_dir, "paths.txt") or "").split()
+    seen = (read(read_back.working_dir, "seen.txt") or "").strip()
+    count = (read(read_back.working_dir, "count.txt") or "").strip()
+    return [
+        ("export: workflow ran", error is None, repr(error)),
+        ("export: tasks finished", [write.status.name, read_back.status.name] == ["FINISHED", "FINISHED"],
+         "%s %s" % (write.status.name, read_back.status.name)),
+        ("export: every node wrote through $JOBFS", count == str(NODES), "count=%r nodes=%d" % (count, NODES)),
+        ("export: $JOBFS named the same mount on every node and task", len(paths) == 1 and paths == [seen],
+         "paths=%s seen=%r" % (paths, seen)),
+        ("export: $JOBFS is the allocation mount, not a host path", seen.startswith("/") and "beeond" in seen,
+         repr(seen)),
+        ("export: metadata records the name only",
+         [item.get("export") for item in write.get_execution_metadata()["adhoc_filesystems"]] == ["JOBFS"],
+         str(write.get_execution_metadata()["adhoc_filesystems"])),
+    ]
+
+
 def scenario_signal(scratch: str, partition: Optional[str]) -> List[Check]:
     workflow = Workflow("ci-beeond-signal", config=site_config(scratch, partition))
     task = DagonTask(TaskType.SLURM, "long",
@@ -263,7 +303,7 @@ def main() -> int:
         scratch = os.path.abspath(args.scratch or temporary)
         os.makedirs(scratch, exist_ok=True)
         scenarios: List[Callable[[str, Optional[str]], List[Check]]] = [
-            scenario_task, scenario_failure, scenario_workflow, scenario_stream]
+            scenario_task, scenario_failure, scenario_workflow, scenario_stream, scenario_export]
         if not args.skip_signal:
             scenarios.append(scenario_signal)
         checks: List[Check] = []

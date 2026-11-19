@@ -1,0 +1,66 @@
+# tools/ci_beeond_slurm.py --partition xxcpu --nodes 2 (E4 cluster, 19 November 2026)
+# The traceback is the expected one of the failure scenario.
+Thu Nov 19 18:00:45 UTC 2026
+== scenario_task
+== scenario_failure
+fails: execution failed
+Traceback (most recent call last):
+  File "~/devel/dagonstar/dagonstar/dagon/task.py", line 2049, in run
+    self.execute_with_task_resources()
+  File "~/devel/dagonstar/dagonstar/dagon/task.py", line 2096, in execute_with_task_resources
+    self.execute()
+  File "~/devel/dagonstar/dagonstar/dagon/task.py", line 1943, in execute
+    self.execute_legacy(key)
+  File "~/devel/dagonstar/dagonstar/dagon/task.py", line 1983, in execute_legacy
+    raise Exception(
+Exception: Executable raised a execption Submitted batch job 1090888
+
+== scenario_workflow
+== scenario_stream
+== scenario_export
+== scenario_signal
+long: execution failed
+Traceback (most recent call last):
+  File "~/devel/dagonstar/dagonstar/dagon/task.py", line 2049, in run
+    self.execute_with_task_resources()
+  File "~/devel/dagonstar/dagonstar/dagon/task.py", line 2096, in execute_with_task_resources
+    self.execute()
+  File "~/devel/dagonstar/dagonstar/dagon/task.py", line 1943, in execute
+    self.execute_legacy(key)
+  File "~/devel/dagonstar/dagonstar/dagon/task.py", line 1983, in execute_legacy
+    raise Exception(
+Exception: Executable raised a execption Submitted batch job 1090892
+
+PASS task: workflow ran
+PASS task: tasks finished
+PASS task: volume persisted
+PASS task: persistence verified
+PASS task: downstream read persisted data
+PASS task: every node wrote into the volume
+PASS failure: task failed
+PASS failure: volume still persisted
+PASS failure: persistence verified
+PASS workflow: workflow ran
+PASS workflow: tasks finished
+PASS workflow: holder confirmed persistence
+PASS workflow: steps shared the volume
+PASS workflow: volume persisted
+PASS workflow: every node of the holder wrote into the volume
+PASS stream: workflow ran
+PASS stream: tasks finished
+PASS stream: only produce -> consume streams
+PASS stream: items arrived verified and in order
+PASS stream: first item consumed while the producer ran
+PASS stream: stream persisted with the volume
+PASS export: workflow ran
+PASS export: tasks finished
+PASS export: every node wrote through $JOBFS
+PASS export: $JOBFS named the same mount on every node and task
+PASS export: $JOBFS is the allocation mount, not a host path
+PASS export: metadata records the name only
+PASS signal: task stopped before its time limit
+PASS signal: volume persisted on USR1
+PASS signal: persistence verified
+BeeOND Slurm checks: 30 passed, 0 failed
+rc=0
+Thu Nov 19 18:05:51 UTC 2026

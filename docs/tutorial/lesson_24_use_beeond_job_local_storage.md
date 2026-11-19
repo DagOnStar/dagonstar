@@ -39,7 +39,7 @@ file calls through a preloaded library, the DAGonFS native frontend needs a
 client, and DynoStore is an object store. `default=True` binds a resource to
 every task; `task.create_adhoc_filesystem(...)` creates a task-scope resource
 that lives only around that task. A task may be bound to any number of
-resources, each addressed as `DAGON_ADHOC_<NAME>_PATH`. A further system needs
+resources, each addressed as `DAGON_ADHOC_<NAME>_PATH` or, with `export="NAME"`, under a variable the developer chooses ([`task_scope_volume.py`](../../examples/adhoc/task_scope_volume.py)). A further system needs
 only an adapter class registered with `register_provider`
 ([`custom_adapter.py`](../../examples/adhoc/custom_adapter.py)).
 
@@ -67,11 +67,12 @@ python examples/adhoc/portable.py
 python examples/adhoc/custom_adapter.py
 python examples/adhoc/streaming.py
 python examples/adhoc/streaming.py --emulate capio
+python examples/adhoc/task_scope_volume.py
 ~~~
 
 ## Expected result
 
-Invalid `scope`, `mount_template`, and `volume` values are rejected; the task volume is persisted and read through `workflow:///write/beeond/result.txt`; the workflow volume is shared. The ad-hoc example prints `Verified 6 providers through 12 tasks`: each provider's producer writes through its own path and its consumer reads the file back. `custom_adapter.py` prints `Verification: ok` after a workflow-scope default volume and a task-scope volume were both bound to one task. `streaming.py` runs `A → {B1, C}`, `B1 → B2`, `{B2, C} → D` and prints how long before B1 finished B2 received the first of eight verified frames (about 3 s locally).
+Invalid `scope`, `mount_template`, and `volume` values are rejected; the task volume is persisted and read through `workflow:///write/beeond/result.txt`; the workflow volume is shared. The ad-hoc example prints `Verified 6 providers through 12 tasks`: each provider's producer writes through its own path and its consumer reads the file back. `task_scope_volume.py` prints `Verification: ok` after B used two task-scope volumes as `$MYVOLUME_1` and `$MYVOLUME_2` and C, which saw neither, read B's result. `custom_adapter.py` prints `Verification: ok` after a workflow-scope default volume and a task-scope volume were both bound to one task. `streaming.py` runs `A → {B1, C}`, `B1 → B2`, `{B2, C} → D` and prints how long before B1 finished B2 received the first of eight verified frames (about 3 s locally).
 
 ## Verify
 

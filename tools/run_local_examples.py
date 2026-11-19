@@ -65,6 +65,7 @@ EXAMPLES = [
     "examples/adhoc/portable.py",
     "examples/adhoc/custom_adapter.py",
     "examples/adhoc/streaming.py",
+    "examples/adhoc/task_scope_volume.py",
     "examples/cwl/export_streaming_workflow.py",
     "examples/cwl/export_meta_workflow.py",
     "examples/meta/meta_workflow_local.py",

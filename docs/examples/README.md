@@ -23,7 +23,8 @@ verification strategy.
 - [Slurm dataflow examples](dataflow_slurm.md): HPC scheduler-backed tasks.
 - [Ad-hoc file-system example](../../examples/adhoc/README.md): DAGonFS, BeeOND,
   Hercules, CAPIO, and DynoStore bound through one interface under portable
-  emulation; source: `examples/adhoc/portable.py`.
+  emulation; source: `examples/adhoc/portable.py`. `examples/adhoc/task_scope_volume.py`
+  binds two task-scope volumes to one task under developer-chosen variables.
 - [Cloud dataflow examples](dataflow_cloud.md): Apache Libcloud-backed virtual
   machine tasks.
 - [Globus dataflow example](dataflow_globus.md): endpoint-based scientific data

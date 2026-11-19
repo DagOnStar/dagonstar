@@ -91,6 +91,29 @@ def _variable_suffix(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9]", "_", name).upper()
 
 
+#: Variables an ``export`` name may not replace: loader, shell, and Python
+#: settings, and every name that DAGonStar itself sets (``DAGON*``).
+RESERVED_EXPORTS = frozenset(("PATH", "HOME", "PWD", "OLDPWD", "SHELL", "USER", "IFS", "TMPDIR",
+                              "LD_PRELOAD", "LD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES",
+                              "DYLD_LIBRARY_PATH", "PYTHONPATH", "PYTHONHOME"))
+
+
+def check_export_name(name: Any) -> str:
+    """Validate the developer-chosen variable of a resource and return it.
+
+    The variable carries the resource's task path only.  Names that look like
+    credentials, DAGonStar's own ``DAGON*`` variables, and loader or shell
+    variables are refused.
+    """
+    if not isinstance(name, str) or not _VARIABLE.match(name):
+        raise ValueError("export must be an environment variable name (letters, digits, '_'), not %r" % (name,))
+    if _SECRET_NAME.search(name):
+        raise ValueError("export %r looks like a credential variable" % name)
+    if name.upper().startswith("DAGON") or name in RESERVED_EXPORTS:
+        raise ValueError("export %r would replace a variable set by DAGonStar, the shell, or the loader" % name)
+    return name
+
+
 def preload_variable() -> str:
     """The dynamic-loader interposition variable of the submitting platform."""
     return "DYLD_INSERT_LIBRARIES" if sys.platform == "darwin" else "LD_PRELOAD"
@@ -137,6 +160,8 @@ class AdHocFileSystem(ABC):
         # Set by Workflow.create_adhoc_filesystem; adapters need not handle them.
         self.scope = "workflow"
         self.default = False
+        # Optional developer-chosen variable carrying task_path (see bind).
+        self.export: Optional[str] = None
         self.streams: List[Any] = []
 
     @property
@@ -157,6 +182,12 @@ class AdHocFileSystem(ABC):
                              "use a workflow-scope resource to share it" % (self.name, self.tasks[0].name))
         resources = task.__dict__.setdefault("adhoc_filesystems", [])
         if self not in resources:
+            if self.export is not None:
+                for other in resources:
+                    if other.export == self.export:
+                        raise ValueError("task %s already uses %s as the variable of %s; "
+                                         "choose another export name for %s"
+                                         % (task.name, self.export, other.name, self.name))
             if not getattr(self.workflow, "portable_emulation", False):
                 for other in resources:
                     if other.provider in self.preload_conflicts or self.provider in other.preload_conflicts:
@@ -273,6 +304,8 @@ class AdHocFileSystem(ABC):
                   "access": self.access}
         if self.default:
             record["default"] = True
+        if self.export is not None:
+            record["export"] = self.export
         if self.streams:
             record["streams"] = [channel.metadata() for channel in self.streams]
         return record

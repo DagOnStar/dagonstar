@@ -451,7 +451,7 @@ class Workflow(object):
             return volume
 
     def create_adhoc_filesystem(self, provider: Any, name: str = "default", scope: str = "workflow",
-                                default: bool = False, **options: Any) -> Any:
+                                default: bool = False, export: Optional[str] = None, **options: Any) -> Any:
         """Create and register an ad-hoc file system or data store resource.
 
         :param provider: a registered provider name (``dagonfs``, ``beeond``,
@@ -461,17 +461,24 @@ class Workflow(object):
             after the last) or ``"task"`` (started and stopped around the one
             task it is bound to; see :meth:`dagon.task.Task.create_adhoc_filesystem`)
         :param default: bind the workflow-scope resource to every task at run time
+        :param export: an extra environment variable, chosen by the developer,
+            that carries the resource's path in every task it is bound to (in
+            addition to ``DAGON_ADHOC_<NAME>_PATH``); see
+            :func:`dagon.adhoc.check_export_name` for the names refused
         """
-        from dagon.adhoc import SCOPES, create
+        from dagon.adhoc import SCOPES, check_export_name, create
         if scope not in SCOPES:
             raise ValueError("ad-hoc scope must be one of %s" % ", ".join(SCOPES))
         if default and scope != "workflow":
             raise ValueError("only a workflow-scope resource can be the default of every task")
         if name in self.adhoc_filesystems:
             raise ValueError("ad-hoc file system %r already exists" % name)
+        if export is not None:
+            check_export_name(export)
         filesystem = create(self, provider, name=name, **options)
         filesystem.scope = scope
         filesystem.default = bool(default)
+        filesystem.export = export
         self.adhoc_filesystems[name] = filesystem
         return filesystem
 

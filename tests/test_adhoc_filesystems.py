@@ -780,6 +780,104 @@ class DynoStoreTests(AdHocTestCase):
         self.assertEqual(task.result["code"], 0)
 
 
+class ExportNameTests(AdHocTestCase):
+    """``export=``: a developer-chosen variable carrying a resource's path."""
+
+    def test_invalid_and_reserved_names_are_refused_before_registration(self):
+        workflow = self.workflow()
+        for name in ("1VOLUME", "MY-VOLUME", "", "MY_TOKEN", "DB_PASSWORD", "DAGON_ADHOC_PATH",
+                     "DAGONFS_MOUNTPOINT", "LD_PRELOAD", "PATH", "PYTHONPATH", 7):
+            with self.assertRaises(ValueError, msg=name):
+                workflow.create_adhoc_filesystem("dagonfs", name="v", export=name)
+            self.assertNotIn("v", workflow.adhoc_filesystems)
+        self.assertIsNone(workflow.create_adhoc_filesystem("dagonfs", name="plain").export)
+
+    def test_two_task_scope_volumes_have_their_own_variables(self):
+        workflow = self.workflow()
+        b = DagonTask(TaskType.BATCH, "B",
+                      'test -n "$MYVOLUME_1" && test -n "$MYVOLUME_2" && '
+                      'test "$MYVOLUME_1" = "$DAGON_ADHOC_B_SCRATCH_1_PATH" && '
+                      'test "$MYVOLUME_2" = "$DAGON_ADHOC_B_SCRATCH_2_PATH" && '
+                      'test "$MYVOLUME_1" != "$MYVOLUME_2" && '
+                      'echo one > "$MYVOLUME_1/f" && echo two > "$MYVOLUME_2/f" && '
+                      'cat "$MYVOLUME_1/f" "$MYVOLUME_2/f" > both.txt')
+        c = DagonTask(TaskType.BATCH, "C",
+                      'cat workflow:///B/both.txt > /dev/null && test -z "${MYVOLUME_1-}" && test -z "${MYVOLUME_2-}"')
+        workflow.add_task(b)
+        workflow.add_task(c)
+        first = b.create_adhoc_filesystem("dagonfs", name="b-scratch-1", export="MYVOLUME_1")
+        second = b.create_adhoc_filesystem("dagonfs", name="b-scratch-2", export="MYVOLUME_2")
+        self.assertEqual((first.scope, second.scope), ("task", "task"))
+        workflow.make_dependencies()
+        workflow.run()
+        with open(os.path.join(b.working_dir, "both.txt")) as stream:
+            self.assertEqual(stream.read().split(), ["one", "two"])
+        self.assertFalse(first.started or second.started)
+        recorded = {item["name"]: item.get("export") for item in b.get_execution_metadata()["adhoc_filesystems"]}
+        self.assertEqual(recorded, {"b-scratch-1": "MYVOLUME_1", "b-scratch-2": "MYVOLUME_2"})
+        self.assertNotIn("adhoc_filesystems", c.get_execution_metadata())
+
+    def test_one_name_per_task_and_no_clash_with_provider_variables(self):
+        workflow = self.workflow()
+        task = DagonTask(TaskType.BATCH, "t", "true")
+        workflow.add_task(task)
+        workflow.create_adhoc_filesystem("dagonfs", name="a", export="VOL").bind(task)
+        with self.assertRaises(ValueError):
+            workflow.create_adhoc_filesystem("dagonfs", name="b", export="VOL").bind(task)
+        # The same name may be used by volumes of different tasks.
+        other = DagonTask(TaskType.BATCH, "u", "true")
+        workflow.add_task(other)
+        workflow.create_adhoc_filesystem("dagonfs", name="c", export="VOL").bind(other)
+        clash = DagonTask(TaskType.BATCH, "w", "true")
+        workflow.add_task(clash)
+        workflow.create_adhoc_filesystem(RecordingFileSystem, name="r").bind(clash)
+        workflow.create_adhoc_filesystem("dagonfs", name="d", export="ADHOC_TEST").bind(clash)
+        with self.assertRaises(ValueError):
+            clash.portable_environment()
+
+    def test_launcher_exports_the_name_after_the_resource_lines(self):
+        workflow = self.workflow(portable=False)
+        task = DagonTask(TaskType.BATCH, "t", "true")
+        workflow.add_task(task)
+        root = os.path.join(self.scratch, "dfs")
+        task.create_adhoc_filesystem("dagonfs", name="shared", model="peer-to-peer", ranks=2,
+                                     mountpoint=root, export="MYVOL")
+        prologue = task.launcher_prologue()
+        # Peer-to-peer resolution now runs in plain batch launchers too.
+        self.assertIn("/proc/mounts", prologue)
+        self.assertLess(prologue.index("/proc/mounts"), prologue.index("export MYVOL="))
+        self.assertIn('export MYVOL="${DAGON_ADHOC_SHARED_PATH-}"', prologue)
+        if os.name != "nt":
+            from dagon.platform_support import bash_executable
+            import subprocess
+            output = subprocess.run([bash_executable(), "-c", prologue + 'echo "$MYVOL"'],
+                                    capture_output=True, text=True, check=True)
+            self.assertEqual(output.stdout.strip(), os.path.join(root, "0"))
+
+    def test_beeond_name_follows_the_allocation_mount(self):
+        workflow = self.workflow(portable=False)
+        task = DagonTask(TaskType.SLURM, "s", "true")
+        workflow.add_task(task)
+        workflow.create_adhoc_filesystem("beeond", name="job", export="JOBFS").bind(task)
+        late = task.adhoc_late_prologue()
+        self.assertLess(late.index('DAGON_ADHOC_JOB_PATH="$DAGON_BEEOND"'), late.index("export JOBFS="))
+        emulated = self.workflow(name="beeond-export")
+        slurm = DagonTask(TaskType.SLURM, "s", "true")
+        emulated.add_task(slurm)
+        emulated.create_adhoc_filesystem("beeond", name="job", export="JOBFS").bind(slurm)
+        slurm.working_dir = os.path.join(self.scratch, "s")
+        environment = slurm.portable_environment()
+        self.assertEqual(environment["JOBFS"], environment["DAGON_BEEOND"])
+
+    def test_workflow_without_export_names_is_unchanged(self):
+        workflow = self.workflow(portable=False)
+        task = DagonTask(TaskType.BATCH, "t", "true")
+        workflow.add_task(task)
+        task.create_adhoc_filesystem("dagonfs", name="ram")
+        self.assertEqual(task.adhoc_late_prologue(), "")
+        self.assertNotIn("export", task.create_adhoc_filesystem("dagonfs", name="ram2").metadata())
+
+
 class InteroperabilityTests(AdHocTestCase):
     def test_cwl_export_omits_execution_resources(self):
         workflow = self.workflow()

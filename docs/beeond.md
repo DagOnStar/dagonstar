@@ -277,8 +277,9 @@ Epilog deletes it when the job ends, so data survives only if DAGonStar
 persisted it in time. `tools/ci_beeond_slurm.py` runs these checks with
 `verify=checksum`: per-task persistence and a downstream `workflow://` read,
 persistence after a failing command, a per-workflow holder volume shared by two
-`srun --jobid` steps, the `signal_grace` time-limit warning, and the teardown of
-every created volume. The emulated volume is a local directory, so BeeGFS
+`srun --jobid` steps, a stream between two steps of an ad-hoc BeeOND resource,
+an `export=` variable naming the mount in every task and node, the
+`signal_grace` time-limit warning, and the teardown of every created volume. The emulated volume is a local directory, so BeeGFS
 behavior and multi-node sharing are not tested. On a cluster you control, run
 the same checks with
 `python tools/ci_beeond_slurm.py --partition <partition> --nodes <n> --scratch <shared-dir>`;
@@ -291,6 +292,14 @@ production BeeOND site (Rocky Linux 8.10, Slurm 23.11.3, four nodes), and
 `examples/dataflow/slurm/beeond_slurm.py` completed in both scopes there. This is a
 one-time manual run, not part of CI; repeat it on your site after upgrading
 DAGonStar or Slurm.
+
+On 2026-11-19 the same site ran `tools/ci_beeond_slurm.py --partition xxcpu --nodes 2`,
+which by then also covered the ad-hoc BeeOND resource, streaming, and
+`export=` names: all 30 checks passed
+([record](performance/beeond_live_2026-11-19.md)). On another partition of
+that site the Prolog ran for `--comment=beeond-fs` jobs but the nodes had no
+BeeGFS client, so nothing was mounted; probe a partition with a short job
+before relying on it.
 
 ## Troubleshooting
 

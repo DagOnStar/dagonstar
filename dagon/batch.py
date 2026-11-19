@@ -621,7 +621,7 @@ class Slurm(Batch):
                     suffix = re.sub(r"[^A-Za-z0-9]", "_", filesystem.name).upper()
                     common.update({"DAGON_ADHOC_PATH": mount, "DAGON_ADHOC_%s_PATH" % suffix: mount,
                                    "DAGON_ADHOC_%s_ACCESS" % suffix: "posix"})
-            return common
+            return self.apply_adhoc_exports(common)
         config = self.beeond_task_config()
         if config is None:
             return common
