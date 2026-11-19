@@ -176,6 +176,12 @@ configuration validation separately from live integration behavior.
   scripted deployment and consistent overwrites. Keep it applicable to that
   commit, list each fix in `docs/adhoc_filesystems.md`, and never let it, a
   deployment log, or a benchmark report contain a user or admin token.
+- Interception libraries that cannot share a process are declared in the
+  adapter's `preload_conflicts` (CAPIO and Hercules declare each other) and
+  refused at `bind`; never silently drop one of the libraries.
+- DAGonFS `fuse3` peer-to-peer resolves the node-local rank mount at run time
+  (launcher via `/proc/mounts`, stream helper via `node_local_location`);
+  specifications keep the static rank-0 path.
 - Hercules `a13da96` needs `tools/adhoc/hercules-a13da96-fixes.patch`. Keep the
   patch applicable to the commit it names, list each fix in
   `docs/adhoc_filesystems.md`, and record its verification in

@@ -935,7 +935,7 @@
         "tests.test_adhoc_streaming"
       ],
       "evidence_level": "local-executed",
-      "limitations": "streaming.py executes the A,B1,B2,C,D stream on a real local-directory adapter and checks that B2 consumed frames while B1 ran; --emulate covers the built-in providers only under portable emulation. Live streams over DAGonFS (fuse3, native, preload), CAPIO, Hercules, and DynoStore were run manually and are recorded in docs/performance/adhoc_streaming_2026-11-18.md; BeeOND streams are unit-tested launcher text only. CWL export materializes the stream (no step concurrency)."
+      "limitations": "streaming.py executes the A,B1,B2,C,D stream on a real local-directory adapter and checks that B2 consumed frames while B1 ran; --emulate covers the built-in providers only under portable emulation. Live streams over DAGonFS (fuse3, native, preload), CAPIO, Hercules, and DynoStore were run manually and are recorded in docs/performance/adhoc_streaming_2026-11-18.md, including producer and consumer on different Slurm nodes for DAGonFS peer-to-peer and Hercules; BeeOND streams are unit-tested launcher text plus the stream scenario of tools/ci_beeond_slurm.py on the CI's emulated BeeOND site, not a real BeeOND deployment. CWL export materializes the stream (no step concurrency)."
     },
     {
       "feature_id": "slurm.scheduler-prestaging",

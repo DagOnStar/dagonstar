@@ -13,14 +13,16 @@ were manual; none is part of CI. Raw results are in [`raw/`](raw/).
 | MacBook Pro (`MacBook-Pro-410`), 16 cores, macOS 26.6.2 arm64, Python 3.12.10 | local batch tasks | DAGonFS (development branch with the preload fix below; macFUSE, Open MPI from Homebrew), DynoStore `b9dedd7` with `tools/adhoc/dynostore-b9dedd7-fixes.patch` (Docker Desktop, `docker-compose.dev.yml`, gateway on port 8070) |
 | PurpleJeans (`wn01`, `wn02`), Slurm partition `low-wn`, Linux, `gcc-12.2.1/ompi-4.1.4_nccl` | local batch tasks inside a Slurm job (`--ntasks-per-node=4 --cpus-per-task=4`) | DAGonFS (same fix), CAPIO, Hercules `a13da96` with `tools/adhoc/hercules-a13da96-fixes.patch` (including the new standard-output fix) |
 
-BeeOND was not available for these runs; BeeOND streaming is covered only by
-the launcher-text unit tests.
+No real BeeOND deployment was available. BeeOND streaming is covered by the
+launcher-text unit tests and by the `stream` scenario of
+`tools/ci_beeond_slurm.py`, which runs on the CI's emulated BeeOND site.
 
-In the two-node jobs the DAGonFS ranks and the Hercules servers span both
-nodes (`mpirun --map-by node`, Hercules's Slurm steps), while the DAGonStar
-tasks run as local batch tasks on the first node. Two-node results therefore
-show streaming through a distributed file system, not producer and consumer on
-different nodes.
+In the two-node jobs of the tables below, the DAGonFS ranks and the Hercules
+servers span both nodes (`mpirun --map-by node`, Hercules's Slurm steps),
+while the DAGonStar tasks run as local batch tasks on the first node. Those
+results therefore show streaming through a distributed file system. Runs with
+producer and consumer on different nodes are reported
+[separately](#producer-and-consumer-on-different-nodes).
 
 ## The A, B1, B2, C, D workflow
 
@@ -108,15 +110,53 @@ volume at the same time.
 | PurpleJeans 1 node, job 20211 (`--order capio,dagonfs-fuse3,dagonfs-native,dagonfs-preload,hercules`) | CAPIO, DAGonFS fuse3, native, preload, Hercules, task-scope directory | passed in 25.1 s, 5 concurrent streams |
 | PurpleJeans 2 nodes, job 20201 | DAGonFS fuse3, native, preload, Hercules, task-scope directory | passed in 22.5 s, 4 concurrent streams |
 | PurpleJeans 1 node, job 20200 (default order) | as job 20211 | failed at the one task bound to **both** CAPIO and Hercules |
+| PurpleJeans 1 node, job 20290 (default order, after the fix below) | as job 20211 | passed in 33.3 s, 5 concurrent streams; the CAPIO → Hercules hop ran as two tasks |
 
 In job 20200, the task whose process loaded the CAPIO and the Hercules
 preload libraries together failed: `mkdir` of an existing directory outside
 both prefixes returned `EINVAL`, so DAGonStar's input staging could not
 proceed. The task that combined the DAGonFS preload library with CAPIO
-passed. The two interception libraries are not composable in one process on
-this system; DAGonStar does not limit how many resources a task uses, but
-bind CAPIO and Hercules to different tasks. The cause inside the libraries was
-not investigated.
+passed. A follow-up probe (one task bound to both, each command run with each
+library order) showed that the pair does not work in one process at all:
+with Hercules first even `/bin/true` hung, with CAPIO first it crashed. The
+cause inside the libraries was not investigated. CAPIO and Hercules now
+declare each other in `preload_conflicts`, so binding both to one task fails
+when the workflow is built. `tools/check_adhoc_multivolume.py` splits such a
+hop into a task that copies the payload out of the first volume and a task
+that copies it into the second, and job 20290 passed with the default order.
+
+## Producer and consumer on different nodes
+
+Run 19 November 2026 (UTC) on PurpleJeans, two nodes (wn01, wn02), with
+`python examples/adhoc/streaming.py --scratch <shared directory> --wrap
+"B1=srun --overlap -N1 -n1 -c1 -w wn01" --wrap "B2=srun --overlap -N1 -n1 -c1
+-w wn02" --live …`. DAGonStar ran on wn01; B1's commands ran on wn01 and B2's
+on wn02 (recorded by each task). The node clocks were compared for the
+first-arrival check. Log excerpts are in
+[`raw/purplejeans-crossnode-2026-11-19.txt`](raw/purplejeans-crossnode-2026-11-19.txt).
+
+| Job | Resource | Result | First frame before B1 ended |
+|---|---|---|---:|
+| 20289 | DAGonFS `fuse3` peer-to-peer, two ranks (one per node) | passed | 4.1 s |
+| 20314 | Hercules, default UCX transports | streaming passed; `hercules stop` failed | 16.3 s |
+| 20316 | Hercules, `UCX_TLS=^ud` | as 20314 | 15.8 s |
+| 20318 | Hercules, `UCX_TLS=tcp,self,sm` | passed, clean stop | 6.8 s |
+
+For DAGonFS peer-to-peer, B2 reached the stream through wn02's rank-1 mount:
+rank 0's mount path also existed on wn02, as an empty directory, so a
+consumer that used the recorded path there would have waited forever. That
+DAGonFS's `native` and `preload` frontends are reachable only on the node of
+rank 0 is a property of their Unix socket; they were not run across nodes.
+
+With Hercules, the data server on wn02, the node of the consumer, aborted on a
+UCX assertion (`ud_ep.c:267`, in `uct_ud_ep_deferred_timeout_handler` called
+from `hercules_ucx_server`) after the stream had been fully consumed;
+`hercules stop` then found no server to stop and DAGonStar reported the stop
+failure. Excluding UCX's UD transport did not help; `UCX_TLS=tcp,self,sm`
+did. Earlier two-node runs, where no client ran on the data server's node, had
+not shown it. The UCX or Hercules cause was not investigated. Note that UCX
+prints its warnings (for example about an unknown `UCX_*` variable) on the
+standard output of intercepted processes.
 
 ## Defects found and fixed
 
@@ -140,10 +180,16 @@ not investigated.
 
 ## Site notes
 
-- The Hercules script runs each server as a Slurm step with
+- The Hercules script ran each server as a Slurm step with
   `--cpus-per-task=4` and its readiness check as a further step: with four
   CPUs in the allocation the check waited forever ("Requested nodes are
-  busy"). `--ntasks-per-node=4 --cpus-per-task=4` worked.
+  busy"), and fewer than four CPUs per node were refused. The fixes patch now
+  runs every step with `--overlap` and bounds the server CPUs by the
+  allocation (`HERCULES_SERVER_CPUS`). Afterwards the streaming example passed
+  with four CPUs in all (B2's first frame 5.3 s early) and with one CPU and
+  `--mem=8G` (20.4 s early); with one CPU and the site's 1 GiB per CPU the
+  servers were killed for lack of memory. Two Hercules deployments on one
+  node collide on Hercules's fixed ports (`HERCULES_ERR_DISPATCHER_BIND`).
 - A CAPIO server killed with its job leaves its shared-memory files in
   `/dev/shm` (named after the CAPIO workflow); the next server with that name
   refuses to start. The job script removes the user's own leftovers first.
@@ -151,7 +197,10 @@ not investigated.
   live checks were submitted with `sbatch`.
 - DynoStore's `docker-compose.dev.yml` puts the gateway on port 8070 (8095 is
   its metadata service, which answers 404 to object requests), and an image
-  rebuild after patching needs `up -d --build`.
+  rebuild after patching needs `up -d --build`. DAGonStar now recognises the
+  metadata service by its OpenAPI title and fails the start with the gateway
+  ports in the message (checked against the local stack on both ports), and
+  `compose_build=True` runs `up -d --build`.
 
 ## Reproduce
 
@@ -173,4 +222,6 @@ CAPIO, Hercules, and DynoStore are added with the options of
 Raw files: `raw/streaming_macos_2026-11-18.json`,
 `raw/multivolume_macos_2026-11-18.json`, and
 `raw/purplejeans-stream-{1n-20200,2n-20201}-*.json`,
-`raw/purplejeans-stream-1n-20211-multivolume.json`.
+`raw/purplejeans-stream-1n-20211-multivolume.json`,
+`raw/purplejeans-stream-1n-20290-multivolume.json`, and
+`raw/purplejeans-crossnode-2026-11-19.txt`.

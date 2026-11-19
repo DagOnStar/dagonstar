@@ -37,6 +37,20 @@ DYNOSTORE_TOKEN=... python examples/adhoc/streaming.py --live dynostore \
     --option server=127.0.0.1:8070 --option catalog=streaming
 ```
 
+`--wrap TASK=PREFIX` runs a task's command through a prefix and records the
+node it ran on in `node.txt`. Inside a two-node Slurm job, with a shared
+scratch directory, this places producer and consumer on different nodes:
+
+```bash
+python examples/adhoc/streaming.py --scratch "$HOME/scratch" \
+    --wrap "B1=srun --overlap -N1 -n1 -w node1" --wrap "B2=srun --overlap -N1 -n1 -w node2" \
+    --live dagonfs --option executable=/path/to/dagonfs --option model=peer-to-peer \
+    --option ranks=2 --option mountpoint=/tmp/dfs --option 'mpirun_args=["--map-by","node"]'
+```
+
+The rank directories (`/tmp/dfs/0`, `/tmp/dfs/1`) must exist on each node
+first. The first-arrival check compares clocks of two nodes.
+
 For live deployments, follow
 [`docs/adhoc_filesystems.md`](../../docs/adhoc_filesystems.md) and provide the
 site-specific executables, configuration files, host files, launcher arguments,

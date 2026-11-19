@@ -239,8 +239,11 @@ period, CAPIO-CL rules generated for CAPIO, and a materialized CWL export with
 a `dagon:Stream` hint. They are unit tested (planning errors, failures,
 concurrency, object and DAGonFS-native stores, CWL with `cwltool` when
 installed, FAIR, JSON, checkpoints, pre-staging) and were run live over
-DAGonFS, CAPIO, Hercules, and DynoStore (`docs/performance/`); BeeOND
-streaming is covered by launcher-text tests only.
+DAGonFS, CAPIO, Hercules, and DynoStore (`docs/performance/`), including
+producer and consumer on different Slurm nodes over DAGonFS peer-to-peer and
+Hercules; BeeOND streaming is covered by launcher-text tests and the CI's
+emulated BeeOND site. Interception libraries that cannot share a process
+(CAPIO and Hercules) are refused in one task when the workflow is built.
 Scheduler-aware pre-staging is opt-in and leaves the default lifecycle
 unchanged: the legacy launcher is guarded by a byte-for-byte fixture. Its
 ordering, `sbatch` gate, typed failure phases (from `sbatch --parsable` job

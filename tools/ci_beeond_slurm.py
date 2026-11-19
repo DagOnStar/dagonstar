@@ -16,6 +16,8 @@ survives, so the checks below exercise the real persistence path:
 * ``failure``: a failing command still has its volume persisted;
 * ``workflow``: two tasks share a per-workflow holder volume through
   ``srun --jobid`` steps, and the holder persists it when the workflow ends;
+* ``stream``: a producer and a consumer step of one holder allocation stream
+  items through the volume (``workflow:///produce/items?stream``);
 * ``signal``: Slurm's ``--signal=B:USR1@<grace>`` warning before the time limit
   stops the command and persists the volume (takes about two minutes).
 
@@ -165,6 +167,45 @@ def scenario_workflow(scratch: str, partition: Optional[str]) -> List[Check]:
     ]
 
 
+def scenario_stream(scratch: str, partition: Optional[str]) -> List[Check]:
+    """Producer and consumer steps of one holder allocation stream through BeeOND."""
+    workflow = Workflow("ci-beeond-stream", config=site_config(scratch, partition))
+    volume = workflow.create_adhoc_filesystem("beeond", name="shared", nodes=NODES, ntasks_per_node=1,
+                                              time="00:20:00")
+    now = '"$DAGON_PYTHON" -c "import time; print(time.time())"'
+    producer = DagonTask(TaskType.SLURM, "produce",
+                         "for i in 1 2 3 4; do echo \"item $i\" > item-$i.txt; "
+                         "\"$DAGON_PYTHON\" -m dagon.adhoc stream publish \"$DAGON_STREAM_OUT\" item-$i.txt "
+                         "> /dev/null || exit 1; sleep 1; done; " + now + " > finished.txt")
+    consumer = DagonTask(TaskType.SLURM, "consume",
+                         "set -o pipefail; \"$DAGON_PYTHON\" -m dagon.adhoc stream items "
+                         "workflow:///produce/items?stream --into in | while read -r item; do "
+                         "cat \"$item\" >> received.txt; " + now + " >> arrivals.txt; done")
+    for task in (producer, consumer):
+        workflow.add_task(task)
+        volume.bind(task)
+    error = run_workflow(workflow)
+    received = (read(consumer.working_dir, "received.txt") or "").splitlines()
+    try:
+        early = float(read(producer.working_dir, "finished.txt") or "") - \
+            float((read(consumer.working_dir, "arrivals.txt") or "").split()[0])
+    except (ValueError, IndexError):
+        early = float("nan")
+    return [
+        ("stream: workflow ran", error is None, repr(error)),
+        ("stream: tasks finished", [producer.status.name, consumer.status.name] == ["FINISHED", "FINISHED"],
+         "%s %s" % (producer.status.name, consumer.status.name)),
+        ("stream: only produce -> consume streams", consumer.stream_prevs == [producer],
+         str([task.name for task in consumer.stream_prevs])),
+        ("stream: items arrived verified and in order", received == ["item %d" % i for i in range(1, 5)],
+         str(received)),
+        ("stream: first item consumed while the producer ran", early > 0, "%.2f s early" % early),
+        ("stream: stream persisted with the volume",
+         os.path.isdir(os.path.join(volume.volume.persist_dir(), ".dagon-streams")),
+         str(volume.volume.persist_dir())),
+    ]
+
+
 def scenario_signal(scratch: str, partition: Optional[str]) -> List[Check]:
     workflow = Workflow("ci-beeond-signal", config=site_config(scratch, partition))
     task = DagonTask(TaskType.SLURM, "long",
@@ -222,7 +263,7 @@ def main() -> int:
         scratch = os.path.abspath(args.scratch or temporary)
         os.makedirs(scratch, exist_ok=True)
         scenarios: List[Callable[[str, Optional[str]], List[Check]]] = [
-            scenario_task, scenario_failure, scenario_workflow]
+            scenario_task, scenario_failure, scenario_workflow, scenario_stream]
         if not args.skip_signal:
             scenarios.append(scenario_signal)
         checks: List[Check] = []

@@ -9,7 +9,9 @@ tasks moves a payload through all of them: task ``hop-i`` is bound to volume
 second, so consecutive volumes are open in one task at once and every volume
 is running for the whole workflow.  A stream then carries items between two
 tasks over each streaming volume.  Every byte is verified by SHA-256.
-``--order`` sets the chain order, which decides which volumes share a hop task.
+``--order`` sets the chain order, which decides which volumes share a hop task;
+two volumes whose preload libraries conflict (``preload_conflicts``) are joined
+through a staged ``workflow://`` file instead of one task.
 
     python tools/check_adhoc_multivolume.py --dagonfs build/dagonfs --dagonfs-frontends native \\
         --dagonfs-python DAGonFS/python --capio-server capio_server --capio-library libcapio_posix.so
@@ -61,10 +63,17 @@ def volume(name):
             return stream.read()
     return write, read
 
-data = bytes(range(256)) * 4096 if source == "-" else volume(source)[1]()
+if source == "-":
+    data = bytes(range(256)) * 4096
+elif source.startswith("@"):          # a staged workflow:// file
+    data = open(source[1:], "rb").read()
+else:
+    data = volume(source)[1]()
 if hashlib.sha256(data).hexdigest() != expected:
     sys.exit("payload changed before %s" % target)
-if target != "-":
+if target.startswith("@"):
+    open(target[1:], "wb").write(data)
+elif target != "-":
     volume(target)[0](data)
 with open(out, "w") as stream:
     stream.write("%s -> %s ok\n" % (source, target))
@@ -112,12 +121,23 @@ def main():
                 suffix = "" if options["frontend"] == "fuse3" else ".sock"
                 options["mountpoint"] = tempfile.mktemp(prefix="dfs", suffix=suffix, dir=args.socket_dir)
             volumes.append(workflow.create_adhoc_filesystem(provider, name="v%d-%s" % (index, label), **options))
-        names = ["-"] + [volume.name for volume in volumes] + ["-"]
+        by_name = {volume.name: volume for volume in volumes}
+
+        def conflict(first, second):
+            a, b = by_name.get(first), by_name.get(second)
+            return bool(a and b and (a.provider in b.preload_conflicts or b.provider in a.preload_conflicts))
+
+        # Consecutive volumes share a hop task; two whose preload libraries
+        # cannot share a process are joined through a staged workflow:// file.
+        pairs, names = [], ["-"] + [volume.name for volume in volumes] + ["-"]
+        for source, target in zip(names, names[1:]):
+            pairs += [(source, "@payload.bin"), ("@", target)] if conflict(source, target) else [(source, target)]
         previous = None
         prefix = "export DAGON_SOURCE=%s RUN_TAG=%s; " % (ROOT, root.name)
         hops = []
-        for index in range(len(names) - 1):
-            source, target = names[index], names[index + 1]
+        for index, (source, target) in enumerate(pairs):
+            if source == "@":
+                source = "@workflow:///%s/payload.bin" % previous.name
             link = "echo workflow:///%s/ok.txt > /dev/null; " % previous.name if previous else ""
             task = DagonTask(TaskType.BATCH, "hop-%d" % index, prefix + link + "%s -B %s %s %s %s ok.txt"
                              % (sys.executable, script, source, target, expected))

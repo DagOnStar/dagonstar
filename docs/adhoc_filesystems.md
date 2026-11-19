@@ -53,7 +53,10 @@ Every bound task receives:
 When a task is bound to several resources, the generic `DAGON_ADHOC_*`
 variables refer to the last one bound. Path-list variables that several
 resources set (`LD_PRELOAD`, `LD_LIBRARY_PATH`) are combined rather than
-overwritten, so a task can preload CAPIO and Hercules at the same time.
+overwritten, so a task can preload, for example, the DAGonFS preload library
+and CAPIO at the same time. Adapters whose interception libraries cannot share
+a process declare it in `preload_conflicts`; binding such a pair to one task
+raises `AdHocFileSystemError` (see below).
 Resource variables never carry credentials: a variable supplied by an adapter
 whose name looks like a token, secret, password, or key is rejected (the
 generated `DAGON_ADHOC_<NAME>_*` names are exempt, so a resource may be called
@@ -95,9 +98,17 @@ volume (`--order` sets which volumes share a hop).
 
 Preload libraries are combined in `LD_PRELOAD`, but whether two interception
 libraries work in one process is up to them. On PurpleJeans the DAGonFS preload
-library combined with CAPIO, while a process that loaded both CAPIO and
-Hercules got `EINVAL` from `mkdir` of an existing directory; bind those two to
-different tasks ([record](performance/adhoc_streaming_2026-11-18.md)).
+library combined with CAPIO, while CAPIO and Hercules did not: with Hercules
+first in `LD_PRELOAD` even `/bin/true` hung, with CAPIO first it crashed, and a
+task loading both got `EINVAL` from `mkdir` of an existing directory
+([record](performance/adhoc_streaming_2026-11-18.md)). CAPIO and Hercules
+therefore declare each other in `preload_conflicts`, and binding both to one
+task raises `AdHocFileSystemError` naming the task, so the workflow fails at
+construction rather than in a hung task. Portable emulation preloads nothing
+and allows the pair. Bind the two resources to different tasks and pass data
+between them through a `workflow://` edge, as
+`tools/check_adhoc_multivolume.py` does for such a pair. Third-party adapters
+can declare their own conflicts the same way.
 
 ```python
 shared = workflow.create_adhoc_filesystem("dagonfs", name="shared", default=True, **dagonfs)
@@ -165,8 +176,20 @@ workflow.create_adhoc_filesystem(
 [frontends](https://github.com/DagOnStar/DAGonFS/blob/main/docs/FRONTENDS.md):
 
 - `fuse3` (default) mounts `mountpoint` (client-server) or `mountpoint/<rank>`
-  (peer-to-peer; tasks receive rank 0's mount). Needs FUSE on the host
-  (`fusermount3`, or macFUSE on macOS).
+  (peer-to-peer). Needs FUSE on the host (`fusermount3`, or macFUSE on
+  macOS). In peer-to-peer mode every rank mounts its own directory on its own
+  node, and the exported paths name rank 0's mount. On Linux the launcher
+  replaces `DAGON_ADHOC_<NAME>_PATH`, `DAGONFS_MOUNTPOINT`, and (when this
+  resource is the last bound) `DAGON_ADHOC_PATH` with the
+  `mountpoint/<rank>` listed in `/proc/mounts` on the node that runs it, and
+  the stream helper does the same when it opens a stream, so a producer and a
+  consumer on different nodes share one stream
+  ([record](performance/adhoc_streaming_2026-11-18.md#producer-and-consumer-on-different-nodes)).
+  A command run on another node than its launcher (for example through
+  `srun -w`) should address files through the stream helper or resolve the
+  mount itself. The rank directories must exist on every node (DAGonStar
+  creates them only on the submission host); the socket-based `native` and
+  `preload` frontends are reachable only on the node that runs rank 0.
 - `native` serves a Unix socket at `mountpoint` (default
   `<scratch>/.dagonfs-<name>.sock`, at most 103 bytes). No kernel module is
   needed. Tasks move data with DAGonFS's standard-library client, which
@@ -262,12 +285,25 @@ proposed upstream in [arcos-uc3m-hercules/hercules#3](https://github.com/arcos-u
   standard error. This fix was found with the streaming example on 18
   November 2026 and is not part of the upstream pull request above.
 
-The Hercules script starts each server as a Slurm step with
-`--cpus-per-task=4` and then runs its readiness check as a further step, so
-the allocation needs CPUs for both: with four CPUs in total the check waits
-forever ("Requested nodes are busy"), with one task it is refused ("More
-processors requested than permitted"). `--ntasks-per-node=4
---cpus-per-task=4` worked on PurpleJeans.
+- the script started each server as a Slurm step with `--cpus-per-task=4`
+  and ran its clean-up and readiness checks as further exclusive steps: with
+  four CPUs in the allocation the check waited forever ("Requested nodes are
+  busy"), and an allocation with fewer than four CPUs per node was refused
+  ("More processors requested than permitted"). Every step now uses
+  `--overlap`, the checks request one CPU, and the servers request
+  `HERCULES_SERVER_CPUS`, else four, never more than `SLURM_CPUS_ON_NODE`.
+  Found on PurpleJeans on 18 November 2026; not part of the upstream pull
+  request.
+
+With the patch, Hercules started and served the streaming example in a
+one-CPU allocation, which then needed `--mem=8G` (the Hercules servers were
+killed by the out-of-memory handler with the site default of 1 GiB per CPU).
+Hercules servers listen on fixed ports, so two Hercules deployments on the
+same node fail with `HERCULES_ERR_DISPATCHER_BIND`. With a Hercules client on the
+node of a data server, that server aborted on a UCX assertion after the
+client finished on PurpleJeans (InfiniBand, UCX 1.15), so `hercules stop`
+failed; `UCX_TLS=tcp,self,sm` in the workflow's environment avoided it
+([record](performance/adhoc_streaming_2026-11-18.md#producer-and-consumer-on-different-nodes)).
 
 Hercules keeps its server status files in the shared `HERCULES_PATH/tmp`
 without a job identifier, so run one Hercules deployment per Hercules tree at a
@@ -281,7 +317,10 @@ implementation (workflow scope). Its options are those of
 `Workflow.create_beeond_volume`. Because the mount exists only inside the
 allocation, the launcher sets `DAGON_ADHOC_PATH="$DAGON_BEEOND"` after the
 BeeOND prologue. BeeOND tasks remain ineligible for scheduler-aware
-pre-staging.
+pre-staging. Streaming over BeeOND is exercised by the `stream` scenario of
+`tools/ci_beeond_slurm.py` on the CI's emulated BeeOND site (single node,
+the site directory stands in for BeeGFS); no real BeeOND deployment was
+available.
 
 ### DynoStore
 
@@ -289,7 +328,7 @@ pre-staging.
 workflow.create_adhoc_filesystem(
     "dynostore", name="objects", server=None, catalog=None, token_env="DYNOSTORE_TOKEN",
     compose_file=None, compose_project=None, setup_commands=(), docker="docker",
-    startup_timeout=120.0, request_timeout=60.0, resiliency=1)
+    startup_timeout=120.0, request_timeout=60.0, resiliency=1, compose_build=False)
 ```
 
 DynoStore is an object store, not a file system: it has no mount, and tasks
@@ -301,8 +340,12 @@ the gateway port of DynoStore's `docker-compose.yml`. DynoStore's
 `docker-compose.dev.yml`, which the deployment below uses, publishes the
 gateway on **8070** and the metadata service on 8095; pass
 `server="127.0.0.1:8070"` there. Requests sent to the metadata port answer
-HTTP 404.
-With `compose_file`, the workflow runs `docker compose up -d`, the
+HTTP 404. Once the server answers, DAGonStar fetches its `/openapi.json`
+without credentials: the metadata service describes itself there as
+`DynoStore-Metadata`, which the gateway does not, and the start then fails
+with a message naming the gateway ports instead of later 404 errors.
+With `compose_file`, the workflow runs `docker compose up -d` (`up -d
+--build` with `compose_build=True`, needed after patching the sources), the
 `setup_commands` (for example the deployment's migration script), waits for the
 gateway, and runs `docker compose down` at the end; without it, DAGonStar only
 checks that the gateway answers.
@@ -475,13 +518,16 @@ depending on either.
 | CAPIO | Files below `CAPIO_DIR`. DAGonStar generates a CAPIO-CL configuration (`<scratch>/.capio-<name>-streams.json`) declaring each stream directory with `committed: on_close` and `mode: no_update`, so CAPIO releases each file to readers when it is closed rather than when the producer terminates (CAPIO's defaults); it replaces `--no-config`. With a user-supplied `config`, DAGonStar only warns: the user configuration must declare those rules. |
 | Hercules | Files below the Hercules mount point. |
 | BeeOND | Files below `$DAGON_BEEOND`, resolved inside the allocation. |
+| DAGonFS `fuse3` peer-to-peer | As `fuse3`, through the rank mount of the node that opens the stream. |
 | DynoStore | Objects with UUID-5 keys derived from the stream location, so producer and consumer agree on keys without listing. |
 
 Under portable emulation the stream runs on the emulated directory, which
 verifies planning and the protocol but not the external system.
 
 **Restrictions.** Streaming is defined for command tasks. It is verified live
-for local batch tasks (also inside Slurm jobs, see the performance record);
+for local batch tasks (also inside Slurm jobs, with producer and consumer on
+different nodes for DAGonFS `fuse3` peer-to-peer and Hercules, see the
+performance record), and for Slurm tasks on the CI's emulated BeeOND site;
 Slurm, remote, and Docker tasks generate the same launcher lines (unit-tested
 for Slurm, including BeeOND locations), and remote execution hosts need
 `python3` with DAGonStar importable. Structured task types (native, FaaS, LLM,

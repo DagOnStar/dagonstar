@@ -612,6 +612,29 @@ def stream_specs(environment: Optional[Mapping[str, str]] = None) -> Dict[str, D
     return specs
 
 
+def node_local_location(spec: Mapping[str, Any]) -> Tuple[str, Optional[str]]:
+    """The stream location and base as reachable on this node.
+
+    A volume mounted once per node (DAGonFS peer-to-peer mounts rank *r* at
+    ``<peer_root>/<r>`` on the node that runs it) names the first rank's mount
+    in its specification; on another node the same data is reached through
+    that node's own rank mount, which is used when it is mounted here.
+    """
+    location = str(spec["location"])
+    parameters = spec.get("parameters", {}) or {}
+    base = parameters.get("base")
+    root, ranks = parameters.get("peer_root"), parameters.get("ranks")
+    if not (root and ranks and base) or not location.startswith(str(base).rstrip("/") + "/"):
+        return location, base
+    if os.path.ismount(str(base)):
+        return location, base
+    for rank in range(int(ranks)):
+        candidate = os.path.join(str(root), str(rank))
+        if os.path.ismount(candidate):
+            return candidate + location[len(str(base).rstrip("/")):], candidate
+    return location, base
+
+
 def find_spec(stream: str, environment: Optional[Mapping[str, str]] = None) -> Dict[str, Any]:
     """The specification of *stream*: a location, a key, or a producer/path name."""
     environment = os.environ if environment is None else environment
@@ -643,7 +666,8 @@ def open_store(spec: Mapping[str, Any]) -> StreamStore:
     if adapter is not None and hasattr(adapter, "open_stream_store"):
         return adapter.open_stream_store(spec)
     if spec.get("access") in ("posix", "preload"):
-        return PosixStreamStore(str(spec["location"]), spec.get("parameters", {}).get("base"))
+        location, base = node_local_location(spec)
+        return PosixStreamStore(location, base)
     raise StreamError("no stream store for access mode %r" % spec.get("access"))
 
 
@@ -728,4 +752,4 @@ __all__ = ["StreamChannel", "StreamError", "StreamItem", "StreamProducerFailed",
            "StreamStore", "StreamWriter", "PosixStreamStore", "DagonFSNativeStreamStore",
            "ObjectStreamStore", "WorkflowReference", "parse_reference", "stream_reference",
            "is_stream_reference", "reject_stream_reference", "reader", "writer", "open_store",
-           "find_spec", "stream_specs", "stream_environment", "iter_command_references", "main"]
+           "find_spec", "node_local_location", "stream_specs", "stream_environment", "iter_command_references", "main"]

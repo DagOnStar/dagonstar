@@ -44,6 +44,7 @@ import os
 import pickle
 import pickletools
 import re
+import shlex
 import shutil
 import signal
 import socket
@@ -58,7 +59,7 @@ import uuid
 import zlib
 from abc import ABC
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 LOGGER = logging.getLogger("dagon.adhoc")
 
@@ -120,6 +121,9 @@ class AdHocFileSystem(ABC):
     access = "posix"
     #: True when the adapter can carry :mod:`dagon.streaming` streams.
     supports_streaming = False
+    # Providers whose interception libraries cannot share a process with this
+    # one: binding both to one task is refused (see ``bind``).
+    preload_conflicts: Tuple[str, ...] = ()
 
     def __init__(self, workflow: Any, name: str = "default") -> None:
         if not name or not re.match(r"^[A-Za-z0-9][A-Za-z0-9._-]*$", str(name)):
@@ -153,6 +157,13 @@ class AdHocFileSystem(ABC):
                              "use a workflow-scope resource to share it" % (self.name, self.tasks[0].name))
         resources = task.__dict__.setdefault("adhoc_filesystems", [])
         if self not in resources:
+            if not getattr(self.workflow, "portable_emulation", False):
+                for other in resources:
+                    if other.provider in self.preload_conflicts or self.provider in other.preload_conflicts:
+                        raise AdHocFileSystemError(
+                            "task %s cannot use %s (%s) and %s (%s) together: their preload libraries "
+                            "cannot be loaded in one process; bind them to different tasks"
+                            % (task.name, other.name, other.provider, self.name, self.provider))
             resources.append(self)
         if task not in self.tasks:
             self.tasks.append(task)
@@ -560,7 +571,33 @@ class DAGonFS(ProcessFileSystem):
             if self.python_path:
                 parameters["python_path"] = str(self.python_path)
             return parameters
-        return super().stream_parameters()
+        parameters = super().stream_parameters()
+        if self.frontend == "fuse3" and self.model == "peer-to-peer":
+            # Every node mounts its own rank: the stream helper uses the local one.
+            parameters.update(peer_root=self.mountpoint, ranks=str(self.ranks))
+        return parameters
+
+    def launcher_environment_lines(self) -> List[str]:
+        """Peer-to-peer FUSE: point the task at the rank mounted on its own node.
+
+        The exported paths name rank 0's mount, which exists only on the node
+        that runs rank 0.  On Linux the launcher replaces them with the
+        ``<mountpoint>/<rank>`` listed in ``/proc/mounts`` on its node; where
+        no such mount is found the values are left unchanged.
+        """
+        if self.frontend != "fuse3" or self.model != "peer-to-peer":
+            return []
+        suffix = _variable_suffix(self.name)
+        root = self.mountpoint.rstrip("/") + "/"
+        return [
+            "dagon_node_mount=$(awk -v r=%s 'index($2, r) == 1 && substr($2, length(r) + 1) ~ /^[0-9]+$/ "
+            "{print $2; exit}' /proc/mounts 2> /dev/null)" % shlex.quote(root),
+            'if [ -n "$dagon_node_mount" ]; then',
+            '    export DAGON_ADHOC_%s_PATH="$dagon_node_mount" DAGONFS_MOUNTPOINT="$dagon_node_mount"' % suffix,
+            '    if [ "$DAGON_ADHOC_NAME" = %s ]; then export DAGON_ADHOC_PATH="$dagon_node_mount"; fi'
+            % shlex.quote(self.name),
+            'fi',
+        ]
 
     @classmethod
     def open_stream_store(cls, spec: Mapping[str, Any]) -> Any:
@@ -615,6 +652,7 @@ class Capio(ProcessFileSystem):
     # Streaming needs CAPIO-CL commit-on-close rules for the stream paths;
     # prepare_streams() writes them when no configuration is given.
     supports_streaming = True
+    preload_conflicts = ("hercules",)
 
     def __init__(self, workflow: Any, name: str = "default", directory: Optional[str] = None,
                  server: str = "capio_server", library: str = "libcapio_posix.so",
@@ -786,6 +824,9 @@ class Hercules(ProcessFileSystem):
     provider = "hercules"
     access = "preload"
     supports_streaming = True
+    # Observed on PurpleJeans (18 November 2026): a process preloading both
+    # libraries hangs (Hercules first) or crashes (CAPIO first), even /bin/true.
+    preload_conflicts = ("capio",)
 
     def __init__(self, workflow: Any, config: str, name: str = "default",
                  launcher: str = "hercules", library: str = "libhercules_posix.so",
@@ -983,7 +1024,7 @@ class DynoStore(AdHocFileSystem):
                  compose_file: Optional[str] = None, compose_project: Optional[str] = None,
                  setup_commands: Sequence[Sequence[str]] = (), docker: str = "docker",
                  startup_timeout: float = 120.0, request_timeout: float = 60.0,
-                 resiliency: int = 1) -> None:
+                 resiliency: int = 1, compose_build: bool = False) -> None:
         super().__init__(workflow, name)
         if server is None:
             # Reuse the [dynostore] section of dagon.ini (the workflow-wide mover) when present.
@@ -1010,6 +1051,8 @@ class DynoStore(AdHocFileSystem):
         self.token_env = token_env
         self.compose_file = compose_file
         self.compose_project = compose_project
+        # ``up -d --build``: rebuild the images, for example after patching the sources.
+        self.compose_build = bool(compose_build)
         self.setup_commands = [_argv(command, "setup_commands") for command in setup_commands]
         self.docker = docker
         self.startup_timeout = float(startup_timeout)
@@ -1054,7 +1097,8 @@ class DynoStore(AdHocFileSystem):
                 environment["DYNOSTORE_PROJECT"] = self.compose_project
             # Set before "up" so that a failure below still brings the stack down.
             self._started = True
-            for command in [self.compose_command("up", "-d")] + self.setup_commands:
+            up = self.compose_command("up", "-d", *(["--build"] if self.compose_build else []))
+            for command in [up] + self.setup_commands:
                 completed = subprocess.run(command, cwd=cwd, check=False, env=environment,
                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 if completed.returncode:
@@ -1066,6 +1110,28 @@ class DynoStore(AdHocFileSystem):
             self.stop(raise_errors=False)
             raise AdHocFileSystemError("DynoStore gateway %s did not answer within %.1f seconds"
                                        % (self.server, self.startup_timeout))
+        hint = self.misdirected()
+        if hint:
+            self.stop(raise_errors=False)
+            raise AdHocFileSystemError(hint)
+
+    def misdirected(self) -> Optional[str]:
+        """A hint when ``server`` answers as a DynoStore service other than the gateway.
+
+        DynoStore's metadata service answers HTTP like the gateway but 404 to
+        object requests.  It identifies itself in its OpenAPI description,
+        which the gateway does not serve; no credential is sent.
+        """
+        try:
+            with urllib.request.urlopen(self.base_url + "/openapi.json", timeout=5) as response:
+                title = json.loads(response.read(65536).decode("utf-8")).get("info", {}).get("title", "")
+        except (OSError, ValueError, AttributeError, urllib.error.HTTPError):
+            return None
+        if isinstance(title, str) and title.startswith("DynoStore-") and title != "DynoStore-Gateway":
+            return ("DynoStore server %s is the %s service, not the API gateway; use the gateway's "
+                    "port (docker-compose.dev.yml publishes it on 8070, the default compose file on 8095)"
+                    % (self.server, title[len("DynoStore-"):].lower()))
+        return None
 
     def stop(self, raise_errors: bool = True) -> Optional[int]:
         if not self.started:

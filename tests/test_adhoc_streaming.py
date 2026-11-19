@@ -322,6 +322,38 @@ class ScopeAndVolumeTest(unittest.TestCase):
         unregister_provider("recorder-test")
         self.directory.cleanup()
 
+    def test_conflicting_preload_libraries_are_refused_in_one_task(self):
+        def resources(emulate=False):
+            workflow = Workflow("conflict", config=config(self.scratch), portable_emulation=emulate)
+            first, second = DagonTask(TaskType.BATCH, "a", "true"), DagonTask(TaskType.BATCH, "b", "true")
+            workflow.add_task(first)
+            workflow.add_task(second)
+            capio = workflow.create_adhoc_filesystem("capio", name="c", server="capio_server")
+            hercules = workflow.create_adhoc_filesystem("hercules", name="h", config="site.conf")
+            return first, second, capio, hercules
+        first, second, capio, hercules = resources()
+        capio.bind(first)
+        with self.assertRaisesRegex(adhoc.AdHocFileSystemError, "cannot be loaded in one process"):
+            hercules.bind(first)
+        self.assertEqual([fs.name for fs in first.adhoc_filesystems], ["c"])
+        hercules.bind(second)                       # separate tasks are fine
+        dagonfs = second.workflow.create_adhoc_filesystem("dagonfs", name="d", frontend="preload",
+                                                          preload_library="libdagonfs_preload.so")
+        dagonfs.bind(first)                         # DAGonFS preload composes with CAPIO
+        first, _, capio, hercules = resources(emulate=True)
+        capio.bind(first)
+        hercules.bind(first)                        # emulation preloads nothing
+
+        class Picky(custom_adapter.LocalDirectory):
+            provider = "picky"
+            preload_conflicts = ("local-directory",)
+        workflow = Workflow("third-party", config=config(self.scratch))
+        task = DagonTask(TaskType.BATCH, "t", "true")
+        workflow.add_task(task)
+        workflow.create_adhoc_filesystem(custom_adapter.LocalDirectory, name="x").bind(task)
+        with self.assertRaises(adhoc.AdHocFileSystemError):
+            workflow.create_adhoc_filesystem(Picky, name="y").bind(task)
+
     def test_task_scope_starts_around_its_task_and_workflow_default_binds_all(self):
         workflow = Workflow("scopes", config=config(self.scratch))
         first = DagonTask(TaskType.BATCH, "first", 'echo one > "$DAGON_ADHOC_SHARED_PATH/one.txt"')
@@ -368,18 +400,60 @@ class ScopeAndVolumeTest(unittest.TestCase):
         task = DagonTask(TaskType.BATCH, "both", "true")
         workflow.add_task(task)
         first = workflow.create_adhoc_filesystem("capio", name="one", library="/opt/a/libcapio_posix.so")
-        second = workflow.create_adhoc_filesystem("hercules", name="two", config="h.conf",
-                                                  library="/opt/b/libhercules_posix.so")
+        # CAPIO with the DAGonFS preload frontend: the pair that worked live
+        # (CAPIO with Hercules is refused, see the conflict test).
+        second = workflow.create_adhoc_filesystem("dagonfs", name="two", frontend="preload",
+                                                  preload_library="/opt/b/libdagonfs_preload.so")
         first.bind(task)
         second.bind(task)
         prologue = task.launcher_prologue()
         self.assertIn('export LD_PRELOAD=/opt/a/libcapio_posix.so"${LD_PRELOAD:+:$LD_PRELOAD}"', prologue)
-        self.assertIn('export LD_PRELOAD=/opt/b/libhercules_posix.so"${LD_PRELOAD:+:$LD_PRELOAD}"', prologue)
+        variable = "DYLD_INSERT_LIBRARIES" if sys.platform == "darwin" else "LD_PRELOAD"
+        self.assertIn('export %s=/opt/b/libdagonfs_preload.so"${%s:+:$%s}"' % ((variable,) * 3), prologue)
         self.assertIn("export DAGON_ADHOC_NAMES=one,two", prologue)
         self.assertIn("DAGON_ADHOC_ONE_PROVIDER=capio", prologue)
         self.assertNotEqual(first.capio_workflow_name, workflow.create_adhoc_filesystem(
             "capio", name="three").capio_workflow_name)
         self.assertEqual(workflow.create_adhoc_filesystem("capio").capio_workflow_name, "volumes")
+
+    def test_peer_to_peer_streams_use_the_mount_of_their_own_node(self):
+        workflow = Workflow("p2p", config=config(self.scratch))
+        task = DagonTask(TaskType.BATCH, "t", "true")
+        workflow.add_task(task)
+        root = os.path.join(self.scratch, "dfs")
+        volume = workflow.create_adhoc_filesystem("dagonfs", name="shared", model="peer-to-peer",
+                                                  ranks=2, mountpoint=root)
+        volume.bind(task)
+        parameters = volume.stream_parameters()
+        self.assertEqual(parameters, {"base": os.path.join(root, "0"), "peer_root": root, "ranks": "2"})
+        spec = {"location": os.path.join(root, "0", ".dagon-streams", "B1", "frames"),
+                "access": "posix", "parameters": parameters}
+        mounted = set()
+        with mock.patch.object(streaming.os.path, "ismount", side_effect=lambda p: p in mounted):
+            self.assertEqual(streaming.node_local_location(spec), (spec["location"], parameters["base"]))
+            mounted.add(os.path.join(root, "1"))    # this node runs rank 1 only
+            self.assertEqual(streaming.node_local_location(spec),
+                             (os.path.join(root, "1", ".dagon-streams", "B1", "frames"), os.path.join(root, "1")))
+            mounted.add(os.path.join(root, "0"))    # rank 0 here: the recorded path
+            self.assertEqual(streaming.node_local_location(spec)[1], parameters["base"])
+        # The launcher picks the rank listed in the node's mount table.
+        lines = volume.launcher_environment_lines()
+        self.assertIn("/proc/mounts", lines[0])
+        self.assertIn(task.adhoc_late_prologue().strip(), "\n".join(lines))
+        table = os.path.join(self.scratch, "mounts")
+        with open(table, "w") as stream:
+            stream.write("dagonfs %s/1x fuse 0 0\ndagonfs %s/1 fuse.dagonfs rw 0 0\n" % (root, root))
+        script = "\n".join(['export DAGON_ADHOC_NAME=shared DAGON_ADHOC_PATH=unset'] +
+                           [line.replace("/proc/mounts", table) for line in lines] +
+                           ['echo "$DAGON_ADHOC_PATH|$DAGON_ADHOC_SHARED_PATH|$DAGONFS_MOUNTPOINT"'])
+        from dagon.platform_support import bash_executable
+        if sys.platform != "win32":
+            output = subprocess.run([bash_executable(), "-c", script], capture_output=True, text=True, check=True)
+            local = os.path.join(root, "1")
+            self.assertEqual(output.stdout.strip(), "|".join([local] * 3))
+        # Other models and frontends keep their static paths.
+        self.assertEqual(workflow.create_adhoc_filesystem("dagonfs", name="cs").launcher_environment_lines(), [])
+        self.assertNotIn("peer_root", workflow.create_adhoc_filesystem("dagonfs", name="cs2").stream_parameters())
 
     def test_resource_names_never_count_as_credentials(self):
         workflow = Workflow("names", config=config(self.scratch))

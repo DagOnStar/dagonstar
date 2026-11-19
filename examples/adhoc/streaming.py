@@ -53,11 +53,19 @@ C = 'wc -c < workflow:///A/count.txt > size.txt'
 D = 'cat workflow:///B2/received.txt workflow:///C/size.txt > summary.txt'
 
 
-def build(scratch: str, emulate: str = "", live: str = "", options: dict = None) -> Workflow:
+def wrapped(command: str, prefix: str) -> str:
+    """*command* run through *prefix* (for example ``srun -w node``), recording the node."""
+    assert "'" not in command
+    return "%s bash -c 'hostname > node.txt; %s'" % (prefix, command)
+
+
+def build(scratch: str, emulate: str = "", live: str = "", options: dict = None,
+          wrap: dict = None) -> Workflow:
     config = {"batch": {"scratch_dir_base": scratch, "run_base": "", "threads": "8"},
               "dagon_service": {"use": "False"}, "ftp_pub": {"ip": "localhost"}}
     workflow = Workflow("streaming-example", config=config, portable_emulation=bool(emulate))
-    tasks = {name: DagonTask(TaskType.BATCH, name, command)
+    wrap = wrap or {}
+    tasks = {name: DagonTask(TaskType.BATCH, name, wrapped(command, wrap[name]) if name in wrap else command)
              for name, command in (("A", A), ("B1", B1), ("B2", B2), ("C", C), ("D", D))}
     for task in tasks.values():
         workflow.add_task(task)
@@ -90,6 +98,10 @@ def check(workflow: Workflow) -> None:
     assert read("D", "summary.txt").startswith("frame 1\n")
     print("B2 received frame 1 %.2f s before B1 finished; %d frames verified in order"
           % (finished - first_arrival, len(received)))
+    nodes = {name: read(name, "node.txt").strip() for name in ("B1", "B2")
+             if os.path.exists(os.path.join(tasks[name].working_dir, "node.txt"))}
+    if nodes:
+        print("nodes: " + ", ".join("%s on %s" % item for item in sorted(nodes.items())))
 
 
 def main() -> None:
@@ -98,6 +110,8 @@ def main() -> None:
     parser.add_argument("--live", default="", help="run on a deployed provider (registered name)")
     parser.add_argument("--option", action="append", default=[], metavar="KEY=VALUE",
                         help="provider option for --live (JSON values are decoded)")
+    parser.add_argument("--wrap", action="append", default=[], metavar="TASK=PREFIX",
+                        help="run TASK's command through PREFIX, e.g. B2='srun --overlap -N1 -n1 -w node2'")
     parser.add_argument("--scratch", help="scratch directory (default: a temporary one)")
     options = parser.parse_args()
     provider_options = {}
@@ -108,7 +122,8 @@ def main() -> None:
         except ValueError:
             provider_options[key] = value
     with tempfile.TemporaryDirectory(dir=options.scratch) as scratch:
-        workflow = build(scratch, options.emulate, options.live, provider_options)
+        wrap = dict(item.split("=", 1) for item in options.wrap)
+        workflow = build(scratch, options.emulate, options.live, provider_options, wrap)
         workflow.run()
         check(workflow)
         print("Verification: ok")

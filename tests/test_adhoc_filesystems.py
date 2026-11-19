@@ -506,6 +506,7 @@ class BeeONDTests(AdHocTestCase):
 class LoopbackDynoStore(http.server.BaseHTTPRequestHandler):
     objects = {}
     metadata = {}
+    openapi_title = None      # set to answer like a DynoStore FastAPI service
 
     def log_message(self, *args):
         pass
@@ -520,6 +521,8 @@ class LoopbackDynoStore(http.server.BaseHTTPRequestHandler):
         parts = self.path.strip("/").split("/")
         if parts == [""]:
             return self.reply(404)
+        if parts == ["openapi.json"] and self.openapi_title:
+            return self.reply(200, json.dumps({"info": {"title": self.openapi_title}}).encode())
         if parts[0] == "storage" and parts[1] == "tok":
             if parts[-1] == "exists":
                 # Like the DynoStore metadata service: 200 with an explicit
@@ -558,8 +561,9 @@ K1 = "k1-" + "0" * 32
 
 
 class DynoStoreTests(AdHocTestCase):
-    def gateway(self):
+    def gateway(self, title=None):
         LoopbackDynoStore.objects, LoopbackDynoStore.metadata = {}, {}
+        LoopbackDynoStore.openapi_title = title
         server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), LoopbackDynoStore)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
@@ -698,6 +702,29 @@ class DynoStoreTests(AdHocTestCase):
             lines = stream.read().splitlines()
         self.assertEqual(lines, ["compose -f %s -p dagon up -d" % compose, "compose exec metadata true",
                                  "compose -f %s -p dagon down" % compose])
+
+    def test_metadata_service_port_is_reported_and_build_is_optional(self):
+        server = self.gateway(title="DynoStore-Metadata")
+        log = os.path.join(self.scratch, "docker.log")
+        docker = write_script(self.scratch, "docker", """
+            import sys
+            with open(%r, "a") as stream:
+                stream.write(" ".join(sys.argv[1:]) + "\\n")
+        """ % log)
+        compose = os.path.join(self.scratch, "docker-compose.dev.yml")
+        open(compose, "w").close()
+        store = DynoStore(self.workflow(portable=False), server=server, compose_file=compose,
+                          docker=docker, compose_build=True)
+        with patch.dict(os.environ, {"DYNOSTORE_TOKEN": "secret-token-value"}):
+            with self.assertRaisesRegex(AdHocFileSystemError, "metadata service, not the API gateway") as caught:
+                store.start()
+        self.assertNotIn("secret-token-value", str(caught.exception))
+        with open(log, encoding="utf-8") as stream:
+            self.assertEqual(stream.read().splitlines(), ["compose -f %s up -d --build" % compose,
+                                                          "compose -f %s down" % compose])
+        self.assertFalse(store.started)
+        # A gateway (no DynoStore OpenAPI description) is accepted.
+        self.assertIsNone(DynoStore(self.workflow(), server=self.gateway()).misdirected())
 
     @POSIX_ONLY
     def test_setup_commands_learn_the_compose_file_and_project(self):
