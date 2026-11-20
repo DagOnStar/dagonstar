@@ -48,10 +48,11 @@ from dagon.task import DagonTask, TaskType  # noqa: E402
 # Files inside the volume are read and written by a program (this Python interpreter), not by
 # shell redirections or system tools: preload providers (CAPIO, Hercules, DAGonFS preload)
 # intercept the calls of the programs they are loaded into, and macOS removes the preload
-# variable from system binaries such as /bin/cat and /bin/bash.
+# variable from system binaries such as /bin/cat and /bin/bash.  They copy bytes, so that
+# Windows text mode adds no carriage returns for the shell arithmetic to trip over.
 PYTHON = shlex.quote(sys.executable)
-READ = PYTHON + ' -c "import sys; sys.stdout.write(open(sys.argv[1]).read())" '
-WRITE = PYTHON + ' -c "import sys; open(sys.argv[1], \'w\').write(sys.stdin.read())" '
+READ = PYTHON + ' -c "import sys; sys.stdout.buffer.write(open(sys.argv[1], \'rb\').read())" '
+WRITE = PYTHON + ' -c "import sys; open(sys.argv[1], \'wb\').write(sys.stdin.buffer.read())" '
 
 EMIT = ('for i in $(' + READ + 'workflow:///Abc/xyz/inputs/data/n.txt ); do echo $i > item-$i; '
         '"$DAGON_PYTHON" -m dagon.adhoc stream publish "$DAGON_STREAM_OUT" item-$i; done')
