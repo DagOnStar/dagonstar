@@ -202,11 +202,11 @@ async function buildScientific() {
   // 1 Title ------------------------------------------------------------------
   pres.addSection({ title: "Opening" });
   let s = k.slide("Title (dark)", "Opening", null,
-    "0:00–0:45. Introduce DAGonStar (DAGon*): a Python workflow engine developed at the University of Naples " +
+    "0:00–0:40. Introduce DAGonStar (DAGon*): a Python workflow engine developed at the University of Naples " +
     "\"Parthenope\" for environmental and marine forecasting workflows, now generalised to the computing continuum. " +
     "State the thesis: one small programming model, many execution targets, and evidence recorded by design.");
   s.addText("DAGonStar: FAIR-by-Design Workflows Across the Computing Continuum", { placeholder: "title" });
-  s.addText("Python-native DAG orchestration from laptops to HPC, cloud, serverless, IoT, and bounded agents",
+  s.addText("Python-native DAG orchestration from laptops to HPC, ad-hoc storage, cloud, serverless, IoT, other engines, and bounded agents",
     { placeholder: "body" });
   k.text(s, "Raffaele Montella and the DAGonStar team · University of Naples “Parthenope”",
     { x: 0.6, y: 4.45, w: 6.2, h: 0.32, fontSize: 13, color: P.amber });
@@ -217,7 +217,7 @@ async function buildScientific() {
   // 2 Motivation -------------------------------------------------------------
   pres.addSection({ title: "Problem" });
   s = k.slide(CONTENT, "Problem", "Every science is now computational",
-    "0:45–2:00. Motivation from the README: clouds democratised computing, so any field is computational if it " +
+    "0:40–1:40. Motivation from the README: clouds democratised computing, so any field is computational if it " +
     "has an easy-to-manage workflow engine. Our own driver is operational forecasting (weather, sea, pollutants, " +
     "mussel-farm contamination), which spans laptops, HPC clusters, and cloud services every day. The four " +
     "pressures on the right are the requirements the rest of the talk answers.");
@@ -227,7 +227,7 @@ async function buildScientific() {
     "Reviewers and operators ask what ran, on which inputs, and whether it can be repeated elsewhere",
   ]), { x: 0.5, y: 1.35, w: 4.4, h: 3.6, fontSize: 15 });
   const pressures = [
-    ["Heterogeneity", "Local, Slurm, containers, cloud, FaaS, IoT, and LLM endpoints"],
+    ["Heterogeneity", "Local, Slurm, containers, cloud, FaaS, IoT, LLMs, other engines"],
     ["Data movement", "Inputs must reach each task; HPC cores idle while they copy"],
     ["Reproducibility", "Provenance, fixity, and safe checkpoint reuse"],
     ["Portability", "Workflows should leave the engine in a standard form"],
@@ -241,27 +241,27 @@ async function buildScientific() {
 
   // 3 Contributions ----------------------------------------------------------
   s = k.slide(CONTENT, "Problem", "Contributions",
-    "2:00–3:00. Six contributions, each backed later by a slide and by tests in the repository. Stress that " +
-    "every optional capability is opt-in: workflows that do not enable FAIR recording, pre-staging, or agentic " +
-    "tasks keep their previous behaviour.");
+    "1:40–2:30. Six contributions of release " + E.version + ", each backed later by a slide and by tests in the " +
+    "repository. Stress that every optional capability is opt-in: workflows that create no ad-hoc resource and do " +
+    "not enable FAIR recording, pre-staging, volume, meta, or agentic tasks keep their previous behaviour.");
   const contrib = [
     ["Data-driven DAGs", "workflow:// references in plain Python infer dependencies and staging"],
-    ["One task contract", E.taskTypes + " task types share dependencies, staging, and checkpoints"],
+    ["One task contract", E.taskTypes + " task types, including meta-tasks that run other engines' workflows"],
+    ["Ad-hoc storage", "DAGonFS, BeeOND, Hercules, CAPIO, DynoStore: volumes, volume tasks, streams"],
     ["Pre-staging", "Slurm inputs staged and verified before sbatch, never after"],
     ["Bounded agents", "Agent results accepted only by independent evaluators"],
-    ["FAIR by design", "Opt-in RO-Crate, PROV, DataCite, CodeMeta, and fixity"],
-    ["CWL v1.2 export", "Deterministic, credential-safe command-graph interchange"],
+    ["FAIR and CWL v1.2", "Opt-in RO-Crate and PROV metadata; CWL export of every task type"],
   ];
   contrib.forEach(([h, b], i) => {
     const col = i % 3, row = Math.floor(i / 3);
     k.card(s, 0.5 + col * 3.07, 1.3 + row * 1.9, 2.86, 1.72, h, b, { num: i + 1,
-      nodeFill: i === 2 ? P.amber : P.teal });
+      nodeFill: i === 2 ? P.amber : P.teal, bodySize: 13 });
   });
 
   // 4 Programming model ------------------------------------------------------
   pres.addSection({ title: "Model and architecture" });
   s = k.slide(CONTENT, "Model and architecture", "Dependencies follow the data",
-    "3:00–4:30. Walk the quick-start example. Nobody writes an edge: task D reads workflow:///B/f2.txt and " +
+    "2:30–3:40. Walk the quick-start example. Nobody writes an edge: task D reads workflow:///B/f2.txt and " +
     "workflow:///C/f2.txt, so make_dependencies() adds B→D and C→D, and at run time the stager places " +
     "the producer's file in D's scratch directory and rewrites the reference to that path. Explicit add_dependency_to " +
     "edges remain available and are kept when the graph is rebuilt or loaded from JSON.");
@@ -302,14 +302,16 @@ async function buildScientific() {
 
   // 5 Architecture -----------------------------------------------------------
   s = k.slide(CONTENT, "Model and architecture", "Architecture",
-    "4:30–5:45. Top to bottom: the Workflow owns the graph, validation, checkpoint state and lifecycle hooks; " +
+    "3:40–4:40. Top to bottom: the Workflow owns the graph, validation, checkpoint state and lifecycle hooks; " +
     "DagonTask is a factory from TaskType to a concrete class; every Task is a thread that creates its scratch " +
-    "directory, writes a bash launcher, rewrites workflow:// references and stages inputs. The FAIR recorder and the " +
-    "CWL exporter sit beside the core and observe it; they do not change execution.");
+    "directory, writes a bash launcher, rewrites workflow:// references and stages inputs. Since 3.0.0 a command " +
+    "that exits non-zero fails its task and its dependants. Ad-hoc file systems are workflow-, task-, or " +
+    "volume-scope resources started and stopped around the tasks that use them. The FAIR recorder and the CWL " +
+    "exporter sit beside the core and observe it; they do not change execution.");
   const layers = [
-    ["Workflow", "graph · make_dependencies · cycle validation · checkpoints · run / launch · hooks"],
-    ["DagonTask factory", "TaskType → concrete task class (Batch, Slurm, Docker, Native, FaaS, Agentic …)"],
-    ["Task (thread)", "scratch directory · launcher · workflow:// rewriting · staging · status"],
+    ["Workflow", "graph · make_dependencies · validation · checkpoints · ad-hoc resources · hooks"],
+    ["DagonTask factory", "TaskType → concrete task class (Batch, Slurm, Volume, Meta, FaaS, Agentic …)"],
+    ["Task (thread)", "scratch directory · launcher · workflow:// rewriting · staging · exit status"],
   ];
   layers.forEach(([h, b], i) => {
     const y = 1.3 + i * 0.92;
@@ -321,7 +323,7 @@ async function buildScientific() {
     if (i < 2) k.arrow(s, 3.55, y + 0.72, 3.55, y + 0.92, P.sea, 1.5);
   });
   k.arrow(s, 3.55, 1.3 + 2 * 0.92 + 0.72, 3.55, 4.18, P.sea, 1.5);
-  ["Local bash", "Slurm + BeeOND", "SSH", "Containers", "Cloud", "Services"].forEach((b, i) => {
+  ["Local bash", "Slurm", "Ad-hoc storage", "Containers", "Cloud, SSH", "Services, engines"].forEach((b, i) => {
     const w = 0.95, x = 0.5 + i * 1.03;
     k.box(s, x, 4.2, w, 0.72, P.mist);
     k.text(s, b, { x: x + 0.05, y: 4.2, w: w - 0.1, h: 0.72, fontSize: 11, align: "center", valign: "middle",
@@ -336,7 +338,7 @@ async function buildScientific() {
 
   // 6 Task types -------------------------------------------------------------
   s = k.slide(CONTENT, "Model and architecture", E.taskTypes + " task types behind one contract",
-    "5:45–6:45. The TaskType enumeration currently registers sixteen types. The point is not the list but the " +
+    "4:40–5:30. The TaskType enumeration currently registers sixteen types. The point is not the list but the " +
     "contract: all of them take part in workflow:// dependencies, checkpoints, JSON serialisation, FAIR declarations " +
     "and CWL export. A single all-factory test builds a mixed workflow containing every type and checks these " +
     "properties without live external services.");
@@ -362,9 +364,9 @@ async function buildScientific() {
     { x: 0.7, y: 4.25, w: 8.6, h: 0.72, fontSize: 13, valign: "middle" });
 
   // 7 Staging ----------------------------------------------------------------
-  pres.addSection({ title: "Data movement" });
-  s = k.slide(CONTENT, "Data movement", "One reference, many data movers",
-    "6:45–7:45. A workflow:// URI names a producer task and a path inside its scratch directory. The stager " +
+  pres.addSection({ title: "Data and storage" });
+  s = k.slide(CONTENT, "Data and storage", "One reference, many data movers",
+    "5:30–6:20. A workflow:// URI names a producer task and a path inside its scratch directory. The stager " +
     "chooses a mover: a symbolic link or copy on the same host, SCP between hosts, Globus or SKYCDS for managed " +
     "transfers. The consumer sees a local path below .dagon/inputs; the path shown is the one observed in our " +
     "getting-started run. Slurm tasks can also run on BeeOND volumes created per task or per workflow.");
@@ -390,8 +392,8 @@ async function buildScientific() {
     { x: 0.5, y: 2.55, w: 3.75, h: 1.1, fontSize: 13, color: P.ink });
 
   // 8 Pre-staging concept ----------------------------------------------------
-  s = k.slide(CONTENT, "Data movement", "Scheduler-aware pre-staging",
-    "7:45–9:30. In the legacy lifecycle the job copies its inputs after the allocation starts, so every core " +
+  s = k.slide(CONTENT, "Data and storage", "Scheduler-aware pre-staging",
+    "6:20–7:40. In the legacy lifecycle the job copies its inputs after the allocation starts, so every core " +
     "is idle during the copy. With pre_stage=True the task stages and verifies inputs on the submission host first; " +
     "sbatch never runs if stage-in failed or cannot be confirmed. The compute launcher re-checks the staged content " +
     "before the payload runs. The 100 core-hour figure is the worked example from docs/scheduler_prestaging.md. " +
@@ -423,10 +425,68 @@ async function buildScientific() {
     "No sbatch before a confirmed stage-in; staging, submission, execution failures stay distinct",
   ]), { x: 3.4, y: 3.8, w: 6.1, h: 1.25, fontSize: 13 });
 
+  // 8b Ad-hoc file systems, volume tasks, and streams --------------------------
+  s = k.slide(CONTENT, "Data and storage", "Ad-hoc storage, volume tasks, and streams",
+    "7:40–9:00. Workflow.create_adhoc_filesystem gives DAGonFS, BeeOND, Hercules, CAPIO, and DynoStore one " +
+    "opt-in lifecycle; the providers stay external programs and new ones are added by registering an adapter. " +
+    "Resources have workflow, task, or volume scope. TaskType.VOLUME makes the volume a node of the graph: Abc " +
+    "creates volume xyz and stages Prep's data in; siblings use workflow:///Abc/xyz/... without copies; Emit streams " +
+    "to Sum through the volume with ?stream=xyz, using a rename-free marker protocol verified by SHA-256; Del stages " +
+    "results out and destroys it, or reference counting releases it when no task refers to it any longer. The live " +
+    "runs are manual records in docs/performance/, not CI.");
+  k.code(s, 0.5, 1.3, 4.6, 2.2,
+    "abc = DagonTask(TaskType.VOLUME, \"Abc\",\n" +
+    "    provider=\"dagonfs\", volume=\"xyz\",\n" +
+    "    stage_in={\"inputs/data\":\n" +
+    "              \"workflow:///Prep/data\"})\n" +
+    "# siblings share it, nothing is copied:\n" +
+    "#   workflow:///Abc/xyz/results/sq.txt\n" +
+    "# stream through it while Emit runs:\n" +
+    "#   workflow:///Emit/numbers?stream=xyz\n" +
+    "dele = DagonTask(TaskType.VOLUME, \"Del\",\n" +
+    "    action=\"destroy\",\n" +
+    "    volume=\"workflow:///Abc/xyz\")", 9.5);
+  ["DAGonFS", "BeeOND", "Hercules", "CAPIO", "DynoStore"].forEach((p, i) => {
+    const x = 0.5 + i * 0.935;
+    k.box(s, x, 3.65, 0.86, 0.4, i === 0 ? P.amber : P.sea);
+    k.text(s, p, { x, y: 3.65, w: 0.86, h: 0.4, fontSize: 10.5, bold: true, align: "center", valign: "middle",
+      color: i === 0 ? P.deep : P.white });
+  });
+  k.text(s, "+ plug-in adapters · workflow, task, and volume scopes", { x: 0.5, y: 4.08, w: 4.6, h: 0.28,
+    fontSize: 11.5, color: P.muted });
+  {
+    k.box(s, 5.3, 1.3, 4.2, 2.2, P.mist);
+    const d = 0.56;
+    const N = { Abc: [5.5, 2.12], Square: [6.6, 1.4], Cube: [6.6, 2.12], Emit: [6.6, 2.84], Sum: [7.75, 2.84],
+      Del: [8.8, 2.12] };
+    const c = (n) => [N[n][0] + d / 2, N[n][1] + d / 2];
+    const edge = (a, b, color, w) => {
+      const [x1, y1] = c(a); const [x2, y2] = c(b);
+      const len = Math.hypot(x2 - x1, y2 - y1), r = d / 2 + 0.02;
+      k.arrow(s, x1 + (x2 - x1) * r / len, y1 + (y2 - y1) * r / len, x2 - (x2 - x1) * r / len,
+        y2 - (y2 - y1) * r / len, color || P.sea, w || 1.25);
+    };
+    [["Abc", "Square"], ["Abc", "Cube"], ["Abc", "Emit"], ["Square", "Del"], ["Cube", "Del"], ["Sum", "Del"]]
+      .forEach(([a, b]) => edge(a, b));
+    edge("Emit", "Sum", P.amber, 2.5);
+    Object.keys(N).forEach((n) => k.node(s, N[n][0], N[n][1], d, n,
+      n === "Abc" || n === "Del" ? P.amber : P.teal, n === "Abc" || n === "Del" ? P.deep : P.white, 9));
+    k.text(s, "stream", { x: 7.14, y: 2.86, w: 0.6, h: 0.2, fontSize: 9.5, color: P.coral, bold: true,
+      align: "center" });
+    k.text(s, "create", { x: 5.35, y: 1.85, w: 0.86, h: 0.24, fontSize: 9.5, color: P.muted, align: "center" });
+    k.text(s, "stage out, destroy", { x: 8.45, y: 1.6, w: 1.0, h: 0.45, fontSize: 9.5, color: P.muted,
+      align: "center" });
+  }
+  k.text(s, "Released by a destroy task or by reference counting; every volume is released at workflow end, also after failures",
+    { x: 5.3, y: 3.62, w: 4.2, h: 0.72, fontSize: 12, valign: "middle" });
+  k.box(s, 0.5, 4.45, 9.0, 0.55, P.foam);
+  k.text(s, "Live, manual: DAGonFS, CAPIO, and Hercules on two Slurm sites; BeeOND on two nodes; DynoStore and DAGonFS volume tasks on macOS",
+    { x: 0.7, y: 4.45, w: 8.6, h: 0.55, fontSize: 12, valign: "middle" });
+
   // 9 Bounded agentic tasks -------------------------------------------------
   pres.addSection({ title: "Structured tasks" });
   s = k.slide(CONTENT, "Structured tasks", "Bounded agents, independent acceptance",
-    "9:30–11:00. TaskType.AGENTIC treats an agent as an untrusted producer. The dagon.ini profile is the maximum " +
+    "9:00–10:10. TaskType.AGENTIC treats an agent as an untrusted producer. The dagon.ini profile is the maximum " +
     "authority: a task may narrow tools and budgets or add guardrails, never widen them. Guardrails and evaluators " +
     "run outside the agent, in supervised processes; the agent's self-report is never evidence. Only an accepted " +
     "result is published, atomically, with commit.json written last. A rejected run never releases dependants. " +
@@ -447,10 +507,47 @@ async function buildScientific() {
     "Nothing published; dependants never released; the evaluation report explains which gate failed",
     { fill: "F8E9E5", headColor: P.coral, bodySize: 13 });
 
+  // 9b Meta-tasks --------------------------------------------------------------
+  s = k.slide(CONTENT, "Structured tasks", "Meta-tasks: other engines as graph nodes",
+    "10:10–11:20. TaskType.META runs a complete workflow written for another engine as one task. prepare → count → " +
+    "report is discovered from workflow:// references alone; count can be a Nextflow, Snakemake, Parsl, StreamFlow, " +
+    "or CWL workflow. The engine is never modified: an adapter builds its documented command line and its own " +
+    "parameter file, runs it without a shell, and collects only declared outputs inside the task scratch directory. " +
+    "The table is the manual live record of 19 November 2026 on macOS; Nextflow has not yet been run live, and " +
+    "engine-side remote executors were not exercised. CI runs the engine-free tests.");
+  k.node(s, 0.5, 1.3, 0.85, "prepare", P.teal, P.white, 10);
+  k.arrow(s, 1.37, 1.725, 1.88, 1.725, P.sea, 1.75);
+  k.box(s, 1.9, 1.3, 5.75, 0.85, P.foam);
+  k.text(s, "count · TaskType.META", { x: 2.05, y: 1.3, w: 1.6, h: 0.85, fontSize: 12, bold: true, color: P.deep,
+    valign: "middle" });
+  ["Nextflow", "Snakemake", "Parsl", "StreamFlow", "CWL"].forEach((e, i) => {
+    const x = 3.7 + i * 0.78;
+    k.box(s, x, 1.53, 0.74, 0.4, P.teal);
+    k.text(s, e, { x, y: 1.53, w: 0.74, h: 0.4, fontSize: 9.5, bold: true, align: "center", valign: "middle",
+      color: P.white });
+  });
+  k.arrow(s, 7.67, 1.725, 8.18, 1.725, P.sea, 1.75);
+  k.node(s, 8.2, 1.3, 0.85, "report", P.teal, P.white, 10);
+  k.card(s, 0.5, 2.4, 4.4, 2.6, "By construction", "", { fill: P.mist });
+  k.text(s, k.bullets([
+    "The engine is never modified: its documented CLI and its own parameter files",
+    "Adapters hold every engine-specific detail; plug-ins register by entry point",
+    "Declared outputs only; checkpoint reuse re-verifies specification and digests",
+  ]), { x: 0.7, y: 3.05, w: 4.0, h: 1.85, fontSize: 12.5 });
+  const live = [["Engine (manual, macOS)", "Live run"], ["Snakemake 9.27.2", "passed, 3.2 s"],
+    ["Parsl 2026.11.16", "passed, 0.6 s"], ["StreamFlow 0.2.0rc3", "passed, 1.0 s"], ["cwltool", "passed, 0.9 s"],
+    ["Nextflow", "not yet run live"]];
+  s.addTable(live.map((r, i) => r.map((c) => ({ text: c, options: { bold: i === 0, color: i === 0 ? P.white :
+    (c.startsWith("not") ? P.coral : P.ink), fill: { color: i === 0 ? P.teal : (i % 2 ? P.mist : P.white) } } }))), {
+    x: 5.1, y: 2.4, w: 4.4, colW: [2.4, 2.0], fontFace: BODY, fontSize: 12, rowH: 0.36, valign: "middle",
+    border: { type: "solid", pt: 0.5, color: P.line }, margin: [0, 0.1, 0, 0.1] });
+  k.text(s, "Engine run times from meta_result.json; CI runs the engine-free command and mock adapters",
+    { x: 5.1, y: 4.65, w: 4.4, h: 0.35, fontSize: 11, color: P.muted });
+
   // 10 FAIR -------------------------------------------------------------------
   pres.addSection({ title: "FAIR and interoperability" });
   s = k.slide(CONTENT, "FAIR and interoperability", "FAIR by design, and opt-in",
-    "11:00–12:15. Workflow.enable_fair(profile) registers a standard-library recorder on lifecycle hooks; " +
+    "11:20–12:20. Workflow.enable_fair(profile) registers a standard-library recorder on lifecycle hooks; " +
     "without it nothing changes. The recorder exports what the implementation can substantiate locally: lifecycle, " +
     "tasks, workflow:// producer/consumer edges, declared outputs with SHA-256 fixity, and checkpoint reuse. " +
     "The file list is exactly what examples/fair/fair_local.py verified in our run. These are local metadata " +
@@ -476,17 +573,18 @@ async function buildScientific() {
 
   // 11 CWL -------------------------------------------------------------------
   s = k.slide(CONTENT, "FAIR and interoperability", "CWL v1.2: an explicit portability boundary",
-    "12:15–13:15. Workflow.saveAsCWL(filename) writes a self-contained CWL v1.2 JSON document. The export is " +
+    "12:20–13:10. Workflow.saveAsCWL(filename) writes a self-contained CWL v1.2 JSON document. The export is " +
     "deterministic and contains no scratch paths or credentials; Lesson 32 validates it with cwltool --validate, " +
     "which reported ok in our run. What is portable is the command graph; DAGonStar's staging, schedulers, and " +
-    "remote runtimes stay on the DAGonStar side. Structured task types are represented through runner tools such as " +
-    "dagon-agent-runner.");
+    "remote runtimes stay on the DAGonStar side. Every task type exports: structured types through runner tools such " +
+    "as dagon-agent-runner and dagon-meta-runner, while streams and volumes are exported in materialized form with " +
+    "dagon:Stream and dagon:Volume hints.");
   k.card(s, 0.5, 1.3, 4.4, 2.55, "Portable in CWL",
     "", { fill: P.foam });
   k.text(s, k.bullets(["Command-line steps and their dependency graph", "Deterministic, credential-free output",
-    "Runner-based tools for FaaS, IoT, and agentic tasks"]), { x: 0.7, y: 2.0, w: 4.0, h: 1.75, fontSize: 14 });
+    "Runner tools for structured tasks; volumes and streams materialized"]), { x: 0.7, y: 2.0, w: 4.0, h: 1.75, fontSize: 14 });
   k.card(s, 5.1, 1.3, 4.4, 2.55, "Stays in DAGonStar", "", { fill: P.mist });
-  k.text(s, k.bullets(["Stagers and data movers", "Slurm, BeeOND, SSH, and cloud runtime behaviour",
+  k.text(s, k.bullets(["Stagers, data movers, and ad-hoc storage", "Slurm, BeeOND, SSH, and cloud runtime behaviour",
     "Checkpoint and FAIR recording"]), { x: 5.3, y: 2.0, w: 4.0, h: 1.75, fontSize: 14 });
   k.code(s, 0.5, 4.05, 5.6, 0.9, "wf.saveAsCWL(\"workflow.cwl\")\n$ python examples/tutorial/lesson_32_cwl_export.py\ncwltool --validate: ok", 11);
   k.text(s, "\"cwlVersion\": \"v1.2\", \"class\": \"Workflow\"", { x: 6.3, y: 4.05, w: 3.2, h: 0.9, fontFace: MONO,
@@ -495,29 +593,31 @@ async function buildScientific() {
   // 12 Evaluation -------------------------------------------------------------
   pres.addSection({ title: "Evaluation" });
   s = k.slide(CONTENT, "Evaluation", "Evaluation: evidence levels, not claims",
-    "13:15–14:45. Numbers observed on " + E.observedOn + ". The unit suite and local examples need no external " +
+    "13:10–14:30. Numbers observed on " + E.observedOn + ". The unit suite and local examples need no external " +
     "service. CI repeats them on Ubuntu (Python 3.8–3.13), macOS, Windows with Git Bash, Rocky Linux 9 and Debian " +
     "bookworm arm64, and runs BeeOND and pre-staging on a single-node Slurm cluster. The table is the honest map: " +
-    "what is only tested locally, what CI exercises, what one manual production run showed, and what is not exercised.");
+    "what is only tested locally, what CI exercises, what manual live runs recorded in docs/performance/ showed, and " +
+    "what is not exercised. The live runs are manual: each was observed once on the named hosts, not repeated by CI.");
   k.stat(s, 0.5, 1.2, 2.1, E.unitTests, "unit tests pass locally, no live services");
   k.stat(s, 2.75, 1.2, 2.1, "5", "CI platforms incl. Windows and arm64");
   k.stat(s, 5.0, 1.2, 2.1, E.lessons, "self-checking tutorial lessons");
   k.stat(s, 7.25, 1.2, 2.25, E.localExamples, "local examples run end to end");
   const ev = [
     ["Evidence level", "What it covers"],
-    ["Local tests", "Dependency discovery, staging commands, checkpoints, JSON/CWL, FAIR, agentic contract"],
+    ["Local tests", "Dependencies, staging, checkpoints, JSON/CWL, FAIR, agentic, meta, volume, stream contracts"],
     ["CI, single-node Slurm", "BeeOND (emulated site) and pre-staging with real sbatch"],
-    ["Manual, one production site", "Pre-staging on Slurm 23.11 with NFS scratch; BeeOND on four nodes"],
-    ["Not exercised", "Live cloud, FaaS, IoT, LLM, and agent providers"],
+    ["Manual, Slurm sites", "Pre-staging (Slurm 23.11, NFS); BeeOND on 2 and 4 nodes; DAGonFS, CAPIO, Hercules"],
+    ["Manual, macOS", "DAGonFS volume tasks (3 frontends); DynoStore; Snakemake, Parsl, StreamFlow, cwltool"],
+    ["Not exercised", "Live cloud, FaaS, IoT, LLM, and agent providers; Nextflow; engine-side executors"],
   ];
   s.addTable(ev.map((r, i) => r.map((c) => ({ text: c, options: { bold: i === 0 || false, color: i === 0 ? P.white : P.ink,
     fill: { color: i === 0 ? P.teal : (i % 2 ? P.mist : P.white) } } }))), {
-    x: 0.5, y: 2.85, w: 9.0, colW: [2.6, 6.4], fontFace: BODY, fontSize: 12, rowH: 0.4, valign: "middle",
+    x: 0.5, y: 2.68, w: 9.0, colW: [2.3, 6.7], fontFace: BODY, fontSize: 12, rowH: 0.38, valign: "middle",
     border: { type: "solid", pt: 0.5, color: P.line }, margin: [0, 0.1, 0, 0.1] });
 
   // 13 Pre-staging on a production site ----------------------------------------
   s = k.slide(CONTENT, "Evaluation", "Pre-staging on a production cluster",
-    "14:45–16:15. Report the manual site run recorded in the README. Setup: Slurm 23.11, NFS-shared scratch, " +
+    "14:30–15:40. Report the manual site run recorded in the README. Setup: Slurm 23.11, NFS-shared scratch, " +
     "compute nodes, real SSH for RemoteSlurm; tools/hpc_prestage_deep.py adds a 1 GiB input, 5,000 small files, a " +
     "two-node allocation, induced queue waits, a change and a cancellation while pending, two contending processes " +
     "and node-local scratch. Key finding: for a 1 GiB input the job's re-check of staged data took most of the " +
@@ -538,7 +638,7 @@ async function buildScientific() {
 
   // 14 Applications -----------------------------------------------------------
   s = k.slide(CONTENT, "Evaluation", "Applications in environmental science",
-    "16:15–17:15. DAGonStar runs production workflows in three funded initiatives listed in the README: MytilX " +
+    "15:40–16:40. DAGonStar runs production workflows in three funded initiatives listed in the README: MytilX " +
     "(Istituto Zooprofilattico Sperimentale dell'Umbria e delle Marche) and MytilEx (Campania Region) for weather, " +
     "marine, pollutant and farmed-mussel contamination forecasts, and the EuroHPC ADMIRE environmental application. " +
     "Related application papers cover Lagrangian pollutant transport and the Shoreline Alert Model.");
@@ -554,23 +654,26 @@ async function buildScientific() {
   // 15 Limitations ------------------------------------------------------------
   pres.addSection({ title: "Closing" });
   s = k.slide(CONTENT, "Closing", "Limitations and threats to validity",
-    "17:15–18:30. Be explicit. Pre-staging evidence comes from one production site. SCP, GridFTP and SKYCDS " +
+    "16:40–17:50. Be explicit. Pre-staging evidence comes from one production site; ad-hoc storage, volume-task " +
+    "and meta-engine live runs are manual and few, Nextflow has not been run live, and CAPIO, Hercules and " +
+    "DynoStore volume tasks are covered only by stand-in stores and emulation. SCP, GridFTP and SKYCDS " +
     "transfers are checked for existence, not content. Several legacy paths still build shell strings, and rewritten " +
     "workflow:// arguments stay unquoted, so paths with spaces are not supported in user commands. The unit suite " +
     "validates command generation and boundaries, not live Docker, Kubernetes, cloud, FaaS, IoT or LLM providers.");
-  [["External validity", "Pre-staging measured on one production site and one CI cluster"],
+  [["External validity", "Pre-staging on one production site; storage and engine live runs are manual"],
     ["Verification depth", "SCP, GridFTP, and SKYCDS inputs checked for existence, not content"],
     ["Shell construction", "Legacy paths build shell strings; rewritten workflow:// arguments stay unquoted"],
-    ["Test scope", "Suite checks command generation and boundaries, not live providers"]]
+    ["Test scope", "Suite checks generation and boundaries, not live providers or Nextflow"]]
     .forEach(([h, b], i) => k.card(s, 0.5 + (i % 2) * 4.6, 1.3 + Math.floor(i / 2) * 1.85, 4.4, 1.68, h, b,
       { num: i + 1, nodeFill: P.coral, bodySize: 14 }));
 
   // 16 Conclusions ------------------------------------------------------------
   s = k.slide("Closing (dark)", "Closing", "Conclusions and future work",
-    "18:30–20:00. Three take-aways, then future work stated as future work: live IoT network providers, automatic " +
-    "object-store upload for FaaS artifacts, wider quoting helpers, and pre-staging measurements on more sites and " +
-    "under real queue waits. Invite questions and point to the repository and the 33-lesson tutorial.");
-  [["Small model, wide reach", "Plain Python plus workflow:// spans " + E.taskTypes + " task types"],
+    "17:50–20:00. Three take-aways, then future work stated as future work: live IoT network providers, a live " +
+    "Nextflow run and engine-side remote executors, live volume tasks beyond DAGonFS, wider quoting helpers, and " +
+    "pre-staging measurements on more sites and under real queue waits. Invite questions and point to the " +
+    "repository and the " + E.lessons + "-lesson tutorial.");
+  [["Small model, wide reach", "Plain Python plus workflow:// spans " + E.taskTypes + " task types and other engines"],
     ["Evidence by design", "FAIR, checkpoints, and acceptance are recorded, not asserted"],
     ["Portable by contract", "CWL v1.2 export with an explicit boundary"]].forEach(([h, b], i) => {
     const y = 1.45 + i * 0.95;
@@ -580,8 +683,8 @@ async function buildScientific() {
   });
   k.box(s, 6.15, 1.4, 3.35, 2.85, "123F45");
   k.text(s, "Future work", { x: 6.35, y: 1.55, w: 3.0, h: 0.35, fontSize: 16, bold: true, color: P.amber });
-  k.text(s, k.bullets(["Live IoT network providers", "Object-store upload for FaaS artifacts",
-    "Safer quoting on legacy paths", "Pre-staging on more sites"]), { x: 6.35, y: 2.0, w: 3.0, h: 2.15,
+  k.text(s, k.bullets(["Live IoT network providers", "Live Nextflow, engine executors",
+    "Live volume tasks beyond DAGonFS", "Safer quoting on legacy paths", "Pre-staging on more sites"]), { x: 6.35, y: 2.0, w: 3.0, h: 2.15,
     fontSize: 13, color: P.white });
   k.text(s, "github.com/DagOnStar/dagonstar · tutorial: docs/tutorial/  ·  Questions?",
     { x: 0.6, y: 4.6, w: 8.9, h: 0.35, fontSize: 13, color: P.amber });
@@ -647,7 +750,7 @@ async function buildTutorial() {
   // 3 Prerequisites -----------------------------------------------------------
   pres.addSection({ title: "Build and install" });
   s = k.slide(CONTENT, "Build and install", "Step 1 — Prerequisites",
-    "1:15–3:00. Python 3.8 or newer (CI covers 3.8 to 3.13). Local tasks run as bash launchers found by " +
+    "1:15–2:45. Python 3.8 or newer (CI covers 3.8 to 3.13). Local tasks run as bash launchers found by " +
     "dagon.platform_support.bash_executable(); on Windows install Git for Windows, MSYS2 or Cygwin, or point " +
     "DAGON_BASH at a bash. Docker, Slurm, SSH, cloud and transfer services are optional and not used today.");
   [["Python ≥ 3.8", "CI tests 3.8 to 3.13. A virtual environment keeps the install isolated"],
@@ -660,7 +763,7 @@ async function buildTutorial() {
 
   // 4 Build ----------------------------------------------------------------
   s = k.slide(CONTENT, "Build and install", "Step 2 — Get the source and compile",
-    "3:00–5:00. DAGonStar is pure Python, so compiling means byte-compiling the sources and, optionally, " +
+    "2:45–4:30. DAGonStar is pure Python, so compiling means byte-compiling the sources and, optionally, " +
     "building the sdist and wheel exactly as the CI build job does with python -m build and twine check --strict. " +
     "py_compile prints nothing on success. The distribution names come from setup.cfg version " + E.version + ".");
   k.code(s, 0.5, 1.3, 5.4, 3.65,
@@ -673,7 +776,8 @@ async function buildTutorial() {
     "# byte-compile every module (silent)\n" +
     "python -m py_compile dagon/*.py dagon/api/*.py \\\n" +
     "  dagon/communication/*.py dagon/ftp_publisher/*.py \\\n" +
-    "  dagon/peer2peer/*.py\n\n" +
+    "  dagon/peer2peer/*.py dagon/meta/*.py \\\n" +
+    "  dagon/meta/adapters/*.py\n\n" +
     "# optional: build distributions like CI\n" +
     "python -m pip install build twine\n" +
     "python -m build\n" +
@@ -684,10 +788,12 @@ async function buildTutorial() {
 
   // 5 Install ---------------------------------------------------------------
   s = k.slide(CONTENT, "Build and install", "Step 3 — Install, with extras only when needed",
-    "5:00–7:00. The editable install is what developers use. The base package installs requests, fabric3, " +
+    "4:30–6:00. The editable install is what developers use. The base package installs requests, fabric3, " +
     "paramiko, graphviz and pycryptodome; Docker, cloud SDKs, Globus and Flask are extras. requirements.txt is the " +
     "full demo environment with all integrations. If you call an integration without its extra, DAGonStar reports " +
-    "the install command at that boundary.");
+    "the install command at that boundary. Workflow engines for meta-tasks (Nextflow, Snakemake, Parsl, StreamFlow, " +
+    "cwltool) and ad-hoc file systems (DAGonFS, BeeOND, Hercules, CAPIO, DynoStore) are external programs, not " +
+    "extras: they are never installed by DAGonStar and are not needed today.");
   k.code(s, 0.5, 1.3, 4.6, 1.6, "python -m pip install -e .\n\n# or the full demo environment\npython -m pip install -r requirements.txt", 11.5);
   const extras = [["Extra", "Enables"], ["docker", "Docker tasks, local or over SSH"], ["kubernetes", "Kubernetes tasks"],
     ["cloud", "Apache Libcloud cloud tasks"], ["globus", "Globus staging"], ["api", "Flask workflow service"],
@@ -699,14 +805,15 @@ async function buildTutorial() {
   k.text(s, "pip install -e \".[docker]\"", { x: 5.35, y: 4.75, w: 4.15, h: 0.25, fontFace: MONO, fontSize: 11,
     color: P.muted });
   k.expect(s, 0.5, 3.1, 4.6, 1.85, "python -c \"import dagon\" exits 0\npip show dagonstar → Version: " + E.version +
-    "\nNo Docker or cloud SDK installed by the base package", 13);
+    "\nNo Docker, cloud SDK, workflow engine, or file system installed", 13);
 
   // 6 Configure -------------------------------------------------------------
   pres.addSection({ title: "Configure and verify" });
   s = k.slide(CONTENT, "Configure and verify", "Step 4 — Configure dagon.ini",
-    "7:00–9:00. Always start from the sample: it also carries the logging sections ([loggers], [handlers], " +
+    "6:00–7:45. Always start from the sample: it also carries the logging sections ([loggers], [handlers], " +
     "[formatters]). A hand-written file with only [batch] fails at start-up with KeyError: 'formatters' — we hit " +
-    "this while preparing the tutorial. Point scratch_dir_base at a directory you own. Secrets never go in the file: " +
+    "this while preparing the tutorial. [beeond] is commented out in the sample; [meta.nextflow] and [meta.parsl] " +
+    "only name the engine executable and the Parsl interpreter. Point scratch_dir_base at a directory you own. Secrets never go in the file: " +
     "SKYCDS tokens, cloud keys and model keys come from environment variables named by the configuration.");
   k.code(s, 0.5, 1.3, 4.6, 2.65,
     "cp dagon.ini.sample dagon.ini\n\n" +
@@ -716,13 +823,14 @@ async function buildTutorial() {
     "scratch_dir_base = /path/to/scratch/\n\n" +
     "# keep [loggers] [handlers] [formatters]", 11.5);
   [["[batch]", "local scratch and staging threads"], ["[slurm] [beeond]", "partition and BeeOND defaults"],
-    ["[llm.*] [agent.*]", "named LLM and agent profiles"], ["[ec2] [gce] …", "optional cloud providers"]]
+    ["[llm.*] [agent.*]", "named LLM and agent profiles"], ["[faas.*] [meta.*]", "FaaS providers, engine paths"],
+    ["[ec2] [gce] …", "optional cloud providers"]]
     .forEach(([h, b], i) => {
-      const y = 1.3 + i * 0.66;
-      k.box(s, 5.35, y, 1.75, 0.52, P.foam);
-      k.text(s, h, { x: 5.35, y, w: 1.75, h: 0.52, fontFace: MONO, fontSize: 10.5, bold: true, color: P.deep,
+      const y = 1.3 + i * 0.54;
+      k.box(s, 5.35, y, 1.75, 0.44, P.foam);
+      k.text(s, h, { x: 5.35, y, w: 1.75, h: 0.44, fontFace: MONO, fontSize: 10.5, bold: true, color: P.deep,
         align: "center", valign: "middle" });
-      k.text(s, b, { x: 7.25, y, w: 2.25, h: 0.52, fontSize: 13, valign: "middle" });
+      k.text(s, b, { x: 7.25, y, w: 2.25, h: 0.44, fontSize: 13, valign: "middle" });
     });
   k.box(s, 0.5, 4.15, 9.0, 0.8, "F8E9E5");
   k.text(s, "Never commit credentials. Tokens and keys come from environment variables, e.g. DAGON_SKYCDS_API_TOKEN, or an agent profile's api_key_env.",
@@ -730,7 +838,7 @@ async function buildTutorial() {
 
   // 7 Verify environment ----------------------------------------------------
   s = k.slide(CONTENT, "Configure and verify", "Step 5 — Verify the environment (Lesson 00)",
-    "9:00–10:00. Lesson 00 imports dagon, finds bash, reads dagon.ini.sample, checks that no API key is " +
+    "7:45–8:45. Lesson 00 imports dagon, finds bash, reads dagon.ini.sample, checks that no API key is " +
     "committed, and lists the registered task types and optional packages. The output on the right is verbatim from " +
     "our run; your Python version, platform and optional packages may differ, but the sixteen task types must match.");
   k.code(s, 0.5, 1.3, 9.0, 0.55, "python examples/tutorial/lesson_00_environment_check.py", 12);
@@ -745,7 +853,7 @@ async function buildTutorial() {
 
   // 8 First workflow --------------------------------------------------------
   s = k.slide(CONTENT, "Configure and verify", "Step 6 — Run a first workflow",
-    "10:00–11:30. The getting-started workflow: prepare writes a CSV, analyze counts its lines through a " +
+    "8:45–10:00. The getting-started workflow: prepare writes a CSV, analyze counts its lines through a " +
     "workflow:// reference. make_dependencies() infers prepare→analyze. Each task gets a timestamped scratch " +
     "directory with a .dagon folder holding the launcher, context script, captured stdout and staged inputs. " +
     "Our run completed in " + E.firstWorkflowSeconds + " s; most of that is the engine's polling interval, not the commands.");
@@ -769,8 +877,9 @@ async function buildTutorial() {
   // 9 Tests -----------------------------------------------------------------
   pres.addSection({ title: "Test and evaluate" });
   s = k.slide(CONTENT, "Test and evaluate", "Step 7 — Run the test suite",
-    "11:30–13:30. The suite is local: it tests command generation, failure propagation, dependency discovery, " +
-    "checkpoints, JSON and CWL, FAIR, pre-staging with a mock sbatch, and the agentic contract with a mock adapter. " +
+    "10:00–11:45. The suite is local: it tests command generation, failure propagation, dependency discovery, " +
+    "checkpoints, JSON and CWL, FAIR, pre-staging with a mock sbatch, ad-hoc volumes and streams against stand-ins, " +
+    "meta-tasks without any engine, and the agentic contract with a mock adapter. " +
     "Tracebacks printed during the run are expected: many tests exercise failure paths on purpose. Judge the final " +
     "summary line only. Start it in a second terminal; it took about " + E.unitTestMinutes + " minutes on our laptop.");
   k.code(s, 0.5, 1.3, 5.4, 2.0,
@@ -787,7 +896,7 @@ async function buildTutorial() {
 
   // 10 Examples and validators -----------------------------------------------
   s = k.slide(CONTENT, "Test and evaluate", "Run the examples and tutorial validators",
-    "13:30–14:30. run_local_examples.py runs every self-contained local example with temporary scratch. The two " +
+    "11:45–12:45. run_local_examples.py runs every self-contained local example with temporary scratch. The two " +
     "validators check the tutorial's structure, links and metadata, and that every TaskType and inventoried feature " +
     "maps to a lesson, an example and a test in docs/tutorial/coverage.json.");
   k.code(s, 0.5, 1.3, 5.4, 1.6,
@@ -802,7 +911,7 @@ async function buildTutorial() {
 
   // 11 Evaluate: checkpoints and CWL ------------------------------------------
   s = k.slide(CONTENT, "Test and evaluate", "Evaluate: checkpoint reuse and CWL export",
-    "14:30–16:00. Two behaviours to evaluate yourself. Lesson 07 runs a workflow, then resumes it from the " +
+    "12:45–14:00. Two behaviours to evaluate yourself. Lesson 07 runs a workflow, then resumes it from the " +
     "checkpoint file and confirms the scratch directory was reused rather than recomputed. Lesson 32 exports a " +
     "workflow to CWL v1.2 and, when cwltool is installed, validates it. The export is deterministic: re-running it " +
     "yields the same document with no scratch paths.");
@@ -810,12 +919,12 @@ async function buildTutorial() {
   k.code(s, 0.7, 2.05, 4.0, 0.55, "python examples/tutorial/lesson_07_*.py", 10);
   k.expect(s, 0.7, 2.9, 4.0, 1.85, "checkpoint: <tmp>/checkpoint.json\nscratch reused: True", 12);
   k.card(s, 5.1, 1.3, 4.4, 3.65, "CWL v1.2 export", "", { num: 2 });
-  k.code(s, 5.3, 2.05, 4.0, 0.55, "python examples/tutorial/lesson_29_*.py", 10);
+  k.code(s, 5.3, 2.05, 4.0, 0.55, "python examples/tutorial/lesson_32_*.py", 10);
   k.expect(s, 5.3, 2.9, 4.0, 1.85, "cwltool --validate: ok\nsteps: announce, measure, summarise\ndeterministic export, no scratch paths", 12);
 
   // 12 Evaluate: FAIR and pre-staging ----------------------------------------
   s = k.slide(CONTENT, "Test and evaluate", "Evaluate: FAIR metadata and pre-staging",
-    "16:00–17:30. fair_local.py enables FAIR recording, runs a small workflow in temporary scratch, and checks " +
+    "14:00–15:15. fair_local.py enables FAIR recording, runs a small workflow in temporary scratch, and checks " +
     "the exported files. pre_stage_mock.py runs a Slurm task twice, legacy and pre-staged, against a mock sbatch " +
     "and compares results. The core-hour figure is tiny because the mock stage-in takes a fraction of a second; " +
     "it is an estimate of allocation not held, not a measured saving. Results must be identical in both modes.");
@@ -826,9 +935,31 @@ async function buildTutorial() {
   k.code(s, 5.3, 2.05, 4.0, 0.7, "python examples/dataflow/slurm/\\\n  pre_stage_mock.py", 10);
   k.expect(s, 5.3, 2.9, 4.0, 1.85, "Highest sea levels identical in both modes\nEstimated core-hours not held (200 cores): ~0.02\nVerification: ok", 12);
 
+  // 12b Evaluate: volumes, streams, and meta-tasks ----------------------------
+  s = k.slide(CONTENT, "Test and evaluate", "Evaluate: volume tasks, streams, and meta-tasks",
+    "15:15–16:45. Three 3.0.0 features, all without a real file system or engine. volume_task.py runs volume tasks " +
+    "on the real local-directory adapter: Abc creates volume xyz, siblings write into it, Emit streams to Sum through " +
+    "it, Del stages results out and destroys it, and a second workflow releases its volume by reference counting " +
+    "(about 25 s). streaming.py checks that B2 receives verified frames while B1 is still running. " +
+    "meta_workflow_local.py runs an external command-line workflow as a meta-task, reuses its verified checkpoint on " +
+    "a second run, and shows portable emulation with the mock engine standing in for Nextflow. Pass --live with a " +
+    "provider or install an engine only when you want a live run.");
+  [["Volume tasks", "examples/adhoc/\n  volume_task.py",
+    "Report: 5 rows from the volume; Sum read 15 while Emit ran; volume destroyed by Del\nVerification: ok"],
+  ["Streams", "examples/adhoc/\n  streaming.py",
+    "B2 received frame 1 before B1 finished; 8 frames verified in order\nVerification: ok"],
+  ["Meta-tasks", "examples/meta/\n  meta_workflow_local.py",
+    "outputs/counts.tsv collected; top word: sea = 3\nsecond run reused the verified checkpoint"]]
+    .forEach(([h, cmd, out], i) => {
+      const x = 0.5 + i * 3.07;
+      k.card(s, x, 1.3, 2.86, 3.65, h, "", { num: i + 5, nodeFill: i === 2 ? P.amber : P.teal });
+      k.code(s, x + 0.15, 2.0, 2.56, 0.7, "python " + cmd, 10);
+      k.expect(s, x + 0.15, 2.85, 2.56, 1.95, out, 11);
+    });
+
   // 13 Expected results at a glance -------------------------------------------
   s = k.slide(CONTENT, "Test and evaluate", "Expected results at a glance",
-    "17:30–18:30. A checklist participants can keep. Every row was observed on " + E.observedOn + ".");
+    "16:45–17:45. A checklist participants can keep. Every row was observed on " + E.observedOn + ".");
   const rows = [
     ["Step", "Command", "Expected"],
     ["Compile", "python -m py_compile dagon/*.py …", "silent, exit 0"],
@@ -840,33 +971,41 @@ async function buildTutorial() {
     ["Checkpoint", "lesson_07_checkpoint_and_resume.py", "scratch reused: True"],
     ["CWL", "lesson_32_cwl_export.py", "cwltool --validate: ok"],
     ["FAIR / pre-stage", "fair_local.py; pre_stage_mock.py", "metadata verified; Verification: ok"],
+    ["Volumes, streams", "volume_task.py; streaming.py", "Verification: ok (both)"],
+    ["Meta-tasks", "meta_workflow_local.py", "checkpoint reused; top word sea = 3"],
   ];
   s.addTable(rows.map((r, i) => r.map((c, j) => ({ text: c, options: { bold: i === 0 || j === 0,
-    fontFace: j === 1 && i > 0 ? MONO : BODY, fontSize: j === 1 && i > 0 ? 10 : 12,
+    fontFace: j === 1 && i > 0 ? MONO : BODY, fontSize: j === 1 && i > 0 ? 10 : 11.5,
     color: i === 0 ? P.white : P.ink, fill: { color: i === 0 ? P.teal : (i % 2 ? P.mist : P.white) } } }))), {
-    x: 0.5, y: 1.2, w: 9.0, colW: [1.6, 4.0, 3.4], rowH: 0.37, valign: "middle",
+    x: 0.5, y: 1.15, w: 9.0, colW: [1.6, 4.0, 3.4], rowH: 0.32, valign: "middle",
     border: { type: "solid", pt: 0.5, color: P.line }, margin: [0, 0.08, 0, 0.08] });
 
   // 14 Troubleshooting ---------------------------------------------------------
   s = k.slide(CONTENT, "Test and evaluate", "Troubleshooting",
-    "18:30–19:15. The four problems most likely in a room of laptops. The pre-staging row is for participants " +
-    "who later run on a real cluster: failure_phase tells you whether anything was submitted.");
+    "17:45–19:00. The problems most likely in a room of laptops. Card 4 is the 3.0.0 behaviour change: a command " +
+    "that exits non-zero now fails its task and its dependants, where earlier releases ignored the status. Card 5 " +
+    "is the refusal of command paths into client (DAGonFS native) or object (DynoStore) volumes, which have no host " +
+    "path. The pre-staging card is for participants who later run on a real cluster: failure_phase tells you " +
+    "whether anything was submitted.");
   [["KeyError: 'formatters'", "dagon.ini lacks the logging sections: start again from cp dagon.ini.sample dagon.ini"],
     ["bash not found (Windows)", "Install Git for Windows, MSYS2, or Cygwin, or set DAGON_BASH to a bash executable"],
     ["Integration import error", "Install the matching extra, e.g. pip install -e \".[docker]\"; the error names it"],
-    ["failure_phase == \"staging\"", "Stage-in failed and no job was submitted; read .dagon/stage_in.sh in the working dir"]]
-    .forEach(([h, b], i) => k.card(s, 0.5 + (i % 2) * 4.6, 1.3 + Math.floor(i / 2) * 1.85, 4.4, 1.68, h, b,
-      { num: i + 1, nodeFill: P.coral, headSize: 14, bodySize: 13 }));
+    ["Task FAILED after upgrading", "Since 3.0.0 a non-zero exit fails the task and its dependants; read .dagon/stdout.txt"],
+    ["Volume reference refused", "Client and object volumes have no host path: use ?stream=, attach(), or stage_in/stage_out"],
+    ["failure_phase == \"staging\"", "Stage-in failed and no job was submitted; read .dagon/stage_in.sh"]]
+    .forEach(([h, b], i) => k.card(s, 0.5 + (i % 3) * 3.07, 1.3 + Math.floor(i / 3) * 1.85, 2.86, 1.72, h, b,
+      { num: i + 1, nodeFill: P.coral, headSize: 12.5, bodySize: 12 }));
 
   // 15 Next steps --------------------------------------------------------------
   pres.addSection({ title: "Closing" });
   s = k.slide("Closing (dark)", "Closing", "Where to go next",
-    "19:15–20:00. Point to the 33-lesson tutorial and its six modules, the examples catalog and the platform " +
-    "support page. Infrastructure lessons (Docker to data movers) run against mocks locally and need a real site " +
-    "only for live runs.");
+    "19:00–20:00. Point to the " + E.lessons + "-lesson tutorial and its six modules, the examples catalog and the " +
+    "platform support page. Infrastructure lessons (Docker to data movers, including ad-hoc file systems and volume " +
+    "tasks) run against mocks or portable emulation locally and need a real site only for live runs. Lessons 30 and " +
+    "31 cover meta-tasks over other engines; Lesson 35 is the capstone with every task type.");
   [["Tutorial", E.lessons + " lessons, 00–35, each with a self-checking script in examples/tutorial/"],
-    ["Documentation", "docs/getting_started.md, configuration.md, user_guide.md, architecture.md"],
-    ["Real infrastructure", "Lessons 17–28: Docker, Apptainer, Kubernetes, Nomad, SSH, cloud, Slurm, BeeOND"]]
+    ["Documentation", "docs/getting_started.md, volume_tasks.md, meta_tasks.md, adhoc_filesystems.md"],
+    ["Real infrastructure", "Lessons 17–28: containers, SSH, cloud, Slurm, BeeOND, ad-hoc storage, volumes"]]
     .forEach(([h, b], i) => {
       const y = 1.45 + i * 0.95;
       k.node(s, 0.6, y, 0.6, String(i + 1), i === 0 ? P.amber : P.teal, i === 0 ? P.deep : P.white, 16);
