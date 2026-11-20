@@ -1,6 +1,34 @@
 """Shared configuration and task helpers for local tutorial examples."""
+import contextlib
+import shutil
+import tempfile
+import time
 from pathlib import Path
 from dagon import Workflow
+
+
+@contextlib.contextmanager
+def scratch_directory(prefix):
+    """Temporary scratch directory, removed with a short retry.
+
+    On Windows a task's shell can keep a scratch file open for a moment after
+    the workflow has ended, and removing the directory then fails with
+    WinError 32; the removal is retried for up to two seconds.
+    """
+    path = tempfile.mkdtemp(prefix=prefix)
+    try:
+        yield path
+    finally:
+        for attempt in range(20):
+            try:
+                shutil.rmtree(path)
+                break
+            except FileNotFoundError:
+                break
+            except PermissionError:
+                if attempt == 19:
+                    raise
+                time.sleep(0.1)
 
 
 def config(scratch, extra=None):
