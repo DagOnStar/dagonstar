@@ -379,6 +379,14 @@ class Workflow(object):
             self._discovering_dependencies = False
         for task, previous in explicit_edges:
             self._restore_explicit_edge(task, previous)
+        if any(getattr(task, "is_volume_task", False) for task in self.tasks):
+            # Volume tasks (dagon.volume): bind users, add volume edges, check readers.
+            from dagon.volume import plan_volumes
+            self._discovering_dependencies = True
+            try:
+                plan_volumes(self)
+            finally:
+                self._discovering_dependencies = False
         self.Validate_WF()
         self._dependencies_made = True
         self._fire_event("on_dependencies_made", self)
@@ -451,7 +459,8 @@ class Workflow(object):
             return volume
 
     def create_adhoc_filesystem(self, provider: Any, name: str = "default", scope: str = "workflow",
-                                default: bool = False, export: Optional[str] = None, **options: Any) -> Any:
+                                default: bool = False, export: Optional[str] = None, owner: Any = None,
+                                **options: Any) -> Any:
         """Create and register an ad-hoc file system or data store resource.
 
         :param provider: a registered provider name (``dagonfs``, ``beeond``,
@@ -459,7 +468,9 @@ class Workflow(object):
             :func:`dagon.adhoc.register_provider`) or an adapter class
         :param scope: ``"workflow"`` (started before the first task, stopped
             after the last) or ``"task"`` (started and stopped around the one
-            task it is bound to; see :meth:`dagon.task.Task.create_adhoc_filesystem`)
+            task it is bound to; see :meth:`dagon.task.Task.create_adhoc_filesystem`);
+            ``"volume"`` is reserved for the resource of a ``TaskType.VOLUME``
+            task, passed as *owner* (see :mod:`dagon.volume`)
         :param default: bind the workflow-scope resource to every task at run time
         :param export: an extra environment variable, chosen by the developer,
             that carries the resource's path in every task it is bound to (in
@@ -471,6 +482,8 @@ class Workflow(object):
             raise ValueError("ad-hoc scope must be one of %s" % ", ".join(SCOPES))
         if default and scope != "workflow":
             raise ValueError("only a workflow-scope resource can be the default of every task")
+        if (scope == "volume") != (owner is not None):
+            raise ValueError("volume-scope resources are created by a volume task (TaskType.VOLUME)")
         if name in self.adhoc_filesystems:
             raise ValueError("ad-hoc file system %r already exists" % name)
         if export is not None:
@@ -479,6 +492,7 @@ class Workflow(object):
         filesystem.scope = scope
         filesystem.default = bool(default)
         filesystem.export = export
+        filesystem.owner = owner
         self.adhoc_filesystems[name] = filesystem
         return filesystem
 
@@ -526,6 +540,10 @@ class Workflow(object):
                     raise ValueError("%s: stream producer not found: %s" % (consumer.name, text))
                 if producer is consumer:
                     raise ValueError("%s: a task cannot consume its own stream: %s" % (consumer.name, text))
+                if getattr(producer, "is_volume_task", False):
+                    raise ValueError("%s: %s is a volume task; streams are produced by command tasks bound to its "
+                                     "volume: workflow:///<producer>/<path>?stream=%s"
+                                     % (text, producer.name, producer.volume_name))
                 for endpoint in (producer, consumer):
                     if not getattr(endpoint, "stream_capable", False):
                         raise ValueError("%s tasks cannot produce or consume streams (%s)"
@@ -662,6 +680,23 @@ class Workflow(object):
             raise RuntimeError("; ".join(errors))
         return results
 
+    def release_volumes(self, raise_errors: bool = True) -> None:
+        """Release every volume of a volume task still held at the end of a run.
+
+        Volumes are normally released when their last reference is gone (or by
+        a destroy task); this covers ``release="end"``, failed users, and
+        interruptions.
+        """
+        errors = []
+        for task in self.tasks:
+            if getattr(task, "is_volume_task", False) and task.action == "create":
+                try:
+                    task.release_volume("workflow ended", raise_errors=True)
+                except Exception as exc:
+                    errors.append(str(exc))
+        if errors and raise_errors:
+            raise RuntimeError("; ".join(errors))
+
     def add_beeond_volume(self, volume: Any) -> Any:
         """Register an existing :class:`dagon.beeond.BeeONDVolume` and return it."""
         with self._beeond_lock:
@@ -780,10 +815,14 @@ class Workflow(object):
         agentic_bindings: Dict[Any, List[Any]] = {}
         # Meta-tasks bind their workflow:// inputs the same way (File or Directory).
         meta_tasks = [task for task in self.tasks if type(task).__name__ == "MetaTask"]
+        # Create volume tasks bind their staged-in references the same way.
+        volume_tasks = [task for task in self.tasks if getattr(task, "is_volume_task", False)]
         output_types: Dict[Any, Dict[str, str]] = {}
-        for task in agentic_tasks + (meta_tasks if not self.portable_emulation else []):
+        bound_tasks = agentic_tasks + (meta_tasks if not self.portable_emulation else []) + (
+            [task for task in volume_tasks if task.action == "create"] if not self.portable_emulation else [])
+        for task in bound_tasks:
             bindings = []
-            kind = "agentic" if type(task).__name__ == "AgenticTask" else "meta"
+            kind = {"AgenticTask": "agentic", "VolumeTask": "volume"}.get(type(task).__name__, "meta")
             for reference, workflow_name, relative, producer in task._producers():
                 if workflow_name != self.name or producer not in task_ids:
                     raise ValueError("CWL export of %s task %s supports only producers in workflow %s: %s"
@@ -797,7 +836,7 @@ class Workflow(object):
                 elif relative not in produced:
                     reserved = {"completed", "task_dir"} | set(produced.values())
                     produced[relative] = cwl_identifier("file_" + relative, reserved)
-                if kind == "meta" and task.input_kind(reference) == "Directory":
+                if kind in ("meta", "volume") and task.input_kind(reference) == "Directory":
                     output_types.setdefault(producer, {})[relative] = "Directory"
                 bindings.append((reference, producer, relative, produced[relative]))
             agentic_bindings[task] = bindings
@@ -829,6 +868,10 @@ class Workflow(object):
             if type(task).__name__ == "MetaTask" and not self.portable_emulation:
                 steps[task_ids[task]] = self._meta_cwl_step(task, task_ids, step_inputs, tool_inputs,
                                                             agentic_bindings[task])
+                continue
+            if getattr(task, "is_volume_task", False):
+                steps[task_ids[task]] = self._volume_cwl_step(task, task_ids, step_inputs, tool_inputs,
+                                                              agentic_bindings.get(task, []))
                 continue
 
             bound_command = False
@@ -948,7 +991,7 @@ class Workflow(object):
                     if output_id in step["run"]["outputs"]:
                         continue
                     output_type = output_types.get(producer, {}).get(relative, "File")
-                    if type(producer).__name__ == "MetaTask":
+                    if type(producer).__name__ in ("MetaTask", "VolumeTask"):
                         output_type = producer.output_kind(relative) or output_type
                     step["run"]["outputs"][output_id] = {"type": output_type, "outputBinding": {"glob": relative}}
                     step["out"].append(output_id)
@@ -980,7 +1023,7 @@ class Workflow(object):
             "outputs": outputs,
             "steps": steps,
         }
-        if streams or any(type(task).__name__ in {"FaaSTask", "IoTTask", "AgenticTask", "MetaTask"}
+        if streams or any(type(task).__name__ in {"FaaSTask", "IoTTask", "AgenticTask", "MetaTask", "VolumeTask"}
                                 for task in self.tasks):
             document["$namespaces"] = {"dagon": "https://dagonstar.org/cwl#"}
         with open(os.fspath(filename), "w", encoding="utf-8") as stream:
@@ -1023,6 +1066,88 @@ class Workflow(object):
                                          "workflow": spec["workflow"], "workflow_sha256": identity["sha256"]}},
             "baseCommand": ["dagon-meta-runner", "run"],
             "arguments": arguments,
+            "inputs": tool_inputs,
+            "outputs": outputs,
+        }
+        return {"label": str(task.name), "in": step_inputs, "out": list(outputs), "run": tool}
+
+    def _volume_cwl_step(self, task: Any, task_ids: Dict[Any, str], step_inputs: Dict[str, str],
+                         tool_inputs: Dict[str, Any], bindings: List[Any]) -> Dict[str, Any]:
+        """Return the CWL step of a volume task: the volume in materialized form.
+
+        CWL v1.2 has no shared, mutable storage between steps.  A create step
+        materializes the staged-in content as the ``Directory`` output
+        ``volume`` (``<volume>/`` of its working directory, which is also what
+        ``workflow:///<task>/<volume>/...`` names); a destroy step copies its
+        ``stage_out`` entries from that directory into its own working
+        directory.  Data that sibling steps write into the volume during a
+        DAGonStar run is not exchanged through CWL.  A ``dagon:Volume`` hint
+        records the provider, volume, action, and release policy.
+        """
+        from dagon.shell import quote as shell_quote
+        spec = task.portable_spec()
+        lines = ["set -e"]
+        outputs: Dict[str, Any] = {"completed": {"type": "boolean",
+                                                 "outputBinding": {"outputEval": "$(runtime.exitCode === 0)"}}}
+        if task.action == "create":
+            owner = task
+            bound = {reference: "$(inputs.%s.path)" % ("in_%d" % index)
+                     for index, (reference, _, _, _) in enumerate(bindings)}
+            for index, (reference, producer, relative, output_id) in enumerate(bindings):
+                input_id = "in_%d" % index
+                tool_inputs[input_id] = task.input_kind(reference)
+                step_inputs[input_id] = task_ids[producer] + "/" + output_id
+            lines.append("mkdir -p %s" % shell_quote(task.volume_name))
+            for target, descriptor in sorted(task.stage_in.items()):
+                location = descriptor["path"]
+                if location in bound:
+                    source = '"%s"' % bound[location]
+                elif location.startswith(self.SCHEMA):
+                    reference = location[len(self.SCHEMA):].split("/")
+                    producer = self.find_task_by_name(reference[0] or self.name, reference[1])
+                    if producer is None or producer not in task_ids:
+                        raise ValueError("CWL export of volume task %s supports only producers in workflow %s: %s"
+                                         % (task.name, self.name, location))
+                    source = '"$(inputs.after_%s.path)"/%s' % (task_ids[producer], "/".join(reference[2:]))
+                else:
+                    source = shell_quote(location)
+                destination = task.volume_name + "/" + target
+                # No "$(...)" shell substitution: CWL would evaluate it as an expression.
+                lines.append("mkdir -p %s && cp -R %s %s" % (shell_quote(os.path.dirname(destination)), source,
+                                                            shell_quote(destination)))
+            outputs["volume"] = {"type": "Directory", "outputBinding": {"glob": task.volume_name}}
+        else:
+            owner = task.resolve_target()
+            if owner not in task_ids:
+                raise ValueError("volume %s of %s is not in workflow %s" % (task.target, task.name, self.name))
+            if self.portable_emulation:
+                root = '"$(inputs.after_%s.path)"/%s' % (task_ids[owner], shell_quote(owner.volume_name))
+            else:
+                tool_inputs["volume"] = "Directory"
+                step_inputs["volume"] = task_ids[owner] + "/volume"
+                root = '"$(inputs.volume.path)"'
+            for target, descriptor in sorted(task.stage_out.items()):
+                source = root + ("/" + descriptor["path"] if descriptor["path"] else "")
+                parent = os.path.dirname(target)
+                lines.append("%scp -R %s %s" % ("mkdir -p %s && " % shell_quote(parent) if parent else "", source,
+                                                shell_quote(target)))
+                if descriptor["type"] != "auto":
+                    # A declared kind is a typed CWL output; "auto" stays inside task_dir.
+                    outputs["staged_" + re.sub(r"[^A-Za-z0-9_]", "_", target)] = {
+                        "type": "Directory" if descriptor["type"] == "directory" else "File",
+                        "outputBinding": {"glob": target}}
+        if self.portable_emulation:
+            outputs["task_dir"] = {"type": "Directory", "outputBinding": {"glob": "."}}
+        filesystem = owner.filesystem
+        tool = {
+            "class": "CommandLineTool",
+            "label": str(task.name),
+            "requirements": {"InlineJavascriptRequirement": {}},
+            "hints": {"dagon:Volume": {"schema_version": spec["schema_version"], "action": task.action,
+                                       "volume": owner.volume_name, "provider": filesystem.provider,
+                                       "access": filesystem.access, "release": owner.release}},
+            "baseCommand": ["/bin/sh", "-c"],
+            "arguments": ["\n".join(lines)],
             "inputs": tool_inputs,
             "outputs": outputs,
         }
@@ -1120,6 +1245,7 @@ class Workflow(object):
                 beeond_error = exc
             adhoc_error = None
             try:
+                self.release_volumes()
                 self.stop_adhoc_filesystems()
             except RuntimeError as exc:
                 adhoc_error = exc
@@ -1139,6 +1265,7 @@ class Workflow(object):
             # Idempotent: only volumes still running (for example after an
             # interruption) are persisted and released here.
             self.stop_beeond_volumes(raise_errors=False)
+            self.release_volumes(raise_errors=False)
             self.stop_adhoc_filesystems(raise_errors=False)
             self._fire_event("on_workflow_end", self)
 
@@ -1206,6 +1333,17 @@ class Workflow(object):
                 contract = dict(temp.get('agentic', {}))
                 contract.pop('schema_version', None)
                 tk = DagonTask(TaskType.AGENTIC, temp['name'], **contract)
+            elif temp['type'].upper() == 'VOLUME':
+                spec = dict(temp.get('volume', {}))
+                spec.pop('schema_version', None)
+                if spec.get('action') == 'destroy':
+                    tk = DagonTask(TaskType.VOLUME, temp['name'], action='destroy', volume=spec.get('volume'),
+                                   stage_out=spec.get('stage_out'), release=spec.get('release', 'auto'))
+                else:
+                    tk = DagonTask(TaskType.VOLUME, temp['name'], provider=spec.get('provider'),
+                                   volume=spec.get('volume'), stage_in=spec.get('stage_in'),
+                                   options=spec.get('options'), export=spec.get('export'),
+                                   release=spec.get('release', 'auto'))
             elif temp['type'].upper() == 'META':
                 tk = DagonTask(TaskType.META, temp['name'], **{key: value for key, value in dict(
                     temp.get('meta', {})).items() if key != 'schema_version'})

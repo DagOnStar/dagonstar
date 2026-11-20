@@ -1,4 +1,4 @@
-"""Lesson 29: deterministic CWL v1.2 export, file versus ordering edges, and optional cwltool checks."""
+"""Lesson 32: deterministic CWL v1.2 export, file versus ordering edges, and optional cwltool checks."""
 import sys
 from pathlib import Path as _Path
 sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
@@ -22,7 +22,7 @@ def build(scratch):
     return wf
 
 
-with tempfile.TemporaryDirectory(prefix="dagon-tutorial-29-") as scratch:
+with tempfile.TemporaryDirectory(prefix="dagon-tutorial-32-") as scratch:
     first, second = Path(scratch, "a.cwl"), Path(scratch, "b.cwl")
     build(scratch).saveAsCWL(str(first))
     build(scratch).saveAsCWL(str(second))

@@ -1,4 +1,4 @@
-"""Lesson 31: operations: service API registration (mocked), runner environments, platform helpers,
+"""Lesson 34: operations: service API registration (mocked), runner environments, platform helpers,
 JSON round trips, and the packaged agent runner."""
 import sys
 from pathlib import Path as _Path
@@ -25,7 +25,7 @@ class Response:
         return {"id": 7}
 
 
-with tempfile.TemporaryDirectory(prefix="dagon-tutorial-31-") as scratch:
+with tempfile.TemporaryDirectory(prefix="dagon-tutorial-34-") as scratch:
     service = config(scratch, {"dagon_service": {"use": "True", "route": "http://dagon-service.invalid"}})
     with mock.patch("dagon.api.requests.head") as head, \
             mock.patch("dagon.api.requests.post", return_value=Response()) as post:

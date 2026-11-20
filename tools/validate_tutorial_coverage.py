@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT))
 TUTORIAL = ROOT / "docs" / "tutorial"
 MANIFEST = TUTORIAL / "coverage.json"
 NOTEBOOK = TUTORIAL / "DAGonStar_tutorial.ipynb"
-LESSON_COUNT = 33
+LESSON_COUNT = 36
 EVIDENCE_LEVELS = ("local-executed", "mock-contract", "portable-emulation", "live-optional", "planned")
 FIELDS = ("feature_id", "category", "task_types", "source_paths", "lessons", "example_paths",
           "test_targets", "evidence_level", "limitations")
@@ -40,7 +40,8 @@ REQUIRED_FEATURES = (
     "agentic.checkpoint-identity", "agentic.mixed-dataflow", "agentic.openai-compatible-adapter",
     "agentic.cwl-runner",
     "faas.http-provider", "faas.cloud-adapters", "iot.actuation-safety", "iot.compute-placement",
-    "remote.ssh-ports-and-quoting", "slurm.beeond", "storage.adhoc-filesystems", "slurm.scheduler-prestaging",
+    "remote.ssh-ports-and-quoting", "slurm.beeond", "storage.adhoc-filesystems", "storage.adhoc-streaming", "storage.volume-tasks",
+    "slurm.scheduler-prestaging",
     "movers.scp", "movers.gridftp-globus", "movers.skycds", "movers.dynostore", "movers.stager-modes",
     "fair.metadata-export", "fair.agentic-artifacts", "meta.dag-tps", "meta.external-engines",
     "meta.dagon-service-api", "cwl.export",

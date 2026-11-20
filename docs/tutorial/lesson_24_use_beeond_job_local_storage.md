@@ -106,4 +106,4 @@ Job-local storage is fast but volatile; persistence is an explicit, verified ste
 
 ## Next lesson
 
-Next, move input staging out of the allocation with scheduler-aware pre-staging. Return to the [syllabus](README.md) at any time.
+Next, write your own ad-hoc file-system adapter and stream between tasks. Return to the [syllabus](README.md) at any time.

@@ -50,7 +50,7 @@ python -m unittest tests.test_scheduler_prestaging -v
 python examples/dataflow/slurm/pre_stage_mock.py
 ~~~
 
-The Lesson 23 script quotes hostile job names and partitions in the `sbatch` command and runs one succeeding and one failing job through the same local mock `sbatch`. [Lesson 24](lesson_24_use_beeond_job_local_storage.md) and [Lesson 25](lesson_25_stage_inputs_before_scheduler_submission.md) treat BeeOND and pre-staging in depth. The BeeOND example uses portable emulation, so `$DAGON_BEEOND` is the persistent directory itself and no job is submitted. The pre-staging example runs one coastal-forecast workflow twice, first with the legacy lifecycle and then with `pre_stage=True`. `sbatch` is replaced by a mock that runs the job script immediately and records what was already on scratch at submission time.
+The Lesson 23 script quotes hostile job names and partitions in the `sbatch` command and runs one succeeding and one failing job through the same local mock `sbatch`. [Lesson 24](lesson_24_use_beeond_job_local_storage.md) and [Lesson 27](lesson_27_stage_inputs_before_scheduler_submission.md) treat BeeOND and pre-staging in depth. The BeeOND example uses portable emulation, so `$DAGON_BEEOND` is the persistent directory itself and no job is submitted. The pre-staging example runs one coastal-forecast workflow twice, first with the legacy lifecycle and then with `pre_stage=True`. `sbatch` is replaced by a mock that runs the job script immediately and records what was already on scratch at submission time.
 
 ## Expected result
 

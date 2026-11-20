@@ -1,4 +1,4 @@
-"""Lesson 30: an edge-to-cloud synthesis graph: IoT -> Native -> agentic QC -> FaaS, original types kept."""
+"""Lesson 33: an edge-to-cloud synthesis graph: IoT -> Native -> agentic QC -> FaaS, original types kept."""
 import sys
 from pathlib import Path as _Path
 sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
@@ -13,7 +13,7 @@ from dagon.task import DagonTask, TaskType  # noqa: E402
 
 EVENTS = [{"id": n, "station": "SYN00%d" % (1 + n % 2), "temperature_c": 11.0 + n} for n in (1, 2, 3, 4)]
 
-with tempfile.TemporaryDirectory(prefix="dagon-tutorial-30-") as scratch:
+with tempfile.TemporaryDirectory(prefix="dagon-tutorial-33-") as scratch:
     wf = workflow("Continuum30", scratch)
     edge = DagonTask(TaskType.IOT, "edge", operation="observe", provider="mock",
                      target={"device_id": "station-01"}, resource="temperature",

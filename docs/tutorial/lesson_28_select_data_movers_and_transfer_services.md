@@ -1,4 +1,4 @@
-# Lesson 26: Select Data Movers and Transfer Services
+# Lesson 28: Select Data Movers and Transfer Services
 
 > **Track:** Distributed infrastructure
 > **Runtime:** Local mock
@@ -15,7 +15,7 @@ After completing this lesson, you will be able to:
 
 ## Prerequisites
 
-- [Lesson 25](lesson_25_stage_inputs_before_scheduler_submission.md), or equivalent concepts.
+- [Lesson 27](lesson_27_stage_inputs_before_scheduler_submission.md), or equivalent concepts.
 - No remote host, Globus account, or storage service; all are mocked or quoted only.
 
 ## Scientific scenario
@@ -30,14 +30,14 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read [`examples/tutorial/lesson_26_data_movers.py`](../../examples/tutorial/lesson_26_data_movers.py). Tasks are mocks that report IP addresses and protocol status; `GlobusManager` is mocked.
+Read [`examples/tutorial/lesson_28_data_movers.py`](../../examples/tutorial/lesson_28_data_movers.py). Tasks are mocks that report IP addresses and protocol status; `GlobusManager` is mocked.
 
 ## Run the example
 
 From the repository root:
 
 ~~~bash
-python examples/tutorial/lesson_26_data_movers.py
+python examples/tutorial/lesson_28_data_movers.py
 ~~~
 
 ## Expected result
@@ -47,7 +47,7 @@ Same-host COPY and LINK generate `cp -r` and `ln -sf`; a remote source selects S
 ## Verify
 
 ~~~bash
-python examples/tutorial/lesson_26_data_movers.py
+python examples/tutorial/lesson_28_data_movers.py
 python -m unittest tests.test_staging tests.test_dynostore_examples -v
 ~~~
 

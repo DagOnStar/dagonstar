@@ -65,9 +65,9 @@ tutorial scripts are also suitable for hosted Colab:
 !python examples/tutorial/lesson_11_llm_tasks.py
 ```
 
-Lesson 27's FAIR workflow is also local and credential-free. Its complete
+Lesson 29's FAIR workflow is also local and credential-free. Its complete
 notebook-ready source and persistence notes are in
-[the FAIR-by-design tutorial](tutorial/lesson_27_make_a_workflow_fair_by_design.md).
+[the FAIR-by-design tutorial](tutorial/lesson_29_make_a_workflow_fair_by_design.md).
 
 The all-task interoperability test verifies every `TaskType` together without external connections:
 
@@ -80,11 +80,11 @@ into a Docker, Kubernetes, Nomad, Apptainer, Slurm, or cloud execution host.
 Install `.[all]` and set `portable_emulation=True` to execute every task type
 locally without those services.
 
-In the complete course notebook, the infrastructure Lessons 17–26 run lesson
+In the complete course notebook, the infrastructure Lessons 17–28 run lesson
 scripts that mock the Docker, Kubernetes, Nomad, SSH, cloud, and scheduler
 clients or use portable emulation. This gives every lesson a deterministic Colab
 exercise without misrepresenting hosted Colab as external infrastructure. The
-FaaS, IoT, and agentic Lessons 12–16 and the continuum Lesson 30 use built-in mock
+FaaS, IoT, and agentic Lessons 12–16 and the continuum Lesson 33 use built-in mock
 providers without a broker, device, model endpoint, credentials, or public
 network endpoint. Lessons 14–16 start agent tools as local subprocesses, which
 hosted Colab supports.

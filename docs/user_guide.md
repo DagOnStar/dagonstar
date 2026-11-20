@@ -5,7 +5,7 @@
 Enable `FairProfile` on a workflow and use task `declare_outputs(Artifact(...))`
 or `declare_inputs()` for intentional data metadata. The recorder writes local
 RO-Crate, PROV, DataCite, CodeMeta, SHA-256 and human-readable reports. See the
-[FAIR principles](fair_principles.md) and [FAIR tutorial](tutorial/lesson_27_make_a_workflow_fair_by_design.md)
+[FAIR principles](fair_principles.md) and [FAIR tutorial](tutorial/lesson_29_make_a_workflow_fair_by_design.md)
 for the implemented model and a runnable example.
 This guide explains how to author DAGonStar workflows for scientific computing.
 
@@ -318,8 +318,20 @@ workflow. Name the `engine`, point `workflow` at the definition, bind its
 inputs to `workflow://` references, and declare the outputs to collect; the
 engine runs unmodified and downstream tasks read
 `workflow:///<task>/outputs/<path>`. Start with
-[Lesson 28](tutorial/lesson_28_compose_meta_workflows.md) and
+[Lesson 30](tutorial/lesson_30_compose_meta_workflows.md),
+[Lesson 31](tutorial/lesson_31_run_other_engines_workflows_with_meta_tasks.md), and
 [Meta-tasks](meta_tasks.md).
+
+## Volume tasks
+
+Use `TaskType.VOLUME` when several tasks should share fast ad-hoc storage.
+`DagonTask(TaskType.VOLUME, "Abc", provider="dagonfs", volume="xyz",
+stage_in={"in": "workflow:///Prep/data"})` creates the volume; other tasks read
+and write `workflow:///Abc/xyz/...` directly in it, and a destroy volume task
+(optional) stages results out before releasing it; otherwise it is released
+when no task refers to it any longer. Start with
+[Lesson 26](tutorial/lesson_26_share_and_release_volumes_with_volume_tasks.md) and
+[Volume tasks](volume_tasks.md).
 
 ## Agentic tasks
 

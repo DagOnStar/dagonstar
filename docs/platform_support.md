@@ -15,7 +15,7 @@ local execution works on each, and what the CI/CD workflow
 | Raspberry Pi (64-bit) | `debian:bookworm` container on a native arm64 runner | 3.11 (system) | unit tests, local examples |
 
 "Local examples" are the self-contained scripts run by
-`python tools/run_local_examples.py`: tutorial lessons 00–32 and the FAIR,
+`python tools/run_local_examples.py`: tutorial lessons 00–35 and the FAIR,
 FaaS, IoT, LLM, agentic, and meta-task (engine-free) examples. They use only local processes, temporary
 scratch directories, and loopback mock services.
 
@@ -185,7 +185,7 @@ requests, on `v*` tags, and on manual dispatch.
 
 | Job | Purpose |
 | --- | --- |
-| `quality` | Ruff and mypy on the typed helper modules (including `dagon/prestage.py`, `dagon/agentic/`, and `dagon/meta/` except the standalone Parsl driver), Ruff on the pre-staging, agentic, and meta-task examples, the coverage validator, and tutorial lessons 00 and 12–32, tutorial structure and feature-coverage validation (`tools/validate_tutorial_coverage.py`), notebook JSON check, `bash -n` on the CI shell scripts. |
+| `quality` | Ruff and mypy on the typed helper modules (including `dagon/prestage.py`, `dagon/agentic/`, and `dagon/meta/` except the standalone Parsl driver), Ruff on the pre-staging, agentic, and meta-task examples, the coverage validator, and tutorial lessons 00 and 12–35, tutorial structure and feature-coverage validation (`tools/validate_tutorial_coverage.py`), notebook JSON check, `bash -n` on the CI shell scripts. |
 | `test` | Unit tests, `compileall`, and local examples on Ubuntu, macOS, and Windows. |
 | `rocky-linux` | Unit tests and local examples on Rocky Linux 9. |
 | `raspberry-pi` | Unit tests and local examples on Debian bookworm arm64. |

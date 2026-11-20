@@ -1,4 +1,4 @@
-"""Lesson 27: opt-in FAIR metadata with declared artifacts, licences, and a credential-free bundle."""
+"""Lesson 29: opt-in FAIR metadata with declared artifacts, licences, and a credential-free bundle."""
 import sys
 from pathlib import Path as _Path
 sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
@@ -14,7 +14,7 @@ EXPECTED = {"run.json", "ro-crate-metadata.json", "prov.json", "datacite.json", 
             "checksums.sha256", "fairness-report.json", "report.md", "report.html"}
 SECRET = "sk-teaching-sentinel-0000"
 
-with tempfile.TemporaryDirectory(prefix="dagon-tutorial-27-") as scratch:
+with tempfile.TemporaryDirectory(prefix="dagon-tutorial-29-") as scratch:
     plain = workflow("NoFAIR27", scratch)
     plain.add_task(DagonTask(TaskType.BATCH, "A", "echo plain > plain.txt"))
     plain.run()

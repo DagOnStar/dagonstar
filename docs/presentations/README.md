@@ -11,6 +11,10 @@ speaker notes with a timing cue, so a presenter can keep each deck within
 
 ## Evidence behind the slides
 
+> The decks and the figures below are a snapshot of DAGonStar 2.9.4, before volume tasks and the
+> renumbering of the tutorial to 36 lessons; command paths are updated to current lesson numbers.
+> Regenerate the decks as described below after re-observing the figures.
+
 The figures on the slides come from commands run on a checkout of
 DAGonStar 2.9.4 (macOS, Python 3.12.10, November 2026):
 
@@ -22,7 +26,7 @@ DAGonStar 2.9.4 (macOS, Python 3.12.10, November 2026):
 | Environment | `python examples/tutorial/lesson_00_environment_check.py` | 14 registered task types |
 | First workflow | the getting-started workflow, with `dagon.ini` copied from the sample | completed in about 5 s; `summary.txt` reports 2 lines |
 | Checkpoint | `python examples/tutorial/lesson_07_checkpoint_and_resume.py` | `scratch reused: True` |
-| CWL | `python examples/tutorial/lesson_29_cwl_export.py` | `cwltool --validate: ok` |
+| CWL | `python examples/tutorial/lesson_32_cwl_export.py` | `cwltool --validate: ok` |
 | FAIR | `python examples/fair/fair_local.py` | the nine exported files listed on the slide |
 | Pre-staging (mock) | `python examples/dataflow/slurm/pre_stage_mock.py` | identical results in both modes, `Verification: ok` |
 

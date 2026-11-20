@@ -1,4 +1,4 @@
-# Lesson 30: Operate Across the Compute Continuum
+# Lesson 33: Operate Across the Compute Continuum
 
 > **Track:** Advanced
 > **Runtime:** Local deterministic mock
@@ -15,7 +15,7 @@ After completing this lesson, you will be able to:
 
 ## Prerequisites
 
-- [Lesson 29](lesson_29_export_and_validate_common_workflow_language.md), or equivalent concepts.
+- [Lesson 32](lesson_32_export_and_validate_common_workflow_language.md), or equivalent concepts.
 - Lessons 09, 12, 13, and 14 introduce the task types combined here.
 
 ## Scientific scenario
@@ -37,7 +37,7 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read [`examples/tutorial/lesson_30_compute_continuum.py`](../../examples/tutorial/lesson_30_compute_continuum.py).
+Read [`examples/tutorial/lesson_33_compute_continuum.py`](../../examples/tutorial/lesson_33_compute_continuum.py).
 The IoT task completes after four mock samples, `events_to_observations` in
 [`native_functions.py`](../../examples/tutorial/common/native_functions.py) converts the envelope into a record
 table, the agentic task uses the `quality-local` profile without tools, and the FaaS mock returns a receipt.
@@ -48,7 +48,7 @@ table, the agentic task uses the `quality-local` profile without tools, and the 
 From the repository root:
 
 ~~~bash
-python examples/tutorial/lesson_30_compute_continuum.py
+python examples/tutorial/lesson_33_compute_continuum.py
 python examples/iot/observe_mock.py
 ~~~
 
@@ -60,7 +60,7 @@ accepted, and confirms the stored receipt. The second prints sequences 1, 2, and
 ## Verify
 
 ~~~bash
-python examples/tutorial/lesson_30_compute_continuum.py
+python examples/tutorial/lesson_33_compute_continuum.py
 python -m unittest tests.test_iot_task tests.test_tasktype_interoperability -v
 ~~~
 

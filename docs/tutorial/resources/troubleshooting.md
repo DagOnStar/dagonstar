@@ -14,6 +14,9 @@ Run commands from the repository root and use the same interpreter for installat
 | Local web/LLM mock cannot bind | Inspect the socket error and host policy | Run on a host that permits loopback sockets; do not substitute a public endpoint merely to finish the lesson. |
 | Agentic task fails with `AgenticConfigurationError` | Read the error code and the named `[agent.*]`, `[agent_provider.*]`, or `[llm.*]` section | Fix the profile, or narrow rather than widen tools and budgets in the task. |
 | Agentic task fails with `AgenticNotAccepted` | Read `outputs/evaluation.json`: `termination_reason`, `mandatory_failures`, `hard_checks`, per-requirement scores | Revise the contract or the inputs; never relax a requirement only to obtain acceptance. |
+| `ad-hoc provider ... is already registered` or `export ... looks like a credential variable` | Read the provider name and the `export` value | Register a new name (or `replace=True` for your own class); choose an export name without credential-like words. |
+| Volume plan refused (`runs after ... which destroys it`, `does not name the volume`) | Print the destroy task's `prevs` and the volume reference | Order every user before the destroy task, or drop the destroy task and rely on reference counting; check `workflow:///<create task>/<volume>`. |
+| Meta-task fails | Read `task.failure_phase` and `.dagon/engine_stderr.txt` | `engine`: install the engine or set `engine_options['executable']`; `outputs`: fix the declared output paths; never put credentials in engine options. |
 | CWL JSON parses but validation fails | Run an available CWL v1.2 validator and inspect the reported field | Treat parsing and standards validation as different levels of evidence. |
 
 Tutorial scripts use temporary directories and therefore clean their artifacts on success. Copy an example and select a persistent scratch directory when extended inspection is required.

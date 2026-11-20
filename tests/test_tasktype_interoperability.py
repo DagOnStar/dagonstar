@@ -60,6 +60,11 @@ class TaskTypeInteroperabilityTests(unittest.TestCase):
                 TaskType.META: DagonTask(TaskType.META, "meta", engine="nextflow", workflow="nextflow-io/hello",
                                          inputs={"data": reference},
                                          outputs={"summary": "results/summary.json"}),
+                # Stages the referenced file into its volume.  The volume is named
+                # after the task, so a volume task renamed "producer" serves
+                # workflow:///producer/output/... only from its scratch directory.
+                TaskType.VOLUME: DagonTask(TaskType.VOLUME, "volume", provider="dagonfs",
+                                           stage_in={"value.txt": reference}),
             }
 
     @staticmethod
@@ -153,6 +158,11 @@ class TaskTypeInteroperabilityTests(unittest.TestCase):
                 if task_type is TaskType.META:
                     # Stricter contract: reuse needs a recorded spec, workflow, input, and output
                     # identity (tests/test_meta_task.py), never a bare successful directory.
+                    self.assertFalse(task.reuse_checkpoint())
+                    continue
+                if task_type is TaskType.VOLUME:
+                    # Stricter contract: volumes are not persistent, so reuse needs a recorded
+                    # volume specification (tests/test_volume_task.py), never a bare directory.
                     self.assertFalse(task.reuse_checkpoint())
                     continue
                 if task_type is TaskType.AGENTIC:

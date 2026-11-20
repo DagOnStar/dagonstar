@@ -20,13 +20,13 @@ RETIRED = re.compile(
     r"08_docker_tasks|09_remote_and_slurm|10_meta_workflows|11_asynchronous_launch|"
     r"12_llm_tasks|13_web_tasks|14_native_tasks|15_fair_by_design|16_using_dynostore|"
     r"17_cwl_interoperability|(?:1[89]|2[0-2])_faas|22_all_task_types|"
-    # Lessons 12-18 of the 19-lesson course were renumbered to 17, 21, 23, and 27-30.
+    # Lessons 12-18 of the 19-lesson course were renumbered to 17, 21, 23, and 27-30 (now 17, 21, 23, 29, 30, 32, and 33).
     r"12_run_a_task_in_docker|13_run_a_task_on_a_remote_host_with_ssh|"
     r"14_submit_a_task_through_slurm|15_make_a_workflow_fair_by_design|"
     r"16_compose_meta_workflows|17_export_and_validate_common_workflow_language|"
     r"18_compute_continuum_operations)\.md"
 )
-LESSON_COUNT = 33
+LESSON_COUNT = 36
 GENERIC = (
     "explain the underlying mechanism",
     "DAGonStar constructed or inspected the graph",

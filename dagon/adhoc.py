@@ -28,8 +28,10 @@ Adapters are registered by name (:func:`register_provider`, or the
 ``dagon.adhoc_providers`` entry-point group), so a new storage system is
 supported by an adapter class alone, without changing DAGonStar or the
 storage software.  A resource has workflow scope (started before the first
-task, optionally bound to every task with ``default=True``) or task scope
-(started right before its single task runs and stopped right after it).  An
+task, optionally bound to every task with ``default=True``), task scope
+(started right before its single task runs and stopped right after it), or
+volume scope (started by a ``TaskType.VOLUME`` task and released when no task
+refers to it any longer; see :mod:`dagon.volume`).  An
 adapter that sets :attr:`AdHocFileSystem.supports_streaming` can carry
 streams between concurrently running tasks (see :mod:`dagon.streaming`).
 """
@@ -64,7 +66,7 @@ from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Seque
 LOGGER = logging.getLogger("dagon.adhoc")
 
 ACCESS_MODES = ("posix", "preload", "client", "object")
-SCOPES = ("workflow", "task")
+SCOPES = ("workflow", "task", "volume")
 PRELOAD_VARIABLES = ("LD_PRELOAD", "DYLD_INSERT_LIBRARIES")
 
 # Object keys accepted by the DynoStore catalog service (pub_sub/.htaccess):
@@ -163,6 +165,8 @@ class AdHocFileSystem(ABC):
         # Optional developer-chosen variable carrying task_path (see bind).
         self.export: Optional[str] = None
         self.streams: List[Any] = []
+        # The volume task that owns a volume-scope resource (dagon.volume).
+        self.owner: Any = None
 
     @property
     def started(self) -> bool:
@@ -236,6 +240,45 @@ class AdHocFileSystem(ABC):
         """Called before :meth:`start` with the run's streams on this resource."""
         self.streams = list(channels)
 
+    # -- volumes (see dagon.volume) --------------------------------------
+    def volume_location(self, relative: str = "", emulated: bool = False) -> str:
+        """Where *relative* lives inside this resource, as tasks address it.
+
+        POSIX and preload resources answer a path below :attr:`task_path`;
+        portable emulation answers a path below :meth:`emulated_path`.
+        Adapters with ``client`` or ``object`` access override this.
+        """
+        if not emulated and self.access not in ("posix", "preload"):
+            raise AdHocFileSystemError("%s does not implement volumes with %s access" % (type(self).__name__,
+                                                                                       self.access))
+        root = (self.emulated_path() if emulated else self.task_path).rstrip("/")
+        if not relative:
+            return root or "/"
+        return root + "/" + relative
+
+    def volume_reference_text(self, relative: str = "", emulated: bool = False) -> str:
+        """Shell text replacing ``workflow:///<volume task>/<volume>/<relative>`` in a command.
+
+        The root is quoted; the relative part stays unquoted, so that shell
+        globs keep working exactly as they do in other ``workflow://`` paths.
+        """
+        if emulated or self.access in ("posix", "preload"):
+            root = self.volume_location("", emulated)
+            return shlex.quote(root) + ("/" + relative if relative else "")
+        return shlex.quote(self.volume_location(relative, emulated))
+
+    def volume_parameters(self) -> Dict[str, str]:
+        """Credential-free values the staging helper needs to open this volume."""
+        return dict(self.stream_parameters())
+
+    @classmethod
+    def open_volume_store(cls, spec: Mapping[str, Any]) -> Any:
+        """Store used by ``python -m dagon.volume stage``; POSIX and preload use file calls."""
+        from dagon.volume import PosixVolumeStore, VolumeError
+        if spec.get("access") in ("posix", "preload"):
+            return PosixVolumeStore(str(spec["location"]))
+        raise VolumeError("%s does not implement volume staging with %s access" % (cls.__name__, spec.get("access")))
+
     # -- task environment ----------------------------------------------
     def common_environment(self, path: Optional[str] = None) -> Dict[str, str]:
         location = self.task_path if path is None else path
@@ -306,6 +349,8 @@ class AdHocFileSystem(ABC):
             record["default"] = True
         if self.export is not None:
             record["export"] = self.export
+        if self.owner is not None:
+            record["owner"] = self.owner.name
         if self.streams:
             record["streams"] = [channel.metadata() for channel in self.streams]
         return record
@@ -609,6 +654,26 @@ class DAGonFS(ProcessFileSystem):
             # Every node mounts its own rank: the stream helper uses the local one.
             parameters.update(peer_root=self.mountpoint, ranks=str(self.ranks))
         return parameters
+
+    def volume_location(self, relative: str = "", emulated: bool = False) -> str:
+        if self.frontend == "native" and not emulated:
+            # A path inside the volume's namespace, opened through the socket.
+            return "/" + relative
+        return super().volume_location(relative, emulated)
+
+    def volume_reference_text(self, relative: str = "", emulated: bool = False) -> str:
+        if self.frontend == "native" and not emulated:
+            return "/" + relative if relative else "/"
+        return super().volume_reference_text(relative, emulated)
+
+    @classmethod
+    def open_volume_store(cls, spec: Mapping[str, Any]) -> Any:
+        if spec.get("access") == "client":
+            from dagon.volume import DagonFSNativeVolumeStore
+            parameters = spec.get("parameters", {})
+            return DagonFSNativeVolumeStore(parameters["socket"],
+                                            parameters.get("python_path") or os.environ.get("DAGONFS_PYTHON"))
+        return super().open_volume_store(spec)
 
     def launcher_environment_lines(self) -> List[str]:
         """Peer-to-peer FUSE: point the task at the rank mounted on its own node.
@@ -1214,6 +1279,26 @@ class DynoStore(AdHocFileSystem):
                                  resiliency=int(parameters.get("resiliency", 1)))
         prefix = str(spec["location"]).split("://", 1)[-1]
         return ObjectStreamStore(client, prefix)
+
+    def volume_location(self, relative: str = "", emulated: bool = False) -> str:
+        """The object key of *relative* (see :func:`dagon.volume.object_key`); the catalog for the root."""
+        if emulated:
+            return super().volume_location(relative, emulated)
+        if not relative:
+            return self.task_path
+        from dagon.volume import object_key
+        return object_key(self.name, relative)
+
+    @classmethod
+    def open_volume_store(cls, spec: Mapping[str, Any]) -> Any:
+        if spec.get("access") != "object":
+            return super().open_volume_store(spec)
+        from dagon.volume import ObjectVolumeStore
+        parameters = spec.get("parameters", {})
+        client = DynoStoreClient(parameters["url"], parameters["catalog"],
+                                 parameters.get("auth_variable", "DYNOSTORE_TOKEN"),
+                                 resiliency=int(parameters.get("resiliency", 1)))
+        return ObjectVolumeStore(client, str(spec["volume"]))
 
     # -- data operations (REST routes used by the dynostore client) --------
     def client(self) -> "DynoStoreClient":

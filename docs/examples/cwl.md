@@ -41,3 +41,20 @@ inputs are bound to producer `File` or `Directory` outputs; see the meta-task
 section of the [CWL export guide](../cwl_export.md) and `examples/cwl/export_meta_workflow.py`
 (`--run` executes it with `cwltool` when `dagon-meta-runner` is installed).
 
+## Volume tasks
+
+`export_volume_workflow.py` exports
+`prepare → scratch (create volume) → {left, right} → drop (destroy) → check`.
+CWL v1.2 has no shared mutable storage, so the create step materializes the
+volume as a `Directory` output, consumers read it as an input, the destroy
+step copies its `stage_out` entries, and both carry a `dagon:Volume` hint.
+`--portable` (default) is directly runnable; `--standard` exports the backend
+form; `--run` executes the portable document with `cwltool --no-container`:
+
+```bash
+python3 examples/cwl/export_volume_workflow.py --output /tmp/volume.cwl --run
+cwltool --validate /tmp/volume.cwl
+```
+
+Data that sibling steps write into the volume during a DAGonStar run is not
+exchanged through CWL. See [Volume tasks](../cwl_export.md#volume-tasks).

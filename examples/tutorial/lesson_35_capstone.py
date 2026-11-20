@@ -1,4 +1,4 @@
-"""Lesson 32 capstone: every registered TaskType in one portable, checkpointed, FAIR-recorded graph,
+"""Lesson 35 capstone: every registered TaskType in one portable, checkpointed, FAIR-recorded graph,
 an accepted agentic step, a CWL export, and a feature checklist.  No live adapter is ever invoked."""
 import sys
 from pathlib import Path as _Path
@@ -62,12 +62,16 @@ def all_tasks():
             # An external Nextflow pipeline; portable emulation uses the mock engine, never Nextflow.
             TaskType.META: DagonTask(TaskType.META, "meta", engine="nextflow", workflow="nextflow-io/hello",
                                      inputs={"values": REF}, outputs={"summary": "results/summary.json"}),
+            # An ad-hoc DAGonFS volume holding a copy of REF; emulated by a local directory and
+            # released by reference counting, since no task destroys it.
+            TaskType.VOLUME: DagonTask(TaskType.VOLUME, "volume", provider="dagonfs", volume="shared",
+                                       stage_in={"value.txt": REF}),
         }
 
 
 TABLE = json.dumps({"observations": [{"id": n, "station": "SYN001"} for n in (1, 2, 2, 3, 4)]})
 
-with tempfile.TemporaryDirectory(prefix="dagon-tutorial-32-") as scratch:
+with tempfile.TemporaryDirectory(prefix="dagon-tutorial-35-") as scratch:
     checkpoint = str(Path(scratch, "checkpoint.json"))
     fair_dir = str(Path(scratch, "fair"))
     with mock.patch("dagon.agentic.providers.OpenAICompatibleAdapter.propose", side_effect=live_call), \

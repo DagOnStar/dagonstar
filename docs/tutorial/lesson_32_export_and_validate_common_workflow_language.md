@@ -1,4 +1,4 @@
-# Lesson 29: Export and Validate Common Workflow Language
+# Lesson 32: Export and Validate Common Workflow Language
 
 > **Track:** Advanced
 > **Runtime:** Local
@@ -15,7 +15,7 @@ After completing this lesson, you will be able to:
 
 ## Prerequisites
 
-- [Lesson 28](lesson_28_compose_meta_workflows.md), or equivalent concepts.
+- [Lesson 30](lesson_30_compose_meta_workflows.md), or equivalent concepts.
 - No external service unless stated below.
 
 ## Scientific scenario
@@ -37,14 +37,14 @@ Inspect `examples/cwl/export_workflow.py` and predict how tasks, edges, commands
 From the repository root:
 
 ~~~bash
-python examples/tutorial/lesson_29_cwl_export.py
+python examples/tutorial/lesson_32_cwl_export.py
 python -m unittest tests.test_cwl_example -v
 python examples/agentic/cwl_local.py
 python examples/cwl/export_streaming_workflow.py --output /tmp/streaming.cwl
 python examples/cwl/export_meta_workflow.py
 ~~~
 
-The Lesson 29 script exports the same graph twice, checks byte-identical output, a file edge and an ordering-only edge, and the absence of scratch paths, and runs `cwltool --validate` when it is installed. `cwl_local.py` exports an agentic step as a `dagon-agent-runner` invocation that takes `dagon_config` as a workflow input, and executes the graph with `cwltool --no-container` when both tools are present. `export_streaming_workflow.py` exports a `workflow:///produce/items?stream` edge: CWL has no concurrent steps, so the stream becomes a `Directory` passed from producer to consumer, and a `dagon:Stream` hint keeps the intent. `export_meta_workflow.py` exports a meta-task as a `dagon-meta-runner` step whose `workflow://` input is bound to the producer's `File` output and whose `dagon:MetaTask` hint records the engine and the workflow-definition SHA-256; the external engine itself stays outside the portable contract.
+The Lesson 32 script exports the same graph twice, checks byte-identical output, a file edge and an ordering-only edge, and the absence of scratch paths, and runs `cwltool --validate` when it is installed. `cwl_local.py` exports an agentic step as a `dagon-agent-runner` invocation that takes `dagon_config` as a workflow input, and executes the graph with `cwltool --no-container` when both tools are present. `export_streaming_workflow.py` exports a `workflow:///produce/items?stream` edge: CWL has no concurrent steps, so the stream becomes a `Directory` passed from producer to consumer, and a `dagon:Stream` hint keeps the intent. `export_meta_workflow.py` exports a meta-task as a `dagon-meta-runner` step whose `workflow://` input is bound to the producer's `File` output and whose `dagon:MetaTask` hint records the engine and the workflow-definition SHA-256; the external engine itself stays outside the portable contract.
 
 ## Expected result
 
@@ -53,7 +53,7 @@ The test regenerates and checks deterministic CWL structure.
 ## Verify
 
 ~~~bash
-python examples/tutorial/lesson_29_cwl_export.py
+python examples/tutorial/lesson_32_cwl_export.py
 python -m unittest tests.test_cwl_example tests.test_agentic_cwl -v
 python -m unittest tests.test_adhoc_streaming -k cwl -v
 ~~~
@@ -82,4 +82,4 @@ CWL export describes the portable graph; it is not execution.
 
 ## Next lesson
 
-Next, [combine edge, serverless, native, and agentic tasks across the compute continuum](lesson_30_compute_continuum_operations.md). Return to the [syllabus](README.md) at any time.
+Next, [combine edge, serverless, native, and agentic tasks across the compute continuum](lesson_33_compute_continuum_operations.md). Return to the [syllabus](README.md) at any time.

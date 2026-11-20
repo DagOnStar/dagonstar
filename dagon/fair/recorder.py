@@ -65,6 +65,12 @@ class FairRecorder:
                     edge["path"] = path
                     if query.split("=", 1)[0] == "stream":
                         edge["transfer"] = "stream"
+                volume = getattr(previous, "volume_name", None)
+                if getattr(previous, "is_volume_task", False) and getattr(previous, "action", "") == "create" \
+                        and path is not None and (path == volume or path.startswith(volume + "/")):
+                    # workflow:///<volume task>/<volume>/...: read in place on the ad-hoc volume.
+                    edge["transfer"] = "volume"
+                    edge["volume"] = volume
                 edges.append(edge)
         self.run["dependencies"] = edges
 

@@ -39,14 +39,17 @@ Python 3, a command shell, and a repository checkout are sufficient for the loca
 | [22](lesson_22_configure_cloud_tasks_without_provisioning.md) | Cloud task configuration | Local | Provider (live only) | Configuration checks | Infrastructure |
 | [23](lesson_23_submit_a_task_through_slurm.md) | Scheduled execution | Mock `sbatch`; Slurm optional | Cluster (live only) | Limited | Infrastructure |
 | [24](lesson_24_use_beeond_job_local_storage.md) | BeeOND job-local storage | Local emulation | BeeOND site (live only) | Supported | Infrastructure |
-| [25](lesson_25_stage_inputs_before_scheduler_submission.md) | Scheduler-aware pre-staging | Mock `sbatch` | Cluster (live only) | Limited | Infrastructure |
-| [26](lesson_26_select_data_movers_and_transfer_services.md) | Data movers and transfer services | Local mock | Transfer services (live only) | Supported | Infrastructure |
-| [27](lesson_27_make_a_workflow_fair_by_design.md) | FAIR metadata and provenance | Local | No | Supported | Advanced |
-| [28](lesson_28_compose_meta_workflows.md) | Workflow composition and meta-tasks over other engines | Local | Engines (optional) | Limited | Advanced |
-| [29](lesson_29_export_and_validate_common_workflow_language.md) | CWL v1.2 export and execution | Local | Optional validator | Supported | Advanced |
-| [30](lesson_30_compute_continuum_operations.md) | Compute continuum synthesis | Local mock | No | Supported | Advanced |
-| [31](lesson_31_operate_deploy_and_troubleshoot_dagonstar.md) | Operations, packaging, CI | Local | No | Limited | Advanced |
-| [32](lesson_32_capstone_every_task_type_with_evidence.md) | Capstone: every task type | Local emulation | No | Supported | Advanced |
+| [25](lesson_25_plug_in_adhoc_file_systems_and_stream_between_tasks.md) | Pluggable ad-hoc file systems and streams | Local adapter; providers emulated | Storage systems (live only) | Supported | Infrastructure |
+| [26](lesson_26_share_and_release_volumes_with_volume_tasks.md) | Volume tasks: create, share, release | Local emulation | Storage systems (live only) | Supported | Infrastructure |
+| [27](lesson_27_stage_inputs_before_scheduler_submission.md) | Scheduler-aware pre-staging | Mock `sbatch` | Cluster (live only) | Limited | Infrastructure |
+| [28](lesson_28_select_data_movers_and_transfer_services.md) | Data movers and transfer services | Local mock | Transfer services (live only) | Supported | Infrastructure |
+| [29](lesson_29_make_a_workflow_fair_by_design.md) | FAIR metadata and provenance | Local | No | Supported | Advanced |
+| [30](lesson_30_compose_meta_workflows.md) | Workflow composition and meta-tasks over other engines | Local | Engines (optional) | Limited | Advanced |
+| [31](lesson_31_run_other_engines_workflows_with_meta_tasks.md) | Meta-tasks: adapters, checkpoints, failure phases | Local | Engines (optional) | Supported | Advanced |
+| [32](lesson_32_export_and_validate_common_workflow_language.md) | CWL v1.2 export and execution | Local | Optional validator | Supported | Advanced |
+| [33](lesson_33_compute_continuum_operations.md) | Compute continuum synthesis | Local mock | No | Supported | Advanced |
+| [34](lesson_34_operate_deploy_and_troubleshoot_dagonstar.md) | Operations, packaging, CI | Local | No | Limited | Advanced |
+| [35](lesson_35_capstone_every_task_type_with_evidence.md) | Capstone: every task type | Local emulation | No | Supported | Advanced |
 
 ### Modules and effort
 
@@ -54,8 +57,8 @@ Python 3, a command shell, and a repository checkout are sufficient for the loca
 - Module 1, constructing the graph: Lessons 01–04, about 95 minutes.
 - Module 2, execution and data movement: Lessons 05–08, about 110 minutes.
 - Module 3, structured task models: Lessons 09–16 (native, web, LLM, FaaS, IoT, and three agentic lessons), about 270 minutes.
-- Module 4, distributed infrastructure: Lessons 17–26 (Docker, Apptainer, Kubernetes, Nomad, SSH, cloud, Slurm, BeeOND, pre-staging, data movers), about 350 minutes plus optional site setup.
-- Module 5, FAIR composition, interoperability, and operations: Lessons 27–32, about 270 minutes.
+- Module 4, distributed infrastructure: Lessons 17–28 (Docker, Apptainer, Kubernetes, Nomad, SSH, cloud, Slurm, BeeOND, pluggable ad-hoc file systems and streams, volume tasks, pre-staging, data movers), about 430 minutes plus optional site setup.
+- Module 5, FAIR composition, interoperability, and operations: Lessons 29–35 (including meta-tasks over other engines in Lesson 31), about 310 minutes.
 - [Optional integrations](integrations/README.md) are selected by research need and maturity.
 
 Every registered `TaskType` and every inventoried supported feature is mapped to a lesson, a runnable example,
@@ -64,8 +67,8 @@ mapping, the evidence paths, and the notebook. Evidence levels distinguish local
 portable emulation, and optional live integration.
 
 The [course notebook](DAGonStar_tutorial.ipynb) includes executable verification
-for every Lesson 00–32 in local Jupyter and Google Colab. For infrastructure
-Lessons 17–26 it runs the lesson scripts, which mock Docker, Kubernetes, Nomad,
+for every Lesson 00–35 in local Jupyter and Google Colab. For infrastructure
+Lessons 17–28 it runs the lesson scripts, which mock Docker, Kubernetes, Nomad,
 SSH, cloud, and scheduler clients or use portable emulation; live Docker,
 Apptainer, Kubernetes, Nomad, SSH, cloud, Slurm, BeeOND, and transfer-service
 claims still require their real backends. Lessons 14–16 use the deterministic
@@ -75,7 +78,7 @@ claims still require their real backends. Lessons 14–16 use the deterministic
 
 ## Run and verify examples
 
-From the repository root, install as described in Lesson 00, then run `python examples/tutorial/lesson_NN_....py`; every lesson from 00 to 32 has a script with the matching number, and `python tools/run_local_examples.py` runs them all. Local scripts create isolated temporary scratch directories, make exact assertions, and exit nonzero on failure. Run `python tools/validate_tutorial.py` for structure and internal-link checks and `python tools/validate_tutorial_coverage.py` for feature coverage.
+From the repository root, install as described in Lesson 00, then run `python examples/tutorial/lesson_NN_....py`; every lesson from 00 to 35 has a script with the matching number, and `python tools/run_local_examples.py` runs them all. Local scripts create isolated temporary scratch directories, make exact assertions, and exit nonzero on failure. Run `python tools/validate_tutorial.py` for structure and internal-link checks and `python tools/validate_tutorial_coverage.py` for feature coverage.
 
 Use the [glossary](resources/glossary.md), [troubleshooting guide](resources/troubleshooting.md), and [teaching notes](resources/teaching_notes.md) throughout.
 

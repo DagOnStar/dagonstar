@@ -53,8 +53,9 @@ working directories. DAGonStar scratch management, checkpointing, remote SSH,
 Slurm, cloud, Kubernetes, Nomad, service registration, and specialized staging
 are not reproduced. BeeOND volumes (see [BeeOND](beeond.md)) and the common
 [ad-hoc file-system resources](adhoc_filesystems.md) are DAGonStar
-execution behavior and are not exported; streams between tasks are exported
-in materialized form ([Streams](#streams)). A command that refers to
+execution behavior and are not exported; streams between tasks and volume
+tasks are exported in materialized form ([Streams](#streams),
+[Volume tasks](#volume-tasks)). A command that refers to
 `$DAGON_BEEOND` needs that variable from the CWL runner's environment.
 Scheduler-aware pre-staging (`pre_stage`, see
 [Scheduler-aware pre-staging](scheduler_prestaging.md)) is a DAGonStar
@@ -137,7 +138,7 @@ and credential safety, and validates and executes a producer → agent →
 consumer document with `cwltool --no-container` when both `cwltool` and
 `dagon-agent-runner` are installed (the test is skipped otherwise).
 `examples/agentic/cwl_local.py` and
-[Lesson 29](tutorial/lesson_29_export_and_validate_common_workflow_language.md)
+[Lesson 32](tutorial/lesson_32_export_and_validate_common_workflow_language.md)
 show the same export. See [Agentic tasks](agentic_tasks.md).
 
 ## Meta-tasks
@@ -165,9 +166,41 @@ determinism, bindings, and `cwltool --validate`; `examples/cwl/export_meta_workf
 exports, validates, and with `--run` executes a producer → meta-task document.
 See [Meta-tasks](meta_tasks.md).
 
+## Volume tasks
+
+CWL v1.2 has no storage shared and mutated by several steps, so a
+`TaskType.VOLUME` task is exported as an ordinary `CommandLineTool` that
+materializes the volume:
+
+- a **create** step runs `/bin/sh -c` with `mkdir -p` and `cp -R` lines that
+  copy its `stage_in` entries into the directory `<volume>/` and declares it as
+  the `volume` `Directory` output. With portable emulation the sources are read
+  from the producers' `task_dir` (`$(inputs.after_<producer>.path)/<path>`), and
+  consumers resolve `workflow:///<task>/<volume>/...` to
+  `$(inputs.after_<task>.path)/<volume>/...` like any other reference; in the
+  standard form each `workflow://` source is a bound `in_N` input of the step,
+  and command steps keep their `workflow://` text as for every other producer;
+- a **destroy** step receives the volume (`volume` input in the standard form,
+  the creator's `task_dir` with emulation), copies each `stage_out` entry into
+  its working directory, and declares a `staged_<target>` `File` or `Directory`
+  output for entries whose type is declared;
+- both carry a `dagon:Volume` hint with the schema version, action, volume,
+  provider, access mode, and release policy. Provider options are not exported.
+
+The script lines avoid `$(...)` shell substitution, which CWL would evaluate
+as a parameter reference. The boundary is explicit: the exported graph is
+valid and runnable, but data that sibling steps write *into* the volume during
+a DAGonStar run is not exchanged between CWL steps, and no provider is
+started. `tests/test_volume_task.py` (`CwlTests`) checks the export and, when
+`cwltool` is installed, runs the portable form;
+[`examples/cwl/export_volume_workflow.py`](../examples/cwl/export_volume_workflow.py)
+exports, validates, and with `--run` executes a
+`prepare → scratch (create) → {left, right} → drop (destroy) → check` document.
+See [Volume tasks](volume_tasks.md).
+
 ## Runnable interoperability material
 
 The [`examples/cwl/`](../examples/cwl/README.md) directory contains the Python
 source and its deterministic, checked-in CWL output. The [example guide](examples/cwl.md)
-and [Lesson 29](tutorial/lesson_29_export_and_validate_common_workflow_language.md) cover regeneration,
+and [Lesson 32](tutorial/lesson_32_export_and_validate_common_workflow_language.md) cover regeneration,
 automatic testing, runner validation, and the interoperability boundary.

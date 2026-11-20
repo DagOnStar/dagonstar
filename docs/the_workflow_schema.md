@@ -168,6 +168,29 @@ launcher (native, FaaS, LLM, web, IoT, agentic, meta) refuse streaming reference
 CWL export, FAIR provenance, and checkpoints keep the reference meaningful
 without streaming support: see [Ad-hoc file systems](adhoc_filesystems.md#streaming-between-tasks).
 
+## Volume references
+
+```text
+workflow:///Abc/xyz/results/out.txt
+workflow:///Emit/numbers?stream=xyz
+```
+
+When the task `Abc` is a [volume task](volume_tasks.md) that created the
+ad-hoc volume `xyz`, a reference whose path starts with `xyz` names an entry
+inside the volume. It is an ordinary reference: same components, same
+dependency on `Abc`, and the path is still relative to `Abc`'s data space,
+where the volume appears under its own name. Only the transfer differs. A
+command task is bound to the volume and the reference is replaced with the
+location inside the volume instead of a staged copy, so writes are shared by
+every user; a structured task reads it through the scratch-directory link
+(POSIX volumes and portable emulation only). Every such reference counts as a
+use of the volume, which is released when no task refers to it any longer or
+by a destroy volume task, whose `stage_out` copies are then addressed as
+`workflow:///<destroy task>/<path>`. Paths of `Abc` that do not start with the
+volume name keep their usual meaning. A stream through a volume names it in
+the query (`?stream=xyz`); a stream query on a volume reference itself is
+refused.
+
 ## Whitespace boundary rule
 
 The current parser scans from `workflow://` until the next space character or
