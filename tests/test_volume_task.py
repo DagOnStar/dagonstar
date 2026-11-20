@@ -7,6 +7,7 @@ built-in providers run under portable emulation or are only planned.
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -176,8 +177,8 @@ class DiscoveryTests(VolumeTestCase):
         self.assertEqual(set(owner.filesystem.tasks), {owner, writer, reader})
         root = owner.filesystem.task_path
         resolved = writer.resolve_volume_references(writer.command)
-        self.assertEqual(resolved, "cp '%s'/in/x.txt '%s'/out.txt" % (root, root) if " " in root
-                         else "cp %s/in/x.txt %s/out.txt" % (root, root))
+        # The root is quoted as the shell needs it (spaces, Windows backslashes).
+        self.assertEqual(resolved, "cp %s/in/x.txt %s/out.txt" % (shlex.quote(root), shlex.quote(root)))
         # The plain reference to W's scratch directory is still staged as before.
         self.assertIn("workflow:///W/.dagon/stdout.txt", reader.resolve_volume_references(reader.command))
         self.assertIn("DAGON_ADHOC_XYZ_PATH", writer.adhoc_prologue())
