@@ -23,6 +23,7 @@ against the StreamFlow file's directory; because the derived file lives in
 ``.dagon``, paths inside ``deployments`` should be absolute.
 """
 
+import importlib
 import json
 from pathlib import Path
 from typing import Any, Dict, Mapping
@@ -73,7 +74,8 @@ class StreamFlowAdapter(MetaEngineAdapter):
                 document = json.loads(text)
             else:
                 try:
-                    import yaml
+                    # Imported by name: PyYAML ships with StreamFlow and its stubs are optional.
+                    yaml = importlib.import_module("yaml")
                 except ImportError as exc:
                     raise MetaValidationError("reading a YAML StreamFlow file needs PyYAML (installed with "
                                               "StreamFlow); or pass the CWL workflow instead") from exc
