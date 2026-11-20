@@ -55,6 +55,7 @@ profile supports CI, teaching, Colab, Jupyter, and portable validation.
 | `IOT` | Mock or configured provider adapter | Deterministic mock runs locally. |
 | `AGENTIC` | `dagon.ini` agent profile (mock or OpenAI-compatible adapter) | Mock adapter runs locally; portable emulation forces it. |
 | `META` | The external engine (Nextflow, Snakemake, Parsl, StreamFlow, a CWL runner, or any CLI) installed on the DAGonStar host | `command` adapter runs locally; portable emulation forces the `mock` engine. |
+| `VOLUME` | A registered ad-hoc provider (DAGonFS, CAPIO, Hercules, DynoStore, or a pluggable adapter) reachable from the DAGonStar host | Pluggable local adapters run locally; portable emulation replaces the volume by a local directory. |
 
 “Notebook supported” means workflow creation, validation, FAIR recording,
 checkpoint loading, and CWL export work in the Python kernel. A notebook does
@@ -110,3 +111,7 @@ Meta-tasks are reused only after re-verifying the specification digest, the
 workflow-definition digest, the content digests of their inputs (re-read from
 the producers' current outputs), and the digests of the collected outputs; a
 remote workflow definition always runs again. See [Meta-tasks](meta_tasks.md).
+Volume tasks are reused only when their recorded volume specification matches
+and, for a create task, every task that uses the volume completed too (a
+volume does not survive the process); a destroy task re-verifies the SHA-256
+of its staged outputs. See [Volume tasks](volume_tasks.md).

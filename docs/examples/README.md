@@ -51,7 +51,7 @@ verification strategy.
 - [CWL interoperability](cwl.md): deterministic local export and a checked-in,
   runnable CWL v1.2 command graph.
 - [Tutorial source programs](../../examples/tutorial/README.md): one runnable,
-  self-checking script for each of the 33 lessons (00–32).
+  self-checking script for each of the 36 lessons (00–35).
 - [Colab notebook authoring](colab_notebooks.md): how to pair DAGonStar Python
   scripts with fresh-runtime Google Colab notebooks; source examples:
   [`examples/colab/`](../../examples/colab/README.md).

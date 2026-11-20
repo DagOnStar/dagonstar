@@ -1,7 +1,7 @@
 # DAGonStar tutorial examples
 
-These scripts are the authoritative runnable companions to the 33-lesson
-curriculum (Lessons 00–32). Each script carries the number of its lesson. Run
+These scripts are the authoritative runnable companions to the 36-lesson
+curriculum (Lessons 00–35). Each script carries the number of its lesson. Run
 them from the repository root after `python -m pip install -e .`:
 
 ~~~bash
@@ -30,14 +30,17 @@ python examples/tutorial/lesson_21_ssh_remote_tasks.py
 python examples/tutorial/lesson_22_cloud_tasks.py
 python examples/tutorial/lesson_23_slurm_tasks.py
 python examples/tutorial/lesson_24_beeond_storage.py
-python examples/tutorial/lesson_25_scheduler_prestaging.py
-python examples/tutorial/lesson_26_data_movers.py
-python examples/tutorial/lesson_27_fair_by_design.py
-python examples/tutorial/lesson_28_meta_workflows.py
-python examples/tutorial/lesson_29_cwl_export.py
-python examples/tutorial/lesson_30_compute_continuum.py
-python examples/tutorial/lesson_31_operations.py
-python examples/tutorial/lesson_32_capstone.py
+python examples/tutorial/lesson_25_adhoc_filesystems.py
+python examples/tutorial/lesson_26_volume_tasks.py
+python examples/tutorial/lesson_27_scheduler_prestaging.py
+python examples/tutorial/lesson_28_data_movers.py
+python examples/tutorial/lesson_29_fair_by_design.py
+python examples/tutorial/lesson_30_meta_workflows.py
+python examples/tutorial/lesson_31_meta_tasks.py
+python examples/tutorial/lesson_32_cwl_export.py
+python examples/tutorial/lesson_33_compute_continuum.py
+python examples/tutorial/lesson_34_operations.py
+python examples/tutorial/lesson_35_capstone.py
 ~~~
 
 `python tools/run_local_examples.py` runs all of them, together with the other
@@ -58,13 +61,16 @@ network access:
   Kubernetes API, the Nomad HTTP API, `SSHManager`, and the cloud provider
   import. Lessons 17 and 19 print an explicit skip when the optional `docker`
   or `kubernetes` package is missing.
-- Lessons 23 and 25 replace `sbatch` with
+- Lessons 23 and 27 replace `sbatch` with
   [`mock_scheduler.py`](../dataflow/slurm/mock_scheduler.py); Lesson 24 uses
-  portable emulation for BeeOND; Lesson 26 mocks remote tasks and the Globus
+  portable emulation for BeeOND; Lesson 25 runs an ad-hoc file-system adapter
+  defined in the script on a local directory (built-in providers only under
+  emulation); Lesson 26 runs volume tasks under portable emulation; Lesson 28 mocks remote tasks and the Globus
   manager.
-- Lessons 27–32 run local FAIR, meta-workflow, CWL, continuum, operations, and
-  capstone checks. Lesson 29 runs `cwltool --validate` only when `cwltool` is
-  installed, and Lesson 31 checks the `dagon-agent-runner` console script only
+- Lessons 29–35 run local FAIR, meta-workflow, meta-task (Lesson 31 registers
+  a toy engine adapter and emulates Nextflow with the mock engine), CWL, continuum, operations, and
+  capstone checks. Lesson 32 runs `cwltool --validate` only when `cwltool` is
+  installed, and Lesson 34 checks the `dagon-agent-runner` console script only
   when it is on `PATH`.
 
 Live Docker, Apptainer, Kubernetes, Nomad, SSH, cloud, Slurm, BeeOND, Globus,

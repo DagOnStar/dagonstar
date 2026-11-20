@@ -63,6 +63,7 @@ class TaskType(Enum):
     :cvar APPTAINER: Task executed in an Apptainer container (HPC environments)
     :cvar AGENTIC: Bounded agent with independent evaluation (see dagon.agentic)
     :cvar META: Workflow written for another engine, run through an adapter (see dagon.meta)
+    :cvar VOLUME: Create or destroy one ad-hoc file-system volume shared through workflow:// (see dagon.volume)
     """
 
     CHECKPOINT = "checkpoint"
@@ -80,6 +81,7 @@ class TaskType(Enum):
     IOT = "iot"
     AGENTIC = "agentic"
     META = "meta"
+    VOLUME = "volume"
 
 
 # Different types os tasks and their module and class name
@@ -104,6 +106,7 @@ tasks_types: Dict[TaskType, TaskTypeSpec] = {
     TaskType.IOT: ("dagon.iot", "IoTTask"),
     TaskType.AGENTIC: ("dagon.agentic.task", "AgenticTask"),
     TaskType.META: ("dagon.meta.task", "MetaTask"),
+    TaskType.VOLUME: ("dagon.volume", "VolumeTask"),
 }
 
 
@@ -259,6 +262,9 @@ class Task(Thread):
         self.stream_references: Dict[str, Any] = {}
         self.stream_started = Event()
         self.stream_launched = False
+        # References to volumes of volume tasks (dagon.volume), set by
+        # Workflow.make_dependencies(): reference text -> (volume task, path).
+        self.volume_references: Dict[str, Any] = {}
 
 
     def declare_inputs(self, *artifacts: Any) -> "Task":
@@ -327,6 +333,24 @@ class Task(Thread):
             channel = references.get(text)
             if channel is not None:
                 command = command[:start] + self.stream_location_text(channel) + command[end:]
+        return command
+
+    def resolve_volume_references(self, command: str) -> str:
+        """Replace this task's references to volumes with locations inside the volumes.
+
+        ``workflow:///<volume task>/<volume>/<path>`` is not staged: the task
+        is bound to the volume and reads and writes it in place.
+        """
+        references = getattr(self, "volume_references", {})
+        if not references:
+            return command
+        for start, end, text in reversed(list(iter_command_references(command, dagon.Workflow.SCHEMA))):
+            found = references.get(text)
+            if found is not None:
+                owner, relative = found
+                command = (command[:start]
+                           + owner.filesystem.volume_reference_text(relative, emulated=owner.emulated)
+                           + command[end:])
         return command
 
     def stream_python(self) -> str:
@@ -434,6 +458,9 @@ class Task(Thread):
                 or "?stream" in (self.command or ""):
             return ("pre-staging is not supported for tasks that produce or consume streams: streamed "
                     "data moves through an ad-hoc file system while the tasks run")
+        if getattr(self, "volume_references", None):
+            return ("pre-staging is not supported for tasks that use a volume task's volume: the data is read "
+                    "in place on the ad-hoc file system, which is not staged before submission")
         stager_mover = self.stager_mover
         if stager_mover is not None and \
                 dagon.stager.base.StagerMover(stager_mover) == dagon.stager.base.StagerMover.SLURM:
@@ -935,7 +962,7 @@ class Task(Thread):
         stages as the missing file ``ids.txt)``; it is reported here so that
         emulation fails where the real run would read nothing.
         """
-        command = self.resolve_stream_references(self.command)
+        command = self.resolve_volume_references(self.resolve_stream_references(self.command))
         missing: List[str] = []
         checkpoint_task = type(self).__name__ in {"Checkpoint", "RemoteCheckpoint"}
         if checkpoint_task:
@@ -1665,7 +1692,9 @@ class Task(Thread):
         """
         header = self.discover_context()
         prologue = self.launcher_prologue()
-        blocks, inputs, body = self.build_stage_plan(command, strict_staging=strict_staging)
+        # Volume references are rewritten in place first: they are never staged.
+        blocks, inputs, body = self.build_stage_plan(self.resolve_volume_references(command),
+                                                     strict_staging=strict_staging)
         invoke = "\n\n# Invoke the command\n" + self.include_command(body) + "if [ $? -ne 0 ]; then code=1; fi"
         return PreparedTask(working_dir=self.working_dir, header=header, prologue=prologue,
                             stage_blocks=blocks, invoke=invoke, resolved_command=body, inputs=inputs)

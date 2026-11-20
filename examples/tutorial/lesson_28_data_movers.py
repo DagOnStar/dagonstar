@@ -1,4 +1,4 @@
-"""Lesson 26: transfer protocol selection and generated commands for the data movers (all mocked)."""
+"""Lesson 28: transfer protocol selection and generated commands for the data movers (all mocked)."""
 import sys
 from pathlib import Path as _Path
 sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))

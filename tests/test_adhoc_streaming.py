@@ -289,6 +289,15 @@ class RegistryTest(unittest.TestCase):
             register_provider("bad", object)
         with self.assertRaises(ValueError):
             unregister_provider("capio")
+        # Built-in names are protected even with replace=True, and stay unchanged.
+        builtin = adhoc.PROVIDERS["dagonfs"]
+        for replace in (False, True):
+            with self.assertRaises(ValueError):
+                register_provider("dagonfs", Plain, replace=replace)
+            with self.assertRaises(ValueError):
+                register_provider("DAGonFS", Plain, replace=replace)
+        self.assertIs(adhoc.PROVIDERS["dagonfs"], builtin)
+        self.assertIs(register_provider("dagonfs", builtin), builtin)
         self.assertEqual(sorted(adhoc.BUILTIN_PROVIDERS),
                          ["beeond", "capio", "dagonfs", "dynostore", "hercules"])
 

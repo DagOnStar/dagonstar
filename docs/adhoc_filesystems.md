@@ -105,7 +105,7 @@ The access mode tells a task how to use `DAGON_ADHOC_PATH`:
 
 ## Scopes and several volumes
 
-A resource has one of two scopes:
+A resource has one of three scopes:
 
 - `scope="workflow"` (default): started by `Workflow.run()` before the first
   task and stopped in reverse creation order after the last one. With
@@ -117,6 +117,13 @@ A resource has one of two scopes:
   also when the task fails. A start failure fails the task with
   `failure_phase="adhoc"`. Binding a task-scope resource to a second task
   raises `ValueError`.
+- `scope="volume"`: created only by a `TaskType.VOLUME` task, which owns it
+  (`resource.owner`). It starts when the volume task runs, is shared by every
+  task that refers to `workflow:///<volume task>/<volume>/...`, and is
+  released by a destroy volume task or by reference counting when no task
+  refers to it any longer. Creating a volume-scope resource without an owner,
+  or giving an owner to another scope, raises `ValueError`. See
+  [Volume tasks](volume_tasks.md).
 
 There is no limit on the number of resources per workflow or per task, and
 resources of different providers may be bound to the same task. Each resource
@@ -168,7 +175,8 @@ local-directory = "my_package.adapters:LocalDirectory"
 ```
 
 `available_providers()` lists the registered names; built-in names cannot be
-replaced or unregistered, other names need `replace=True` to be replaced.
+replaced (not even with `replace=True`) or unregistered, other names need
+`replace=True` to be replaced.
 `create_adhoc_filesystem` also accepts the class itself. The adapter inherits
 binding, scopes, emulation, metadata, streaming over POSIX or preload paths,
 and the credential checks. An adapter with `client` or `object` access
@@ -178,6 +186,16 @@ provides streaming by implementing the class method `open_stream_store(spec)`
 working adapter written outside the package; none of the built-in adapters
 modifies the storage software, and the DynoStore and Hercules patches below
 fix defects of those systems, not interface needs.
+
+Volume tasks use four further hooks with working defaults for POSIX and
+preload adapters: `volume_location(relative, emulated)` (the path, or object
+key, of a volume entry), `volume_reference_text` (the text that replaces a
+`workflow:///<task>/<volume>/...` reference in a command), `volume_parameters()`
+(credential-free parameters for the staging helper), and the class method
+`open_volume_store(spec)` (the store that the staging helper uses to put and
+get files). The DAGonFS native frontend and DynoStore override them; an
+adapter with `client` or `object` access must override them to serve volume
+tasks ([Volume tasks](volume_tasks.md#provider-support)).
 
 ## Providers
 
@@ -620,9 +638,20 @@ of all five providers.
   of the commands and survive a JSON round trip. A checkpointed task skipped
   on resume does not need the resource, but the resource is still started; data
   left on a volatile volume by an earlier run is not preserved across runs.
+- **Volume tasks.** A `TaskType.VOLUME` task creates a volume-scope resource
+  that sibling tasks address as `workflow:///<task>/<volume>/...`; FAIR edges
+  served by it carry `"transfer": "volume"`, and CWL export materializes it
+  with a `dagon:Volume` hint ([Volume tasks](volume_tasks.md)).
 - **Pre-staging.** Pre-staging moves `workflow://` inputs on the submission
   host; it does not stage into ad-hoc storage, and tasks with streams are
   ineligible.
+
+## Tutorial
+
+[Lesson 24](tutorial/lesson_24_use_beeond_job_local_storage.md) introduces BeeOND and the common
+interface, [Lesson 25](tutorial/lesson_25_plug_in_adhoc_file_systems_and_stream_between_tasks.md)
+writes and registers an adapter and streams through it, and
+[Lesson 26](tutorial/lesson_26_share_and_release_volumes_with_volume_tasks.md) uses volume tasks.
 
 ## Evidence
 

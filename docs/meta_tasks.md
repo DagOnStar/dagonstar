@@ -286,8 +286,13 @@ a live test guarded by `unittest.skipUnless(shutil.which("<engine>"), ...)`.
 
 ## Verification
 
+The tutorial covers meta-tasks in [Lesson 30](tutorial/lesson_30_compose_meta_workflows.md)
+(composition) and [Lesson 31](tutorial/lesson_31_run_other_engines_workflows_with_meta_tasks.md)
+(a new adapter, checkpoint identity, failure phases, and emulation).
+
 ```bash
 python -m unittest tests.test_meta_task -v
+python examples/tutorial/lesson_31_meta_tasks.py
 python examples/meta/meta_workflow_local.py
 python examples/meta/meta_engines.py            # every installed engine; others are skipped
 python examples/cwl/export_meta_workflow.py

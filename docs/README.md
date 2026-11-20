@@ -14,7 +14,7 @@ Start with the [academic tutorial syllabus](tutorial/README.md). It presents the
   operations, and an all-task-type capstone;
 - [optional integrations](tutorial/integrations/README.md).
 
-The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) has a verification cell for each of the 33 lessons, and [`coverage.json`](tutorial/coverage.json) maps every task type and inventoried feature to lessons, examples, and tests. Use the [glossary](tutorial/resources/glossary.md) and [troubleshooting guide](tutorial/resources/troubleshooting.md) while working through it.
+The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) has a verification cell for each of the 36 lessons, and [`coverage.json`](tutorial/coverage.json) maps every task type and inventoried feature to lessons, examples, and tests. Use the [glossary](tutorial/resources/glossary.md) and [troubleshooting guide](tutorial/resources/troubleshooting.md) while working through it.
 
 ## Guides
 
@@ -28,6 +28,7 @@ The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) has 
 - [Checkpointing](checkpoints.md)
 - [BeeOND on-demand file systems](beeond.md)
 - [Common ad-hoc file-system interface](adhoc_filesystems.md)
+- [Volume tasks: ad-hoc volumes shared through `workflow://`](volume_tasks.md)
 - [Scheduler-aware pre-staging](scheduler_prestaging.md)
 - [Asynchronous launch](asynch_launch.md)
 - [Native tasks](native_tasks.md)

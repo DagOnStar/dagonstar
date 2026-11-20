@@ -1,4 +1,4 @@
-# Lesson 27: Make a Workflow FAIR by Design
+# Lesson 29: Make a Workflow FAIR by Design
 
 > **Track:** Advanced
 > **Runtime:** Local
@@ -15,7 +15,7 @@ After completing this lesson, you will be able to:
 
 ## Prerequisites
 
-- [Lesson 26](lesson_26_select_data_movers_and_transfer_services.md), or equivalent concepts.
+- [Lesson 28](lesson_28_select_data_movers_and_transfer_services.md), or equivalent concepts.
 - No external service unless stated below.
 
 ## Scientific scenario
@@ -38,11 +38,11 @@ From the repository root, run the self-contained two-task FAIR workflow. It uses
 an inline configuration (no `dagon.ini`) and a temporary scratch directory:
 
 ~~~bash
-python examples/tutorial/lesson_27_fair_by_design.py
+python examples/tutorial/lesson_29_fair_by_design.py
 python examples/fair/fair_local.py
 ~~~
 
-The Lesson 27 script first runs a workflow without FAIR recording and checks that no bundle exists, then places a synthetic secret in the configuration and checks that it appears in no exported file. Agentic tasks add their accepted result and evaluation report as artifacts with role `agentic-<name>`; a rejected result is never recorded as an output.
+The Lesson 29 script first runs a workflow without FAIR recording and checks that no bundle exists, then places a synthetic secret in the configuration and checks that it appears in no exported file. Agentic tasks add their accepted result and evaluation report as artifacts with role `agentic-<name>`; a rejected result is never recorded as an output.
 
 To keep and inspect the bundle, choose a scratch directory explicitly, for
 example `python examples/fair/fair_local.py --scratch /tmp/dagon-fair`; the
@@ -58,7 +58,7 @@ The script prints `FAIR metadata verified:` followed by the nine local exports:
 ## Verify
 
 ~~~bash
-python examples/tutorial/lesson_27_fair_by_design.py
+python examples/tutorial/lesson_29_fair_by_design.py
 python -m unittest tests.test_fair -v
 ~~~
 

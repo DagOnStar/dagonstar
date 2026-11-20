@@ -43,7 +43,7 @@ python -c "import dagon; print(dagon.Workflow.__name__)"
 python examples/tutorial/lesson_00_environment_check.py
 ~~~
 
-The environment check prints the Python version, platform, installed DAGonStar version, the bash used for launchers, every registered task type, and which optional packages are present. It also reads `dagon.ini.sample` and confirms that the sample agent profiles name environment variables rather than key values. Optional extras (`docker`, `kubernetes`, `cloud`, `globus`, and others) are needed only for the live variants of Lessons 17–26.
+The environment check prints the Python version, platform, installed DAGonStar version, the bash used for launchers, every registered task type, and which optional packages are present. It also reads `dagon.ini.sample` and confirms that the sample agent profiles name environment variables rather than key values. Optional extras (`docker`, `kubernetes`, `cloud`, `globus`, and others) are needed only for the live variants of Lessons 17–28.
 
 ## Expected result
 

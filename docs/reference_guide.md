@@ -107,6 +107,7 @@ Factory task types:
 - `TaskType.IOT`
 - `TaskType.AGENTIC`
 - `TaskType.META`
+- `TaskType.VOLUME`
 
 ## `dagon.task.DagonTask`
 
@@ -511,6 +512,21 @@ workflow through the adapter registered as `engine` (`nextflow`, `snakemake`,
 `dagon.meta.MetaEngineAdapter` and call `register_adapter` (or use the
 `dagon.meta_adapters` entry-point group). The `dagon-meta-runner` console
 script runs a specification outside a workflow. See [Meta-tasks](meta_tasks.md).
+
+## Volume task reference
+
+`DagonTask(TaskType.VOLUME, name, provider=..., volume=None, stage_in=None,
+options=None, export=None, release="auto")` creates a `dagon.volume.VolumeTask`
+that starts one ad-hoc volume (`provider` is a registered provider name or
+adapter class; BeeOND is refused). Sibling tasks refer to it as
+`workflow:///<name>/<volume>/...`; `attach(*tasks)` binds tasks that use only
+its environment variables. `DagonTask(TaskType.VOLUME, name, action="destroy",
+volume="workflow:///<create task>/<volume>", stage_out=None)` runs after every
+user, copies `stage_out` entries into its scratch directory, and releases the
+volume. Without a destroy task the volume is released when its reference count
+reaches zero (`release="end"` keeps it to the end of the run). Invalid plans
+raise `ValueError`; run-time staging errors raise `dagon.volume.VolumeError`.
+See [Volume tasks](volume_tasks.md).
 
 ## Agentic task reference
 

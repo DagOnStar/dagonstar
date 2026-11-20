@@ -70,6 +70,10 @@ local, remote, Slurm, Docker, cloud, and data-staging environments.
 - `dagon/adhoc.py`: common lifecycle for DAGonFS, BeeOND, Hercules, CAPIO,
   and DynoStore resources (`Workflow.create_adhoc_filesystem`), scopes, and the
   adapter registry.
+- `dagon/volume.py`: `TaskType.VOLUME` (`VolumeTask`): create or destroy one
+  ad-hoc volume as a task, `workflow:///<task>/<volume>/...` planning
+  (`plan_volumes`), reference-counted release, the staging helper
+  (`python -m dagon.volume stage`), and POSIX, DAGonFS-native, and object stores.
 - `dagon/streaming.py`: `workflow://…?stream` references, the stream marker
   protocol, stores, and the `python -m dagon.adhoc stream` CLI.
 - `dagon/communication/`: SSH/SCP/Globus/SKYCDS transfer helpers.
@@ -160,8 +164,8 @@ configuration validation separately from live integration behavior.
 - Changes require the local and remote pre-staging tests,
   `tools/ci_prestage_slurm.py`, the manual `tools/hpc_prestage_deep.py`, the
   `examples/dataflow/slurm/pre_stage_*.py`
-  examples, `docs/scheduler_prestaging.md`, and tutorial Lessons 23 and 25
-  (with `examples/tutorial/lesson_25_scheduler_prestaging.py`) to stay consistent.
+  examples, `docs/scheduler_prestaging.md`, and tutorial Lessons 23 and 27
+  (with `examples/tutorial/lesson_27_scheduler_prestaging.py`) to stay consistent.
 
 ## Ad-hoc file-system maintenance
 
@@ -208,11 +212,40 @@ configuration validation separately from live integration behavior.
 - Changes require `tests/test_adhoc_filesystems.py`,
   `tests/test_adhoc_streaming.py`, `examples/adhoc/`,
   `examples/cwl/export_streaming_workflow.py`, `docs/adhoc_filesystems.md`,
-  `docs/the_workflow_schema.md`, `docs/cwl_export.md`, Lessons 24 and 29, the
+  `docs/the_workflow_schema.md`, `docs/cwl_export.md`, Lessons 24, 25, 26, and 32, the
   coverage entries `storage.adhoc-filesystems` and `storage.adhoc-streaming`,
   `tools/benchmark_adhoc_filesystems.py`, `tools/benchmark_adhoc_streaming.py`,
   and `tools/check_adhoc_multivolume.py` to stay consistent; record live runs,
   with host and date, in `docs/performance/`.
+
+## Volume task maintenance
+
+- `TaskType.VOLUME` is opt-in: workflows without volume tasks must behave as
+  before. Volume-scope resources exist only with an owning volume task.
+- `workflow:///<task>/<volume>/...` must stay an ordinary `workflow://`
+  reference (same components, dependency, and reference counting); only the
+  transfer changes. Paths not starting with the volume name keep their usual
+  meaning, and only `?stream=<volume>` streams through a volume.
+- Command paths into `client` or `object` volumes stay refused outside
+  emulation (the rewritten text would name a host path); preload volumes are
+  staged through the adapter's `open_volume_store` (DAGonFS uses its socket
+  client because its library lists no directories).
+- A volume is released when its reference count reaches zero (the scratch
+  collector's rule) or by a destroy task that every user precedes; users after
+  the destroy task, two destroyers, and unknown volumes are refused at
+  dependency discovery. Every remaining volume is released at workflow end,
+  also after failures. BeeOND stays refused.
+- Staging into and out of volumes runs in the helper process with the
+  volume's task environment. Specifications, helper specs, checkpoints, JSON,
+  CWL, and FAIR records stay credential-free (`token_env` names a variable).
+- A create checkpoint is reused only if every user also completed; a destroy
+  checkpoint only after re-verifying staged-output digests.
+- Changes require `tests/test_volume_task.py`, the all-type interoperability
+  tests, `examples/adhoc/volume_task.py`, `examples/cwl/export_volume_workflow.py`,
+  `docs/volume_tasks.md`, `docs/adhoc_filesystems.md`,
+  `docs/the_workflow_schema.md`, `docs/cwl_export.md`, Lessons 26 and 35, and
+  the coverage entries `tasktype.volume` and `storage.volume-tasks` to stay
+  consistent.
 
 ## FaaS maintenance
 
@@ -246,8 +279,8 @@ configuration validation separately from live integration behavior.
   content hashes.
 - Tests and examples use the deterministic `mock` adapter or a loopback server;
   never require a live model. Changes require `tests/test_agentic_*.py`, the
-  all-type interoperability tests, `examples/agentic/`, Lessons 14–16, 30, and
-  32, `docs/agentic_*.md`, CWL/FAIR/JSON documentation, and `coverage.json` to
+  all-type interoperability tests, `examples/agentic/`, Lessons 14–16, 33, and
+  35, `docs/agentic_*.md`, CWL/FAIR/JSON documentation, and `coverage.json` to
   stay consistent.
 
 ## Meta-task maintenance
@@ -280,7 +313,7 @@ configuration validation separately from live integration behavior.
 - Changes require `tests/test_meta_task.py` (engine-free tests must pass
   without any engine; live tests skip when an engine is absent), the all-type
   interoperability tests, `examples/meta/`, `examples/cwl/export_meta_workflow.py`,
-  `docs/meta_tasks.md`, `docs/cwl_export.md`, Lessons 28, 29, and 32, and the
+  `docs/meta_tasks.md`, `docs/cwl_export.md`, Lessons 30, 31, 32, and 35, and the
   coverage entries `tasktype.meta` and `meta.external-engines` to stay
   consistent.
 

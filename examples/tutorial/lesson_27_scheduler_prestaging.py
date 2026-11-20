@@ -1,4 +1,4 @@
-"""Lesson 25: stage inputs before submission, and never submit when stage-in fails (mock sbatch)."""
+"""Lesson 27: stage inputs before submission, and never submit when stage-in fails (mock sbatch)."""
 import sys
 from pathlib import Path as _Path
 sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
@@ -37,7 +37,7 @@ def run(scratch, reference):
     return simulate, submission_for(log, "simulate")
 
 
-with tempfile.TemporaryDirectory(prefix="dagon-tutorial-25-") as scratch:
+with tempfile.TemporaryDirectory(prefix="dagon-tutorial-27-") as scratch:
     simulate, submission = run(scratch, "workflow:///forcing/data/wind.txt")
     assert simulate.status.name == "FINISHED"
     assert submission["marker_present"] and submission["inputs_populated"], submission
@@ -45,7 +45,7 @@ with tempfile.TemporaryDirectory(prefix="dagon-tutorial-25-") as scratch:
     assert metadata["pre_stage_effective"] and metadata["inputs_content_verified"] == 1
     assert scratch not in str(metadata), "pre-staging metadata stays path-free"
 
-with tempfile.TemporaryDirectory(prefix="dagon-tutorial-25-") as scratch:
+with tempfile.TemporaryDirectory(prefix="dagon-tutorial-27-") as scratch:
     simulate, submission = run(scratch, "workflow:///forcing/data/missing.txt")
     assert simulate.status.name == "FAILED" and simulate.failure_phase == "staging"
     assert submission is None, "sbatch must never run after a failed stage-in"

@@ -1,4 +1,4 @@
-# Lesson 25: Stage Inputs before Scheduler Submission
+# Lesson 27: Stage Inputs before Scheduler Submission
 
 > **Track:** Distributed infrastructure
 > **Runtime:** Local mock scheduler
@@ -30,14 +30,14 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read [`examples/tutorial/lesson_25_scheduler_prestaging.py`](../../examples/tutorial/lesson_25_scheduler_prestaging.py) and [`pre_stage_mock.py`](../../examples/dataflow/slurm/pre_stage_mock.py).
+Read [`examples/tutorial/lesson_27_scheduler_prestaging.py`](../../examples/tutorial/lesson_27_scheduler_prestaging.py) and [`pre_stage_mock.py`](../../examples/dataflow/slurm/pre_stage_mock.py).
 
 ## Run the example
 
 From the repository root:
 
 ~~~bash
-python examples/tutorial/lesson_25_scheduler_prestaging.py
+python examples/tutorial/lesson_27_scheduler_prestaging.py
 python examples/dataflow/slurm/pre_stage_mock.py
 ~~~
 
@@ -48,7 +48,7 @@ BATCH and BeeOND requests are refused; the staged run reports the marker present
 ## Verify
 
 ~~~bash
-python examples/tutorial/lesson_25_scheduler_prestaging.py
+python examples/tutorial/lesson_27_scheduler_prestaging.py
 python -m unittest tests.test_scheduler_prestaging tests.test_remote_scheduler_prestaging -v
 ~~~
 

@@ -1,4 +1,4 @@
-"""Lesson 28: compose workflows with DAG_TPS and named workflow:// references across workflows,
+"""Lesson 30: compose workflows with DAG_TPS and named workflow:// references across workflows,
 then call a workflow written for another engine as one TaskType.META task."""
 import sys
 from pathlib import Path as _Path
@@ -11,7 +11,7 @@ from dagon.dag_tps import DAG_TPS
 from dagon.task import DagonTask, TaskType
 from examples.tutorial.common.support import config, workflow
 
-with tempfile.TemporaryDirectory(prefix="dagon-tutorial-28-") as scratch:
+with tempfile.TemporaryDirectory(prefix="dagon-tutorial-30-") as scratch:
     meta = DAG_TPS("Campaign28", config=config(scratch))
     acquisition = workflow("Acquisition", scratch)
     analysis = workflow("Analysis", scratch)
@@ -40,7 +40,7 @@ print("unresolvable reference without the optional service:", message)
 # Part 2: a meta-task runs an external workflow (here an engine-free stand-in driven by
 # the generic command adapter) and exchanges data only through workflow:// references.
 ENGINE = _Path(__file__).resolve().parents[1] / "meta" / "workflows" / "tiny_engine.py"
-with tempfile.TemporaryDirectory(prefix="dagon-tutorial-28-meta-") as scratch:
+with tempfile.TemporaryDirectory(prefix="dagon-tutorial-30-meta-") as scratch:
     composite = workflow("Composite", scratch)
     composite.add_task(DagonTask(TaskType.BATCH, "observe", "mkdir -p out; printf 'gust calm gust\\n' > out/log.txt"))
     composite.add_task(DagonTask(TaskType.META, "external", engine="command", workflow=str(ENGINE),

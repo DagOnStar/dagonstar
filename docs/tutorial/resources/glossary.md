@@ -28,3 +28,8 @@
 - **Guardrail:** a registered check, run outside the agent, that refuses or returns feedback on an action or candidate.
 - **Result fit:** the weighted mean of evaluator scores; acceptance also requires the threshold, mandatory, and hard gates.
 - **Coverage manifest:** `docs/tutorial/coverage.json`, the machine-checked map from task types and features to lessons, examples, and tests.
+- **Ad-hoc file system adapter:** a subclass of `dagon.adhoc.AdHocFileSystem` registered with `register_provider` (or the `dagon.adhoc_providers` entry-point group) that lets DAGonStar start, bind, and stop a storage system without modifying it.
+- **Resource scope:** the lifetime of an ad-hoc resource: `workflow` (the run), `task` (one task), or `volume` (owned by a volume task).
+- **Stream reference:** `workflow:///producer/path?stream[=resource]`, a data dependency whose consumer reads verified items while the producer runs.
+- **Volume task:** a `TaskType.VOLUME` task that creates (or destroys) one ad-hoc volume; siblings address it as `workflow:///<task>/<volume>/...`, and it is released by a destroy task or by reference counting.
+- **Meta-task:** a `TaskType.META` task that runs a workflow written for another engine through an adapter, exchanging data only through `workflow://` references.

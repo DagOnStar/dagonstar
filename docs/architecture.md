@@ -35,6 +35,8 @@ dagon/
   meta/                       TaskType.META: MetaTask, engine adapters (Nextflow, Snakemake,
                               Parsl, StreamFlow, CWL, command, mock), shared runner and
                               dagon-meta-runner, self-contained Parsl driver
+  volume.py                   TaskType.VOLUME: VolumeTask, volume planning, release,
+                              staging helper and volume stores
   fair/                       Optional FAIR models, recorder, validation, exporters
   api/                        HTTP client and workflow service
   cloud/                      Apache Libcloud helpers

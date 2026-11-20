@@ -1,4 +1,4 @@
-# Lesson 31: Operate, Deploy, and Troubleshoot DAGonStar
+# Lesson 34: Operate, Deploy, and Troubleshoot DAGonStar
 
 > **Track:** Advanced
 > **Runtime:** Local
@@ -15,7 +15,7 @@ After completing this lesson, you will be able to:
 
 ## Prerequisites
 
-- [Lesson 30](lesson_30_compute_continuum_operations.md), or equivalent concepts.
+- [Lesson 33](lesson_33_compute_continuum_operations.md), or equivalent concepts.
 - No running DAGon service; HTTP calls are mocked.
 
 ## Scientific scenario
@@ -30,14 +30,14 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read [`examples/tutorial/lesson_31_operations.py`](../../examples/tutorial/lesson_31_operations.py), [`tools/run_local_examples.py`](../../tools/run_local_examples.py), and the [platform support guide](../platform_support.md).
+Read [`examples/tutorial/lesson_34_operations.py`](../../examples/tutorial/lesson_34_operations.py), [`tools/run_local_examples.py`](../../tools/run_local_examples.py), and the [platform support guide](../platform_support.md).
 
 ## Run the example
 
 From the repository root:
 
 ~~~bash
-python examples/tutorial/lesson_31_operations.py
+python examples/tutorial/lesson_34_operations.py
 python tools/run_local_examples.py
 ~~~
 
@@ -48,7 +48,7 @@ The mocked service assigns workflow id 7, the JSON round trip keeps the tasks an
 ## Verify
 
 ~~~bash
-python examples/tutorial/lesson_31_operations.py
+python examples/tutorial/lesson_34_operations.py
 python -m unittest tests.test_runtime_env tests.test_platform_support tests.test_packaging -v
 ~~~
 

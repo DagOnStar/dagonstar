@@ -24,7 +24,7 @@ class TutorialValidationTests(unittest.TestCase):
             if cell.get("cell_type") == "markdown"
         )
         headings = [line for line in markdown.splitlines() if line.startswith("## Lesson ")]
-        self.assertEqual(len(headings), 33)
+        self.assertEqual(len(headings), 36)
         for number, heading in enumerate(headings):
             self.assertTrue(heading.startswith("## Lesson %02d " % number), heading)
         lesson_cells = [

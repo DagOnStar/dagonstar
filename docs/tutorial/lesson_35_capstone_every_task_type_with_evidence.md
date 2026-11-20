@@ -1,4 +1,4 @@
-# Lesson 32: Capstone: Every Task Type with Evidence
+# Lesson 35: Capstone: Every Task Type with Evidence
 
 > **Track:** Advanced
 > **Runtime:** Local portable emulation
@@ -15,7 +15,7 @@ After completing this lesson, you will be able to:
 
 ## Prerequisites
 
-- [Lesson 31](lesson_31_operate_deploy_and_troubleshoot_dagonstar.md), or equivalent concepts.
+- [Lesson 34](lesson_34_operate_deploy_and_troubleshoot_dagonstar.md), or equivalent concepts.
 - All earlier lessons, or equivalent experience.
 
 ## Scientific scenario
@@ -30,25 +30,25 @@ New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow
 
-Read [`examples/tutorial/lesson_32_capstone.py`](../../examples/tutorial/lesson_32_capstone.py). The set of tasks is checked against `set(TaskType)`, so a newly registered type fails the capstone until it is added.
+Read [`examples/tutorial/lesson_35_capstone.py`](../../examples/tutorial/lesson_35_capstone.py). The set of tasks is checked against `set(TaskType)`, so a newly registered type fails the capstone until it is added.
 
 ## Run the example
 
 From the repository root:
 
 ~~~bash
-python examples/tutorial/lesson_32_capstone.py
+python examples/tutorial/lesson_35_capstone.py
 python tools/validate_tutorial_coverage.py
 ~~~
 
 ## Expected result
 
-Every task finishes; the agent is accepted under portable emulation; NATIVE counts four records; FAIR records every task; a checkpoint and a deterministic CWL file exist. The checklist reports 15 task types and zero live adapter calls; the META task (a Nextflow pipeline) ran on the mock engine, so Nextflow was never started. The coverage validator reports no unmatched feature.
+Every task finishes; the agent is accepted under portable emulation; NATIVE counts four records; FAIR records every task; a checkpoint and a deterministic CWL file exist. The checklist reports 16 task types and zero live adapter calls; the META task (a Nextflow pipeline) ran on the mock engine, so Nextflow was never started, and the VOLUME task's DAGonFS volume was a local directory, released by reference counting once no task referred to it. The coverage validator reports no unmatched feature.
 
 ## Verify
 
 ~~~bash
-python examples/tutorial/lesson_32_capstone.py
+python examples/tutorial/lesson_35_capstone.py
 python -m unittest tests.test_tasktype_interoperability tests.test_tutorial_coverage -v
 ~~~
 
@@ -76,4 +76,4 @@ The capstone ties every task type and evidence surface into one reproducible, ho
 
 ## Next lesson
 
-This is the final lesson. Revisit [Lesson 29](lesson_29_export_and_validate_common_workflow_language.md) to compare graph portability with execution evidence. Return to the [syllabus](README.md) at any time.
+This is the final lesson. Revisit [Lesson 32](lesson_32_export_and_validate_common_workflow_language.md) to compare graph portability with execution evidence. Return to the [syllabus](README.md) at any time.

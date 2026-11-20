@@ -23,7 +23,7 @@
       ],
       "example_paths": [
         "examples/tutorial/lesson_07_checkpoint_and_resume.py",
-        "examples/tutorial/lesson_32_capstone.py"
+        "examples/tutorial/lesson_35_capstone.py"
       ],
       "test_targets": [
         "tests.test_checkpointing",
@@ -472,11 +472,11 @@
         "dagon/agentic/task.py"
       ],
       "lessons": [
-        25,
+        27,
         14
       ],
       "example_paths": [
-        "examples/tutorial/lesson_25_scheduler_prestaging.py",
+        "examples/tutorial/lesson_27_scheduler_prestaging.py",
         "examples/tutorial/lesson_14_agentic_specification.py"
       ],
       "test_targets": [
@@ -494,11 +494,11 @@
         "dagon/__init__.py"
       ],
       "lessons": [
-        32,
+        35,
         24
       ],
       "example_paths": [
-        "examples/tutorial/lesson_32_capstone.py",
+        "examples/tutorial/lesson_35_capstone.py",
         "examples/tutorial/lesson_24_beeond_storage.py"
       ],
       "test_targets": [
@@ -539,10 +539,10 @@
         "dagon/task.py"
       ],
       "lessons": [
-        31
+        34
       ],
       "example_paths": [
-        "examples/tutorial/lesson_31_operations.py"
+        "examples/tutorial/lesson_34_operations.py"
       ],
       "test_targets": [
         "tests.test_workflow_core.WorkflowCoreTests.test_load_json_recreates_task_instances",
@@ -698,11 +698,11 @@
         "dagon/agentic/task.py"
       ],
       "lessons": [
-        30,
-        32
+        33,
+        35
       ],
       "example_paths": [
-        "examples/tutorial/lesson_30_compute_continuum.py",
+        "examples/tutorial/lesson_33_compute_continuum.py",
         "examples/agentic/mixed_workflow.py"
       ],
       "test_targets": [
@@ -743,10 +743,10 @@
         "dagon/__init__.py"
       ],
       "lessons": [
-        29
+        32
       ],
       "example_paths": [
-        "examples/tutorial/lesson_29_cwl_export.py",
+        "examples/tutorial/lesson_32_cwl_export.py",
         "examples/agentic/cwl_local.py"
       ],
       "test_targets": [
@@ -828,10 +828,10 @@
         "dagon/iot/task.py"
       ],
       "lessons": [
-        30
+        33
       ],
       "example_paths": [
-        "examples/tutorial/lesson_30_compute_continuum.py",
+        "examples/tutorial/lesson_33_compute_continuum.py",
         "examples/iot/observe_mock.py"
       ],
       "test_targets": [
@@ -898,9 +898,11 @@
         "dagon/adhoc.py"
       ],
       "lessons": [
-        24
+        24,
+        25
       ],
       "example_paths": [
+        "examples/tutorial/lesson_25_adhoc_filesystems.py",
         "examples/adhoc/portable.py",
         "examples/adhoc/custom_adapter.py",
         "examples/adhoc/task_scope_volume.py"
@@ -926,9 +928,12 @@
       ],
       "lessons": [
         24,
-        29
+        25,
+        26,
+        32
       ],
       "example_paths": [
+        "examples/tutorial/lesson_25_adhoc_filesystems.py",
         "examples/adhoc/streaming.py",
         "examples/cwl/export_streaming_workflow.py"
       ],
@@ -937,6 +942,36 @@
       ],
       "evidence_level": "local-executed",
       "limitations": "streaming.py executes the A,B1,B2,C,D stream on a real local-directory adapter and checks that B2 consumed frames while B1 ran; --emulate covers the built-in providers only under portable emulation. Live streams over DAGonFS (fuse3, native, preload), CAPIO, Hercules, and DynoStore were run manually and are recorded in docs/performance/adhoc_streaming_2026-11-18.md, including producer and consumer on different Slurm nodes for DAGonFS peer-to-peer and Hercules; BeeOND streams are unit-tested launcher text plus the stream scenario of tools/ci_beeond_slurm.py on the CI's emulated BeeOND site and, once, on a real two-node BeeOND site (docs/performance/beeond_live_2026-11-19.md). CWL export materializes the stream (no step concurrency)."
+    },
+    {
+      "feature_id": "storage.volume-tasks",
+      "category": "infrastructure",
+      "task_types": [
+        "volume",
+        "batch"
+      ],
+      "source_paths": [
+        "dagon/volume.py",
+        "dagon/__init__.py",
+        "dagon/task.py"
+      ],
+      "lessons": [
+        26,
+        32
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_26_volume_tasks.py",
+        "examples/adhoc/volume_task.py",
+        "examples/cwl/export_volume_workflow.py"
+      ],
+      "test_targets": [
+        "tests.test_volume_task.DiscoveryTests",
+        "tests.test_volume_task.ExecutionTests",
+        "tests.test_volume_task.CheckpointTests",
+        "tests.test_volume_task.CwlTests"
+      ],
+      "evidence_level": "local-executed",
+      "limitations": "workflow:///<task>/<volume>/... references, destroy ordering, reference-counted release, and ?stream=<volume> run locally; CWL v1.2 export materializes the volume as a Directory and does not exchange data written into it by sibling steps."
     },
     {
       "feature_id": "slurm.scheduler-prestaging",
@@ -949,10 +984,10 @@
         "dagon/batch.py"
       ],
       "lessons": [
-        25
+        27
       ],
       "example_paths": [
-        "examples/tutorial/lesson_25_scheduler_prestaging.py",
+        "examples/tutorial/lesson_27_scheduler_prestaging.py",
         "examples/dataflow/slurm/pre_stage_mock.py"
       ],
       "test_targets": [
@@ -971,10 +1006,10 @@
         "dagon/communication/scp.py"
       ],
       "lessons": [
-        26
+        28
       ],
       "example_paths": [
-        "examples/tutorial/lesson_26_data_movers.py"
+        "examples/tutorial/lesson_28_data_movers.py"
       ],
       "test_targets": [
         "tests.test_failure_paths.FailurePathTests.test_remote_target_quotes_connection_values_but_expands_path_variable"
@@ -991,10 +1026,10 @@
         "dagon/communication/data_transfer.py"
       ],
       "lessons": [
-        26
+        28
       ],
       "example_paths": [
-        "examples/tutorial/lesson_26_data_movers.py"
+        "examples/tutorial/lesson_28_data_movers.py"
       ],
       "test_targets": [
         "tests.test_failure_paths.FailurePathTests.test_globus_intermediate_endpoint_accepts_preferred_and_legacy_keys",
@@ -1012,10 +1047,10 @@
         "dagon/communication/data_transfer.py"
       ],
       "lessons": [
-        26
+        28
       ],
       "example_paths": [
-        "examples/tutorial/lesson_26_data_movers.py"
+        "examples/tutorial/lesson_28_data_movers.py"
       ],
       "test_targets": [
         "tests.test_staging"
@@ -1031,10 +1066,10 @@
         "examples/dynostore/dynostore_commands.py"
       ],
       "lessons": [
-        26
+        28
       ],
       "example_paths": [
-        "examples/tutorial/lesson_26_data_movers.py",
+        "examples/tutorial/lesson_28_data_movers.py",
         "examples/dynostore/dynostore_workflow.py"
       ],
       "test_targets": [
@@ -1051,12 +1086,12 @@
         "dagon/stager/base.py"
       ],
       "lessons": [
-        26,
-        25
+        28,
+        27
       ],
       "example_paths": [
-        "examples/tutorial/lesson_26_data_movers.py",
-        "examples/tutorial/lesson_25_scheduler_prestaging.py"
+        "examples/tutorial/lesson_28_data_movers.py",
+        "examples/tutorial/lesson_27_scheduler_prestaging.py"
       ],
       "test_targets": [
         "tests.test_staging.StagingTests.test_generate_command_supports_all_staging_modes"
@@ -1072,10 +1107,10 @@
         "dagon/fair/recorder.py"
       ],
       "lessons": [
-        27
+        29
       ],
       "example_paths": [
-        "examples/tutorial/lesson_27_fair_by_design.py",
+        "examples/tutorial/lesson_29_fair_by_design.py",
         "examples/fair/fair_local.py"
       ],
       "test_targets": [
@@ -1094,12 +1129,12 @@
         "dagon/fair/recorder.py"
       ],
       "lessons": [
-        27,
+        29,
         16
       ],
       "example_paths": [
-        "examples/tutorial/lesson_27_fair_by_design.py",
-        "examples/tutorial/lesson_32_capstone.py"
+        "examples/tutorial/lesson_29_fair_by_design.py",
+        "examples/tutorial/lesson_35_capstone.py"
       ],
       "test_targets": [
         "tests.test_agentic_task"
@@ -1115,10 +1150,10 @@
         "dagon/dag_tps.py"
       ],
       "lessons": [
-        28
+        30
       ],
       "example_paths": [
-        "examples/tutorial/lesson_28_meta_workflows.py"
+        "examples/tutorial/lesson_30_meta_workflows.py"
       ],
       "test_targets": [
         "tests.test_workflow_core.WorkflowCoreTests.test_transversal_references_resolve_across_loaded_workflows"
@@ -1134,12 +1169,12 @@
         "dagon/api/__init__.py"
       ],
       "lessons": [
-        31,
-        28
+        34,
+        30
       ],
       "example_paths": [
-        "examples/tutorial/lesson_31_operations.py",
-        "examples/tutorial/lesson_28_meta_workflows.py"
+        "examples/tutorial/lesson_34_operations.py",
+        "examples/tutorial/lesson_30_meta_workflows.py"
       ],
       "test_targets": [
         "tests.test_workflow_core.WorkflowCoreTests.test_unknown_reference_requires_api_service",
@@ -1156,15 +1191,17 @@
         "dagon/__init__.py"
       ],
       "lessons": [
-        29
+        32
       ],
       "example_paths": [
-        "examples/tutorial/lesson_29_cwl_export.py",
-        "examples/cwl/export_workflow.py"
+        "examples/tutorial/lesson_32_cwl_export.py",
+        "examples/cwl/export_workflow.py",
+        "examples/cwl/export_volume_workflow.py"
       ],
       "test_targets": [
         "tests.test_cwl_example",
-        "tests.test_agentic_cwl"
+        "tests.test_agentic_cwl",
+        "tests.test_volume_task.CwlTests"
       ],
       "evidence_level": "local-executed",
       "limitations": "Backend-specific staging and remote execution remain outside the exported command graph."
@@ -1177,10 +1214,10 @@
         "dagon/runtime_env.py"
       ],
       "lessons": [
-        31
+        34
       ],
       "example_paths": [
-        "examples/tutorial/lesson_31_operations.py"
+        "examples/tutorial/lesson_34_operations.py"
       ],
       "test_targets": [
         "tests.test_runtime_env"
@@ -1197,11 +1234,11 @@
       ],
       "lessons": [
         0,
-        31
+        34
       ],
       "example_paths": [
         "examples/tutorial/lesson_00_environment_check.py",
-        "examples/tutorial/lesson_31_operations.py"
+        "examples/tutorial/lesson_34_operations.py"
       ],
       "test_targets": [
         "tests.test_packaging"
@@ -1218,10 +1255,10 @@
         "tools/run_local_examples.py"
       ],
       "lessons": [
-        31
+        34
       ],
       "example_paths": [
-        "examples/tutorial/lesson_31_operations.py",
+        "examples/tutorial/lesson_34_operations.py",
         "tools/run_local_examples.py"
       ],
       "test_targets": [
@@ -1242,13 +1279,15 @@
         "dagon/meta/adapters/base.py"
       ],
       "lessons": [
-        28,
-        32
+        30,
+        31,
+        35
       ],
       "example_paths": [
-        "examples/tutorial/lesson_28_meta_workflows.py",
+        "examples/tutorial/lesson_30_meta_workflows.py",
+        "examples/tutorial/lesson_31_meta_tasks.py",
         "examples/meta/meta_workflow_local.py",
-        "examples/tutorial/lesson_32_capstone.py"
+        "examples/tutorial/lesson_35_capstone.py"
       ],
       "test_targets": [
         "tests.test_meta_task.MetaExecutionTests",
@@ -1257,6 +1296,32 @@
       ],
       "evidence_level": "local-executed",
       "limitations": "Local executions use the generic command adapter with an engine-free stand-in or the mock engine; the engine runs on the DAGonStar host only."
+    },
+    {
+      "feature_id": "tasktype.volume",
+      "category": "task-type",
+      "task_types": [
+        "volume"
+      ],
+      "source_paths": [
+        "dagon/volume.py",
+        "dagon/adhoc.py"
+      ],
+      "lessons": [
+        26,
+        35
+      ],
+      "example_paths": [
+        "examples/tutorial/lesson_26_volume_tasks.py",
+        "examples/adhoc/volume_task.py",
+        "examples/tutorial/lesson_35_capstone.py"
+      ],
+      "test_targets": [
+        "tests.test_volume_task",
+        "tests.test_tasktype_interoperability"
+      ],
+      "evidence_level": "live-optional",
+      "limitations": "examples/adhoc/volume_task.py executes create, shared use, streaming, destroy with stage-out, and reference-counted release on a real local-directory adapter, and passed live on DAGonFS with the fuse3, native, and preload frontends on macOS (docs/performance/volume_tasks_2026-11-20.md). CAPIO, Hercules, and DynoStore volume tasks are exercised only under portable emulation and with stand-in stores in tests. Command tasks cannot open paths in client or object volumes. BeeOND volumes cannot be created by a volume task."
     },
     {
       "feature_id": "meta.external-engines",
@@ -1273,9 +1338,11 @@
         "dagon/meta/parsl_driver.py"
       ],
       "lessons": [
-        28
+        30,
+        31
       ],
       "example_paths": [
+        "examples/tutorial/lesson_31_meta_tasks.py",
         "examples/meta/meta_engines.py",
         "examples/cwl/export_meta_workflow.py"
       ],
@@ -1315,7 +1382,7 @@
       "source_paths": [
         "dagon/api/server.py"
       ],
-      "reason": "Flask server wrapper; only its missing-extra error is tested. Lesson 31 covers the client API against a mock instead.",
+      "reason": "Flask server wrapper; only its missing-extra error is tested. Lesson 34 covers the client API against a mock instead.",
       "evidence": [
         "tests/test_failure_paths.py"
       ]

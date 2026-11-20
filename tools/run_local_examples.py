@@ -7,7 +7,7 @@ Usage (from the repository root)::
 Every listed example uses only local processes, temporary scratch directories,
 and loopback mock services; none needs ``dagon.ini``, credentials, Docker, SSH,
 Slurm, or network access beyond ``127.0.0.1`` (``pre_stage_mock.py`` and the
-Lesson 23 and 25 scripts replace ``sbatch`` with a local mock scheduler; the
+Lesson 23 and 27 scripts replace ``sbatch`` with a local mock scheduler; the
 infrastructure lessons mock their Docker, Kubernetes, Nomad, SSH, and cloud
 clients, and the agentic examples use the deterministic ``mock`` adapter).
 The script exits non-zero when any example fails and prints the tail of its
@@ -48,14 +48,17 @@ EXAMPLES = [
     "examples/tutorial/lesson_22_cloud_tasks.py",
     "examples/tutorial/lesson_23_slurm_tasks.py",
     "examples/tutorial/lesson_24_beeond_storage.py",
-    "examples/tutorial/lesson_25_scheduler_prestaging.py",
-    "examples/tutorial/lesson_26_data_movers.py",
-    "examples/tutorial/lesson_27_fair_by_design.py",
-    "examples/tutorial/lesson_28_meta_workflows.py",
-    "examples/tutorial/lesson_29_cwl_export.py",
-    "examples/tutorial/lesson_30_compute_continuum.py",
-    "examples/tutorial/lesson_31_operations.py",
-    "examples/tutorial/lesson_32_capstone.py",
+    "examples/tutorial/lesson_25_adhoc_filesystems.py",
+    "examples/tutorial/lesson_26_volume_tasks.py",
+    "examples/tutorial/lesson_27_scheduler_prestaging.py",
+    "examples/tutorial/lesson_28_data_movers.py",
+    "examples/tutorial/lesson_29_fair_by_design.py",
+    "examples/tutorial/lesson_30_meta_workflows.py",
+    "examples/tutorial/lesson_31_meta_tasks.py",
+    "examples/tutorial/lesson_32_cwl_export.py",
+    "examples/tutorial/lesson_33_compute_continuum.py",
+    "examples/tutorial/lesson_34_operations.py",
+    "examples/tutorial/lesson_35_capstone.py",
     "examples/fair/fair_local.py",
     "examples/faas/mock_sync.py",
     "examples/faas/local_http.py",
@@ -66,8 +69,10 @@ EXAMPLES = [
     "examples/adhoc/custom_adapter.py",
     "examples/adhoc/streaming.py",
     "examples/adhoc/task_scope_volume.py",
+    "examples/adhoc/volume_task.py",
     "examples/cwl/export_streaming_workflow.py",
     "examples/cwl/export_meta_workflow.py",
+    "examples/cwl/export_volume_workflow.py",
     "examples/meta/meta_workflow_local.py",
     "examples/dataflow/slurm/pre_stage_mock.py",
     "examples/agentic/tool_free.py",

@@ -129,14 +129,16 @@ The full documentation set is available in `docs/`:
 - [Checkpoints](docs/checkpoints.md)
 - [BeeOND on-demand file systems](docs/beeond.md)
 - [Common ad-hoc file-system interface](docs/adhoc_filesystems.md)
+- [Volume tasks: ad-hoc volumes shared through `workflow://`](docs/volume_tasks.md)
 - [Scheduler-aware pre-staging](docs/scheduler_prestaging.md)
 - [Exporting workflows to CWL](docs/cwl_export.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
 - [Using DAGonStar from Jupyter Notebook](docs/jupyter_notebook.md)
 - [Running DAGonStar demos in Google Colab](docs/colab.md)
 - [Examples Catalog](docs/examples/README.md)
-- [Tutorials: thirty-three incremental lessons (00–32)](docs/tutorial/README.md)
+- [Tutorials: thirty-six incremental lessons (00–35)](docs/tutorial/README.md)
 - [Platform support and CI/CD](docs/platform_support.md)
+- [Changelog](CHANGELOG.md)
 
 ## What DAGonStar supports
 
@@ -156,6 +158,12 @@ The full documentation set is available in `docs/`:
 - Streaming between selected tasks over a streaming-capable ad-hoc resource:
   `workflow:///producer/path?stream` lets the consumer process verified items
   while the producer still runs; other edges keep file staging.
+- Volume tasks (`TaskType.VOLUME`) that create one ad-hoc volume as a graph
+  node: sibling tasks share it as `workflow:///<task>/<volume>/...`, stage data
+  in from other tasks' scratch directories, stream through it with
+  `?stream=<volume>`, and release it with an optional destroy task that stages
+  results out, or automatically by reference counting when no task refers to
+  it any longer.
 - Opt-in scheduler-aware pre-staging (`Workflow(pre_stage=True)` or
   `pre_stage=True` per Slurm task). Slurm and RemoteSlurm tasks stage and verify
   their `workflow://` inputs on the submission host before `sbatch`, so
@@ -258,6 +266,19 @@ producer and consumer on different Slurm nodes over DAGonFS peer-to-peer and
 Hercules; BeeOND streaming is covered by launcher-text tests, the CI's
 emulated BeeOND site, and a live two-node BeeOND run. Interception libraries that cannot share a process
 (CAPIO and Hercules) are refused in one task when the workflow is built.
+Volume tasks (`TaskType.VOLUME`, `dagon/volume.py`) add a third, volume
+scope owned by a task. Reference discovery, binding, destroy ordering and its
+refusals, reference-counted release, staging in and out through a helper that
+receives the preload environment, streams through a volume, POSIX, DAGonFS
+native, and object stores, verified checkpoint reuse, JSON, FAIR edges, and a
+materialized CWL export (`dagon:Volume` hint, run with `cwltool` when
+installed) are unit tested, and `examples/adhoc/volume_task.py` executes them
+on a real local-directory adapter. A live run on DAGonFS (FUSE3, native, and
+preload frontends on macOS, 20 November 2026,
+`docs/performance/volume_tasks_2026-11-20.md`) passed after four fixes. It led
+to command paths into client and object volumes being refused, and to staging
+preload volumes through the DAGonFS socket client. CAPIO, Hercules, and
+DynoStore volume tasks are covered only by stand-in stores and emulation.
 Scheduler-aware pre-staging is opt-in and leaves the default lifecycle
 unchanged: the legacy launcher is guarded by a byte-for-byte fixture. Its
 ordering, `sbatch` gate, typed failure phases (from `sbatch --parsable` job
@@ -318,6 +339,8 @@ The repository has a sound baseline for changes to the core behavior:
   BeeOND command generation, launcher persistence, and holder lifecycle,
   ad-hoc file-system provider contracts, scopes, the adapter registry,
   multi-volume task environments, cleanup, and inter-task streaming,
+  volume tasks (creation, sharing, destroy, reference-counted release,
+  checkpoints, stores, and CWL export),
   scheduler-aware pre-staging (configuration, ordering, failure gating,
   retries, checkpoints, and local and remote Slurm paths),
   command exit-status propagation through the launcher's output capture
@@ -339,8 +362,8 @@ The repository has a sound baseline for changes to the core behavior:
   allowing hosted notebook environments such as Google Colab to retain their
   platform dependencies;
 - documentation covers configuration, architecture, checkpoints, examples,
-  FAIR principles, CWL export semantics, agentic tasks, and a canonical 33-lesson
-  (00–32) academic tutorial whose structure, links, metadata, retired-name drift,
+  FAIR principles, CWL export semantics, agentic tasks, and a canonical 36-lesson
+  (00–35) academic tutorial whose structure, links, metadata, retired-name drift,
   and task-type and feature coverage (`docs/tutorial/coverage.json`) are checked
   automatically; and
 - an all-factory contract test constructs a mixed workflow containing every
@@ -444,7 +467,7 @@ workflow.run()
 
 Outputs are written below `<scratch>/.dagon/fair/<workflow>/<run>/`, including
 `run.json`, `ro-crate-metadata.json`, `prov.json`, `checksums.sha256`, and a
-FAIRness report. See [Lesson 27](docs/tutorial/lesson_27_make_a_workflow_fair_by_design.md).
+FAIRness report. See [Lesson 29](docs/tutorial/lesson_29_make_a_workflow_fair_by_design.md).
 
 `requirements.txt` remains a full development/demo environment that installs
 the optional integration dependencies together.
@@ -526,7 +549,7 @@ Example groups:
 - `examples/hipes-tutorial`: tutorial material for HiPES workflows.
 - `examples/cwl`: portable command-graph export plus a checked-in CWL v1.2
   document; see the [example guide](docs/examples/cwl.md) and
-  [Lesson 29](docs/tutorial/lesson_29_export_and_validate_common_workflow_language.md).
+  [Lesson 32](docs/tutorial/lesson_32_export_and_validate_common_workflow_language.md).
 - `examples/envapp`: environmental application workflows and utilities.
 - `examples/async`: local asynchronous launch and lifecycle-callback example.
 - `examples/native`: importable Python functions with staged `workflow://` inputs.
@@ -538,7 +561,7 @@ Example groups:
 - `examples/meta`: the same word count written for Snakemake, Parsl, Nextflow,
   StreamFlow, and CWL, each run unmodified as a meta-task; `meta_workflow_local.py`
   needs no engine. See the [example guide](docs/examples/meta.md).
-- `examples/tutorial`: one self-checking script for each of the 33 lessons.
+- `examples/tutorial`: one self-checking script for each of the 36 lessons.
 
 Generate and test the portable CWL example without a private configuration:
 
@@ -642,7 +665,7 @@ them. Built-in adapters: `nextflow`, `snakemake`, `parsl`, `streamflow`, `cwl`,
 a `MetaEngineAdapter` subclass registered with `register_adapter` or the
 `dagon.meta_adapters` entry point. See the [meta-task guide](docs/meta_tasks.md)
 (interface and adapter development), [examples](examples/meta/README.md), and
-[Lesson 28](docs/tutorial/lesson_28_compose_meta_workflows.md).
+[Lesson 30](docs/tutorial/lesson_30_compose_meta_workflows.md).
 
 ## Development
 

@@ -27,18 +27,18 @@ const OUT_DIR = __dirname;
 // Observed evidence (re-measure before presenting a new release).
 // ---------------------------------------------------------------------------
 const EVIDENCE = {
-  version: "2.9.4",                       // setup.cfg [metadata] version
+  version: "3.0.0",                       // setup.cfg [metadata] version
   observedOn: "macOS, Python 3.12.10, November 2026",
-  unitTests: 383,            // python -m unittest discover -s tests
-  unitTestSeconds: "328.682",
-  unitTestSkipped: "0",
-  unitTestMinutes: "5.5",    // wall-clock of the full suite
-  localExamples: 46,    // python tools/run_local_examples.py
-  localExamplesMinutes: "4",
-  taskTypes: 14,                          // dagon.task.TaskType
-  lessons: 33,                            // docs/tutorial lessons 00-32
-  testModules: 45,                        // files in tests/ (modules + helpers)
-  firstWorkflowSeconds: "4.9",            // getting-started workflow, two tasks
+  unitTests: 545,            // python -m unittest discover -s tests
+  unitTestSeconds: "550.475",
+  unitTestSkipped: "4",
+  unitTestMinutes: "9",    // wall-clock of the full suite
+  localExamples: 58,    // python tools/run_local_examples.py
+  localExamplesMinutes: "6",
+  taskTypes: 16,                          // dagon.task.TaskType
+  lessons: 36,                            // docs/tutorial lessons 00-35
+  testModules: 48,                        // files in tests/ (modules + helpers)
+  firstWorkflowSeconds: "4.6",            // getting-started workflow, two tasks
 };
 
 // ---------------------------------------------------------------------------
@@ -336,14 +336,14 @@ async function buildScientific() {
 
   // 6 Task types -------------------------------------------------------------
   s = k.slide(CONTENT, "Model and architecture", E.taskTypes + " task types behind one contract",
-    "5:45–6:45. The TaskType enumeration currently registers fourteen types. The point is not the list but the " +
+    "5:45–6:45. The TaskType enumeration currently registers sixteen types. The point is not the list but the " +
     "contract: all of them take part in workflow:// dependencies, checkpoints, JSON serialisation, FAIR declarations " +
     "and CWL export. A single all-factory test builds a mixed workflow containing every type and checks these " +
     "properties without live external services.");
   const groups = [
     ["Execution backends", ["batch", "slurm", "docker", "apptainer", "kubernetes", "nomad", "cloud"], P.teal],
-    ["Structured services", ["native", "web", "llm", "faas", "iot", "agentic"], P.sea],
-    ["Control", ["checkpoint"], P.amber],
+    ["Structured services", ["native", "web", "llm", "faas", "iot", "agentic", "meta"], P.sea],
+    ["Control and storage", ["checkpoint", "volume"], P.amber],
   ];
   groups.forEach(([h, items, color], gi) => {
     const x = 0.5 + gi * 3.07;
@@ -477,7 +477,7 @@ async function buildScientific() {
   // 11 CWL -------------------------------------------------------------------
   s = k.slide(CONTENT, "FAIR and interoperability", "CWL v1.2: an explicit portability boundary",
     "12:15–13:15. Workflow.saveAsCWL(filename) writes a self-contained CWL v1.2 JSON document. The export is " +
-    "deterministic and contains no scratch paths or credentials; Lesson 29 validates it with cwltool --validate, " +
+    "deterministic and contains no scratch paths or credentials; Lesson 32 validates it with cwltool --validate, " +
     "which reported ok in our run. What is portable is the command graph; DAGonStar's staging, schedulers, and " +
     "remote runtimes stay on the DAGonStar side. Structured task types are represented through runner tools such as " +
     "dagon-agent-runner.");
@@ -488,7 +488,7 @@ async function buildScientific() {
   k.card(s, 5.1, 1.3, 4.4, 2.55, "Stays in DAGonStar", "", { fill: P.mist });
   k.text(s, k.bullets(["Stagers and data movers", "Slurm, BeeOND, SSH, and cloud runtime behaviour",
     "Checkpoint and FAIR recording"]), { x: 5.3, y: 2.0, w: 4.0, h: 1.75, fontSize: 14 });
-  k.code(s, 0.5, 4.05, 5.6, 0.9, "wf.saveAsCWL(\"workflow.cwl\")\n$ python examples/tutorial/lesson_29_cwl_export.py\ncwltool --validate: ok", 11);
+  k.code(s, 0.5, 4.05, 5.6, 0.9, "wf.saveAsCWL(\"workflow.cwl\")\n$ python examples/tutorial/lesson_32_cwl_export.py\ncwltool --validate: ok", 11);
   k.text(s, "\"cwlVersion\": \"v1.2\", \"class\": \"Workflow\"", { x: 6.3, y: 4.05, w: 3.2, h: 0.9, fontFace: MONO,
     fontSize: 11, color: P.muted, valign: "middle" });
 
@@ -732,13 +732,13 @@ async function buildTutorial() {
   s = k.slide(CONTENT, "Configure and verify", "Step 5 — Verify the environment (Lesson 00)",
     "9:00–10:00. Lesson 00 imports dagon, finds bash, reads dagon.ini.sample, checks that no API key is " +
     "committed, and lists the registered task types and optional packages. The output on the right is verbatim from " +
-    "our run; your Python version, platform and optional packages may differ, but the fourteen task types must match.");
+    "our run; your Python version, platform and optional packages may differ, but the sixteen task types must match.");
   k.code(s, 0.5, 1.3, 9.0, 0.55, "python examples/tutorial/lesson_00_environment_check.py", 12);
   k.code(s, 0.5, 2.05, 9.0, 1.35,
     "Python 3.12.10 on Darwin | dagonstar " + E.version + "\n" +
     "bash: /bin/bash\n" +
     "registered task types: agentic, apptainer, batch, checkpoint, cloud, docker, faas,\n" +
-    "  iot, kubernetes, llm, native, nomad, slurm, web\n" +
+    "  iot, kubernetes, llm, meta, native, nomad, slurm, volume, web\n" +
     "optional packages present: cwltool, docker, globus_sdk, kubernetes, libcloud", 11);
   k.expect(s, 0.5, 3.6, 9.0, 1.35, "Exit status 0 and all " + E.taskTypes + " task types listed. \"optional packages present\" " +
     "depends on the extras you installed (\"none\" after a base install is correct).", 13);
@@ -803,7 +803,7 @@ async function buildTutorial() {
   // 11 Evaluate: checkpoints and CWL ------------------------------------------
   s = k.slide(CONTENT, "Test and evaluate", "Evaluate: checkpoint reuse and CWL export",
     "14:30–16:00. Two behaviours to evaluate yourself. Lesson 07 runs a workflow, then resumes it from the " +
-    "checkpoint file and confirms the scratch directory was reused rather than recomputed. Lesson 29 exports a " +
+    "checkpoint file and confirms the scratch directory was reused rather than recomputed. Lesson 32 exports a " +
     "workflow to CWL v1.2 and, when cwltool is installed, validates it. The export is deterministic: re-running it " +
     "yields the same document with no scratch paths.");
   k.card(s, 0.5, 1.3, 4.4, 3.65, "Checkpoint and resume", "", { num: 1 });
@@ -838,7 +838,7 @@ async function buildTutorial() {
     ["Unit tests", "unittest discover -s tests", "Ran " + E.unitTests + " tests … OK"],
     ["Examples", "tools/run_local_examples.py", E.localExamples + " examples pass"],
     ["Checkpoint", "lesson_07_checkpoint_and_resume.py", "scratch reused: True"],
-    ["CWL", "lesson_29_cwl_export.py", "cwltool --validate: ok"],
+    ["CWL", "lesson_32_cwl_export.py", "cwltool --validate: ok"],
     ["FAIR / pre-stage", "fair_local.py; pre_stage_mock.py", "metadata verified; Verification: ok"],
   ];
   s.addTable(rows.map((r, i) => r.map((c, j) => ({ text: c, options: { bold: i === 0 || j === 0,
@@ -864,9 +864,9 @@ async function buildTutorial() {
     "19:15–20:00. Point to the 33-lesson tutorial and its six modules, the examples catalog and the platform " +
     "support page. Infrastructure lessons (Docker to data movers) run against mocks locally and need a real site " +
     "only for live runs.");
-  [["Tutorial", E.lessons + " lessons, 00–32, each with a self-checking script in examples/tutorial/"],
+  [["Tutorial", E.lessons + " lessons, 00–35, each with a self-checking script in examples/tutorial/"],
     ["Documentation", "docs/getting_started.md, configuration.md, user_guide.md, architecture.md"],
-    ["Real infrastructure", "Lessons 17–26: Docker, Apptainer, Kubernetes, Nomad, SSH, cloud, Slurm, BeeOND"]]
+    ["Real infrastructure", "Lessons 17–28: Docker, Apptainer, Kubernetes, Nomad, SSH, cloud, Slurm, BeeOND"]]
     .forEach(([h, b], i) => {
       const y = 1.45 + i * 0.95;
       k.node(s, 0.6, y, 0.6, String(i + 1), i === 0 ? P.amber : P.teal, i === 0 ? P.deep : P.white, 16);

@@ -62,6 +62,33 @@ python examples/adhoc/streaming.py --scratch "$HOME/scratch" \
 The rank directories (`/tmp/dfs/0`, `/tmp/dfs/1`) must exist on each node
 first. The first-arrival check compares clocks of two nodes.
 
+## Volume tasks
+
+`volume_task.py` uses `TaskType.VOLUME`. In the `shared-volume` workflow the
+volume task `Abc` creates volume `xyz` and stages `workflow:///Prep/data` into
+it; `Square` and `Cube` write into `workflow:///Abc/xyz/results/`, `Emit`
+streams to `Sum` through the volume (`workflow:///Emit/numbers?stream=xyz`),
+the destroy task `Del` waits for all of them and stages `results/` out, and
+`Report` reads `workflow:///Del/results/...`. In the `collected-volume`
+workflow no task destroys the volume: it is released by reference counting as
+soon as its last user finishes. The modes are those of `streaming.py`:
+
+```bash
+python examples/adhoc/volume_task.py
+python examples/adhoc/volume_task.py --emulate dagonfs
+python examples/adhoc/volume_task.py --live dagonfs --option executable=/path/to/dagonfs
+```
+
+Commands read and write the volume through a program (the running Python
+interpreter), so preload providers intercept them. With a client or object
+provider (DAGonFS `frontend=native`, DynoStore), which has no path a command
+can open, the example uses only stage-in, the stream, stage-out, and attached
+tasks. It prints `Verification: ok`; live DAGonFS runs are recorded in
+[`docs/performance/volume_tasks_2026-11-20.md`](../../docs/performance/volume_tasks_2026-11-20.md).
+See [volume tasks](../../docs/volume_tasks.md);
+the CWL form is shown by
+[`../cwl/export_volume_workflow.py`](../cwl/export_volume_workflow.py).
+
 For live deployments, follow
 [`docs/adhoc_filesystems.md`](../../docs/adhoc_filesystems.md) and provide the
 site-specific executables, configuration files, host files, launcher arguments,

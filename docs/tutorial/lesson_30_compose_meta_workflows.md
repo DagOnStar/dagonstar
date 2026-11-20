@@ -1,4 +1,4 @@
-# Lesson 28: Compose Meta-Workflows
+# Lesson 30: Compose Meta-Workflows
 
 > **Track:** Advanced
 > **Runtime:** Local
@@ -17,7 +17,7 @@ After completing this lesson, you will be able to:
 
 ## Prerequisites
 
-- [Lesson 27](lesson_27_make_a_workflow_fair_by_design.md), or equivalent concepts.
+- [Lesson 29](lesson_29_make_a_workflow_fair_by_design.md), or equivalent concepts.
 - No external service unless stated below.
 
 ## Scientific scenario
@@ -52,7 +52,7 @@ DagonTask(TaskType.META, "external", engine="command", workflow=str(ENGINE),
 From the repository root:
 
 ~~~bash
-python examples/tutorial/lesson_28_meta_workflows.py
+python examples/tutorial/lesson_30_meta_workflows.py
 python -m unittest tests.test_workflow_core.WorkflowCoreTests.test_transversal_references_resolve_across_loaded_workflows -v
 ~~~
 
@@ -71,7 +71,7 @@ The test proves local cross-workflow dependency discovery. The script prints tha
 ## Verify
 
 ~~~bash
-python examples/tutorial/lesson_28_meta_workflows.py
+python examples/tutorial/lesson_30_meta_workflows.py
 python -m unittest tests.test_workflow_core.WorkflowCoreTests.test_transversal_references_resolve_across_loaded_workflows -v
 python -m unittest tests.test_meta_task -v
 ~~~
@@ -100,4 +100,4 @@ Meta-workflows connect workflow units while preserving task causality; maturity 
 
 ## Next lesson
 
-Next, export the portable command graph to CWL. Return to the [syllabus](README.md) at any time.
+Next, examine meta-tasks in depth: adapters for new engines, checkpoint identity, and failure phases. Return to the [syllabus](README.md) at any time.
