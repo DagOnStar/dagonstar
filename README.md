@@ -286,6 +286,11 @@ change, the context-discovery script (`context.sh`, used in every lifecycle)
 quotes its scratch path, so shell syntax in that path is no longer executed. The
 pre-staging transfer loop is injection-safe, while the legacy launcher text
 is unchanged.
+Portable emulation ends a `workflow://` reference where real runs do (at the
+next space) and fails a task whose reference names no producer artifact, so a
+reference closed by a shell character, such as `$(cat workflow:///A/ids.txt)`,
+no longer passes emulation and then reads nothing in a real run; this is unit
+tested for the parser and for an emulated workflow.
 
 Meta-tasks (`TaskType.META`) run workflows written for other engines through
 an adapter registry (entry-point group `dagon.meta_adapters`); the engines are

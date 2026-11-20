@@ -923,7 +923,20 @@ class Task(Thread):
 
     def portable_command(self) -> str:
         """Resolve workflow references to local producer artifacts."""
+        return self.resolve_portable_references()[0]
+
+    def resolve_portable_references(self) -> Tuple[str, List[str]]:
+        """Return the emulated command and the references that name no producer artifact.
+
+        A reference ends where the live parsers (:meth:`build_stage_plan`,
+        :meth:`pre_run`) end it: at the next space or at the end of the
+        command, never at a shell character.  In ``$(cat workflow:///A/ids.txt)``
+        the reference is therefore ``workflow:///A/ids.txt)``, which a real run
+        stages as the missing file ``ids.txt)``; it is reported here so that
+        emulation fails where the real run would read nothing.
+        """
         command = self.resolve_stream_references(self.command)
+        missing: List[str] = []
         checkpoint_task = type(self).__name__ in {"Checkpoint", "RemoteCheckpoint"}
         if checkpoint_task:
             command = command.split("checkpoint.sh ", 1)[-1]
@@ -932,12 +945,16 @@ class Task(Thread):
                            "workflow://%s/%s/" % (self.workflow.name, previous.name)):
                 while prefix in command:
                     start = command.index(prefix)
-                    end = start + len(prefix)
-                    while end < len(command) and not command[end].isspace() and command[end] not in "'\";|)&":
-                        end += 1
+                    space = command.find(" ", start + len(prefix))
+                    end = len(command) if space == -1 else space
                     relative = command[start + len(prefix):end]
-                    command = command[:start] + shell_path(os.path.join(previous.working_dir, relative)) + command[end:]
-        return "test -f " + " ".join(shlex.quote(item) for item in command.split()) if checkpoint_task else command
+                    resolved = os.path.join(previous.working_dir, relative)
+                    if not glob.glob(glob.escape(previous.working_dir) + "/" + relative):
+                        missing.append(command[start:end])
+                    command = command[:start] + shell_path(resolved) + command[end:]
+        if checkpoint_task:
+            command = "test -f " + " ".join(shlex.quote(item) for item in command.split())
+        return command, missing
 
     def execute_portable(self) -> None:
         """Execute a command task locally without contacting its configured backend."""
@@ -963,6 +980,13 @@ class Task(Thread):
             package_root = os.path.dirname(os.path.dirname(os.path.abspath(dagon.__file__)))
             environment["PYTHONPATH"] = os.pathsep.join(
                 item for item in (package_root, environment.get("PYTHONPATH")) if item)
+        missing = self.resolve_portable_references()[1]
+        if missing:
+            self.workflow.checkpoints[key]["code"] = 1
+            self.close_streams_from_host(1)
+            raise RuntimeError("Portable task failed: %s: no producer artifact matches %s; a workflow:// "
+                               "reference ends at the next space, so write a space before shell "
+                               "characters such as ')' or ';'" % (self.name, ", ".join(missing)))
         self._mark_stream_launch()
         completed = subprocess.run([bash_executable(), "-c", self.portable_command()],
                                    cwd=self.working_dir, text=True, capture_output=True,

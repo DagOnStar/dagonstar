@@ -186,6 +186,17 @@ Avoid:
 workflow:///A/output/result with spaces.nc
 ```
 
+Shell characters do not end a reference either: in `$(cat workflow:///A/ids.txt)`
+the reference is `workflow:///A/ids.txt)`, which names a file that does not
+exist. Write a space before them, as in `$(cat workflow:///A/ids.txt )`.
+Portable emulation (`Workflow(..., portable_emulation=True)`) ends a reference
+at the same place and fails the task, before its command runs, when a
+reference names no file or directory in the producer's working directory, so a
+command such as `$(cat workflow:///A/ids.txt)` fails under emulation instead of
+passing there and reading nothing in a real run. The live stage-in text is
+unchanged: the legacy launcher still copies the reference as written, and only
+strict pre-staging fails on the missing input.
+
 ## Same-workflow examples
 
 Producer:
