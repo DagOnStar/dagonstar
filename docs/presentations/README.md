@@ -6,24 +6,20 @@ speaker notes with a timing cue, so a presenter can keep each deck within
 
 | Deck | Audience and length | Contents |
 |---|---|---|
-| [`dagonstar_scientific_talk.pptx`](dagonstar_scientific_talk.pptx) | Workshop or conference, 20 minutes, 17 slides (the last one is a backup reference slide) | Motivation, contributions, programming model, architecture, the 14 task types, data movers, scheduler-aware pre-staging, bounded agentic tasks, FAIR recording, CWL v1.2 export, evaluation by evidence level, the production pre-staging run, applications, limitations, conclusions |
+| [`dagonstar_scientific_talk.pptx`](dagonstar_scientific_talk.pptx) | Workshop or conference, 20 minutes, 17 slides (the last one is a backup reference slide) | Motivation, contributions, programming model, architecture, the 16 task types, data movers, scheduler-aware pre-staging, bounded agentic tasks, FAIR recording, CWL v1.2 export, evaluation by evidence level, the production pre-staging run, applications, limitations, conclusions |
 | [`dagonstar_tutorial.pptx`](dagonstar_tutorial.pptx) | Hands-on tutorial, 20 minutes, 15 slides | Prerequisites, getting the source and compiling (byte-compilation and the sdist/wheel build), installation and extras, `dagon.ini` configuration, environment check (Lesson 00), a first workflow, the unit tests, local examples and tutorial validators, evaluating checkpoint reuse, CWL, FAIR, and mock pre-staging, a table of expected results, troubleshooting |
 
 ## Evidence behind the slides
 
-> The decks and the figures below are a snapshot of DAGonStar 2.9.4, before volume tasks and the
-> renumbering of the tutorial to 36 lessons; command paths are updated to current lesson numbers.
-> Regenerate the decks as described below after re-observing the figures.
-
 The figures on the slides come from commands run on a checkout of
-DAGonStar 2.9.4 (macOS, Python 3.12.10, November 2026):
+DAGonStar 3.0.0 (macOS 26.6.2 arm64, Python 3.12.10, 20 November 2026):
 
 | Figure | Command | Observed |
 |---|---|---|
-| Unit tests | `python -m unittest discover -s tests` | `Ran 383 tests in 328.682s`, `OK` |
-| Local examples | `python tools/run_local_examples.py` | `46/46 examples passed`, about 4 minutes |
-| Tutorial checks | `python tools/validate_tutorial.py`, `python tools/validate_tutorial_coverage.py` | 33 lessons; 14 task types, 0 unmatched features |
-| Environment | `python examples/tutorial/lesson_00_environment_check.py` | 14 registered task types |
+| Unit tests | `python -m unittest discover -s tests` | `Ran 545 tests in 550.475s`, `OK (skipped=4)` |
+| Local examples | `python tools/run_local_examples.py` | `58/58 examples passed`, about 6 minutes |
+| Tutorial checks | `python tools/validate_tutorial.py`, `python tools/validate_tutorial_coverage.py` | 36 lessons; 16 task types, 0 unmatched features |
+| Environment | `python examples/tutorial/lesson_00_environment_check.py` | 16 registered task types |
 | First workflow | the getting-started workflow, with `dagon.ini` copied from the sample | completed in about 5 s; `summary.txt` reports 2 lines |
 | Checkpoint | `python examples/tutorial/lesson_07_checkpoint_and_resume.py` | `scratch reused: True` |
 | CWL | `python examples/tutorial/lesson_32_cwl_export.py` | `cwltool --validate: ok` |

@@ -198,8 +198,8 @@ requests, on `v*` tags, and on manual dispatch.
 
 ### Publishing a release
 
-1. Set `version` in `setup.cfg`, for example `2.9.5`, and merge to `main`.
-2. Tag and push: `git tag v2.9.5 && git push origin v2.9.5`.
+1. Set `version` in `setup.cfg`, for example `3.0.1`, add its entry to `CHANGELOG.md`, and merge to `main`.
+2. Tag and push: `git tag v3.0.1 && git push origin v3.0.1`.
 3. The workflow tests every platform, builds, and creates the GitHub release.
 
 PyPI publishing is off until a maintainer sets it up once: add a trusted

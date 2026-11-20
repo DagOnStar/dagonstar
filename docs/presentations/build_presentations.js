@@ -27,18 +27,18 @@ const OUT_DIR = __dirname;
 // Observed evidence (re-measure before presenting a new release).
 // ---------------------------------------------------------------------------
 const EVIDENCE = {
-  version: "2.9.4",                       // setup.cfg [metadata] version
+  version: "3.0.0",                       // setup.cfg [metadata] version
   observedOn: "macOS, Python 3.12.10, November 2026",
-  unitTests: 383,            // python -m unittest discover -s tests
-  unitTestSeconds: "328.682",
-  unitTestSkipped: "0",
-  unitTestMinutes: "5.5",    // wall-clock of the full suite
-  localExamples: 46,    // python tools/run_local_examples.py
-  localExamplesMinutes: "4",
-  taskTypes: 14,                          // dagon.task.TaskType
+  unitTests: 545,            // python -m unittest discover -s tests
+  unitTestSeconds: "550.475",
+  unitTestSkipped: "4",
+  unitTestMinutes: "9",    // wall-clock of the full suite
+  localExamples: 58,    // python tools/run_local_examples.py
+  localExamplesMinutes: "6",
+  taskTypes: 16,                          // dagon.task.TaskType
   lessons: 36,                            // docs/tutorial lessons 00-35
-  testModules: 45,                        // files in tests/ (modules + helpers)
-  firstWorkflowSeconds: "4.9",            // getting-started workflow, two tasks
+  testModules: 48,                        // files in tests/ (modules + helpers)
+  firstWorkflowSeconds: "4.6",            // getting-started workflow, two tasks
 };
 
 // ---------------------------------------------------------------------------
@@ -336,14 +336,14 @@ async function buildScientific() {
 
   // 6 Task types -------------------------------------------------------------
   s = k.slide(CONTENT, "Model and architecture", E.taskTypes + " task types behind one contract",
-    "5:45–6:45. The TaskType enumeration currently registers fourteen types. The point is not the list but the " +
+    "5:45–6:45. The TaskType enumeration currently registers sixteen types. The point is not the list but the " +
     "contract: all of them take part in workflow:// dependencies, checkpoints, JSON serialisation, FAIR declarations " +
     "and CWL export. A single all-factory test builds a mixed workflow containing every type and checks these " +
     "properties without live external services.");
   const groups = [
     ["Execution backends", ["batch", "slurm", "docker", "apptainer", "kubernetes", "nomad", "cloud"], P.teal],
-    ["Structured services", ["native", "web", "llm", "faas", "iot", "agentic"], P.sea],
-    ["Control", ["checkpoint"], P.amber],
+    ["Structured services", ["native", "web", "llm", "faas", "iot", "agentic", "meta"], P.sea],
+    ["Control and storage", ["checkpoint", "volume"], P.amber],
   ];
   groups.forEach(([h, items, color], gi) => {
     const x = 0.5 + gi * 3.07;
@@ -732,13 +732,13 @@ async function buildTutorial() {
   s = k.slide(CONTENT, "Configure and verify", "Step 5 — Verify the environment (Lesson 00)",
     "9:00–10:00. Lesson 00 imports dagon, finds bash, reads dagon.ini.sample, checks that no API key is " +
     "committed, and lists the registered task types and optional packages. The output on the right is verbatim from " +
-    "our run; your Python version, platform and optional packages may differ, but the fourteen task types must match.");
+    "our run; your Python version, platform and optional packages may differ, but the sixteen task types must match.");
   k.code(s, 0.5, 1.3, 9.0, 0.55, "python examples/tutorial/lesson_00_environment_check.py", 12);
   k.code(s, 0.5, 2.05, 9.0, 1.35,
     "Python 3.12.10 on Darwin | dagonstar " + E.version + "\n" +
     "bash: /bin/bash\n" +
     "registered task types: agentic, apptainer, batch, checkpoint, cloud, docker, faas,\n" +
-    "  iot, kubernetes, llm, native, nomad, slurm, web\n" +
+    "  iot, kubernetes, llm, meta, native, nomad, slurm, volume, web\n" +
     "optional packages present: cwltool, docker, globus_sdk, kubernetes, libcloud", 11);
   k.expect(s, 0.5, 3.6, 9.0, 1.35, "Exit status 0 and all " + E.taskTypes + " task types listed. \"optional packages present\" " +
     "depends on the extras you installed (\"none\" after a base install is correct).", 13);
