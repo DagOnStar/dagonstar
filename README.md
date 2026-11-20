@@ -233,7 +233,11 @@ were stopped by the adapter's readiness check. DynoStore deploys from its
 README steps, and keeps object overwrites consistent, only with
 `tools/adhoc/dynostore-b9dedd7-fixes.patch`; with it, the managed Docker
 Compose lifecycle was also verified live.
-BeeOND, also as an ad-hoc resource with streaming and `export=` names, passed
+CAPIO and Hercules were rerun on a second Slurm site (one node, including
+`export=` names), which also showed that preloaded volumes must be written by
+programs rather than shell redirections and recorded a CAPIO `cp` hang and a
+Hercules `tee` data loss. BeeOND, also as an ad-hoc resource with streaming
+and `export=` names, passed
 `tools/ci_beeond_slurm.py` on a real two-node BeeOND site (30 checks,
 19 November 2026) besides CI emulation. These live runs are manual and are not
 part of CI.

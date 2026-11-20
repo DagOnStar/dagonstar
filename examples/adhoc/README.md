@@ -90,5 +90,6 @@ workflow at the same time; both take the backend options above.
 Measured results, with hosts, dates, and limitations, are recorded in
 [`docs/performance/adhoc_filesystems_2026-11-18.md`](../../docs/performance/adhoc_filesystems_2026-11-18.md)
 [`docs/performance/adhoc_streaming_2026-11-18.md`](../../docs/performance/adhoc_streaming_2026-11-18.md),
-and, for BeeOND on a real site (including `export=`),
+[`docs/performance/capio_hercules_e4_2026-11-19.md`](../../docs/performance/capio_hercules_e4_2026-11-19.md)
+(CAPIO and Hercules on a second site), and, for BeeOND on a real site (including `export=`),
 [`docs/performance/beeond_live_2026-11-19.md`](../../docs/performance/beeond_live_2026-11-19.md).

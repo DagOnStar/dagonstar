@@ -93,7 +93,11 @@ The access mode tells a task how to use `DAGON_ADHOC_PATH`:
 - `posix`: an ordinary mounted directory (DAGonFS FUSE3, BeeOND).
 - `preload`: paths below `DAGON_ADHOC_PATH` are intercepted by a library in
   `LD_PRELOAD` (Hercules, CAPIO, DAGonFS preload); other paths are unaffected,
-  and the interception applies only to dynamically linked programs.
+  and the interception applies only to dynamically linked programs started by
+  the command. The command's own shell redirections (`> "$DAGON_ADHOC_PATH/f"`)
+  are made by the launcher shell, which is not preloaded: write and read
+  through a program instead (`cp`, `tee`, `cat`, `dd`), as the stream helper
+  does ([record](performance/capio_hercules_e4_2026-11-19.md#findings)).
 - `client`: a client protocol is required (the DAGonFS native socket, used with
   `python -m dagonfs`).
 - `object`: an object store addressed by keys in a catalog (DynoStore);
@@ -259,6 +263,12 @@ an allocation, `server_launcher=["srun", "--ntasks-per-node=1"]` starts them
 with the same lifecycle (stopping the workflow resource signals `srun`, which
 forwards the signal to the servers).
 
+With CAPIO `91cd54d` preloaded, `cp` into `CAPIO_DIR` blocked until it was
+killed on the E4 cluster, while `tee` and `dd` of the same file worked; the
+killed servers left their shared-memory files in `/dev/shm`
+([record](performance/capio_hercules_e4_2026-11-19.md#findings)). The stream
+helper and the examples do not use `cp` into the volume.
+
 ### Hercules
 
 ```python
@@ -331,6 +341,12 @@ node of a data server, that server aborted on a UCX assertion after the
 client finished on PurpleJeans (InfiniBand, UCX 1.15), so `hercules stop`
 failed; `UCX_TLS=tcp,self,sm` in the workflow's environment avoided it
 ([record](performance/adhoc_streaming_2026-11-18.md#producer-and-consumer-on-different-nodes)).
+
+Data written into Hercules by GNU `tee` was lost on the E4 cluster (the file
+existed but read back empty) while `cp` and `dd` were read back correctly
+([record](performance/capio_hercules_e4_2026-11-19.md#findings)); check new
+writers before relying on them. The Hercules UCX abort above did not occur
+there with the default transports.
 
 Hercules keeps its server status files in the shared `HERCULES_PATH/tmp`
 without a job identifier, so run one Hercules deployment per Hercules tree at a
@@ -617,7 +633,9 @@ DynoStore gateway. Live results are recorded in
 [`docs/performance/adhoc_filesystems_2026-11-18.md`](performance/adhoc_filesystems_2026-11-18.md),
 which states for every provider whether it was exercised live and where;
 BeeOND through this interface is recorded in
-[`docs/performance/beeond_live_2026-11-19.md`](performance/beeond_live_2026-11-19.md).
+[`docs/performance/beeond_live_2026-11-19.md`](performance/beeond_live_2026-11-19.md),
+and CAPIO and Hercules on a second Slurm site (including `export=`) in
+[`docs/performance/capio_hercules_e4_2026-11-19.md`](performance/capio_hercules_e4_2026-11-19.md).
 
 For reproducible measurements, run
 
