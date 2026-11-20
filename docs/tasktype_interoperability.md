@@ -31,7 +31,8 @@ workflow = Workflow("portable-demo", config=config, portable_emulation=True)
 ```
 
 Command tasks run in isolated local scratch directories. LLM, Web, and FaaS use
-credential-free deterministic emulators; Native runs locally. Original task
+credential-free deterministic emulators; Native runs locally; Meta-tasks use the
+`mock` engine, which writes placeholder outputs without starting the external engine. Original task
 types remain visible in FAIR metadata, JSON, checkpoints, and the DAG. This
 profile supports CI, teaching, Colab, Jupyter, and portable validation.
 
@@ -53,6 +54,7 @@ profile supports CI, teaching, Colab, Jupyter, and portable validation.
 | `FAAS` | Mock, HTTP, or configured provider adapter | Mock provider runs locally. |
 | `IOT` | Mock or configured provider adapter | Deterministic mock runs locally. |
 | `AGENTIC` | `dagon.ini` agent profile (mock or OpenAI-compatible adapter) | Mock adapter runs locally; portable emulation forces it. |
+| `META` | The external engine (Nextflow, Snakemake, Parsl, StreamFlow, a CWL runner, or any CLI) installed on the DAGonStar host | `command` adapter runs locally; portable emulation forces the `mock` engine. |
 
 “Notebook supported” means workflow creation, validation, FAIR recording,
 checkpoint loading, and CWL export work in the Python kernel. A notebook does
@@ -104,3 +106,7 @@ Agentic tasks are reused only after re-verifying contract, profile, registered
 versions, input content hashes, and published output hashes; agentic inputs
 must come from producers with a local working directory. See
 [Agentic tasks](agentic_tasks.md).
+Meta-tasks are reused only after re-verifying the specification digest, the
+workflow-definition digest, the content digests of their inputs (re-read from
+the producers' current outputs), and the digests of the collected outputs; a
+remote workflow definition always runs again. See [Meta-tasks](meta_tasks.md).

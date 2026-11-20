@@ -125,8 +125,10 @@ The full documentation set is available in `docs/`:
 - [Running External Scientific Software](docs/running_external_software.md)
 - [The `workflow://` Schema](docs/the_workflow_schema.md)
 - [Task-type interoperability](docs/tasktype_interoperability.md)
+- [Meta-tasks: workflows from other engines, and writing adapters](docs/meta_tasks.md)
 - [Checkpoints](docs/checkpoints.md)
 - [BeeOND on-demand file systems](docs/beeond.md)
+- [Common ad-hoc file-system interface](docs/adhoc_filesystems.md)
 - [Scheduler-aware pre-staging](docs/scheduler_prestaging.md)
 - [Exporting workflows to CWL](docs/cwl_export.md)
 - [Asynchronous workflow launch](docs/asynch_launch.md)
@@ -144,6 +146,16 @@ The full documentation set is available in `docs/`:
 - Remote SSH tasks.
 - Slurm tasks, optionally on BeeOND (BeeGFS On Demand) volumes created per task
   or per workflow, with verified copies to persistent storage.
+- Opt-in ad-hoc storage resources for DAGonFS (FUSE3, native-socket, or
+  preload frontends), BeeOND, Hercules, CAPIO, and DynoStore through a common
+  lifecycle, readiness, and task-environment interface
+  (`Workflow.create_adhoc_filesystem`), at workflow or task scope, any number
+  per task, each optionally exported under a developer-chosen variable
+  (`export="MYVOLUME"`), and extensible with adapter classes registered without changing
+  DAGonStar or the storage software.
+- Streaming between selected tasks over a streaming-capable ad-hoc resource:
+  `workflow:///producer/path?stream` lets the consumer process verified items
+  while the producer still runs; other edges keep file staging.
 - Opt-in scheduler-aware pre-staging (`Workflow(pre_stage=True)` or
   `pre_stage=True` per Slurm task). Slurm and RemoteSlurm tasks stage and verify
   their `workflow://` inputs on the submission host before `sbatch`, so
@@ -172,6 +184,10 @@ The full documentation set is available in `docs/`:
 - Native, opt-in FAIR metadata and provenance recording with RO-Crate, PROV,
   DataCite, CodeMeta, local output fixity, validation, and reports.
 - Meta-workflows that coordinate multiple workflows.
+- Meta-tasks (`TaskType.META`) that run a workflow written for another engine
+  - Nextflow, Snakemake, Parsl, StreamFlow, a CWL runner, or any CLI - as one
+  task, unmodified, through adapters, with data passed in and out by
+  `workflow://` references; new engines need only an adapter class.
 
 ## Project status and quality assessment
 
@@ -202,6 +218,46 @@ cluster whose Prolog and Epilog emulate a BeeOND site; real BeeGFS and
 multi-node sites are not exercised by CI. A manual run on a four-node production
 BeeOND site (Slurm 23.11.3) passed the same checks and the live example in both
 scopes.
+The common ad-hoc file-system interface gives DAGonFS, BeeOND, Hercules,
+CAPIO, and DynoStore one opt-in workflow lifecycle and task-binding API.
+Provider command generation, readiness, environment injection, failure
+cleanup, the DynoStore client and its non-unpickling object decoder, and
+credential-free metadata are unit tested against local stand-ins on every CI
+platform, without the optional runtimes. Live runs through DAGonStar workflows
+(November 2026, recorded in `docs/performance/`) exercised DAGonFS (three
+frontends; macOS and one- and two-node Slurm), CAPIO (one Slurm node), and
+DynoStore (Docker Compose on macOS) and Hercules (one and two Slurm nodes)
+with byte-verified data. Hercules works only with the fixes recorded in
+`tools/adhoc/hercules-a13da96-fixes.patch`; unpatched deployments failed and
+were stopped by the adapter's readiness check. DynoStore deploys from its
+README steps, and keeps object overwrites consistent, only with
+`tools/adhoc/dynostore-b9dedd7-fixes.patch`; with it, the managed Docker
+Compose lifecycle was also verified live.
+CAPIO and Hercules were rerun on a second Slurm site (one node, including
+`export=` names), which also showed that preloaded volumes must be written by
+programs rather than shell redirections and recorded a CAPIO `cp` hang and a
+Hercules `tee` data loss. BeeOND, also as an ad-hoc resource with streaming
+and `export=` names, passed
+`tools/ci_beeond_slurm.py` on a real two-node BeeOND site (30 checks,
+19 November 2026) besides CI emulation. These live runs are manual and are not
+part of CI.
+Ad-hoc resources have workflow and task scopes and a provider registry
+(entry-point group `dagon.adhoc_providers`); several resources, also of
+different providers, can be bound to one task, and `export=` names the
+variable that carries a resource's path (validated against credential-like,
+`DAGON*`, shell, and loader names). Streams between tasks
+(`workflow://…?stream`, an RFC 3986 query that leaves non-stream references
+unchanged) use a rename-free marker protocol with per-item SHA-256
+verification, end-of-stream status, a producer-ended signal with a grace
+period, CAPIO-CL rules generated for CAPIO, and a materialized CWL export with
+a `dagon:Stream` hint. They are unit tested (planning errors, failures,
+concurrency, object and DAGonFS-native stores, CWL with `cwltool` when
+installed, FAIR, JSON, checkpoints, pre-staging) and were run live over
+DAGonFS, CAPIO, Hercules, and DynoStore (`docs/performance/`), including
+producer and consumer on different Slurm nodes over DAGonFS peer-to-peer and
+Hercules; BeeOND streaming is covered by launcher-text tests, the CI's
+emulated BeeOND site, and a live two-node BeeOND run. Interception libraries that cannot share a process
+(CAPIO and Hercules) are refused in one task when the workflow is built.
 Scheduler-aware pre-staging is opt-in and leaves the default lifecycle
 unchanged: the legacy launcher is guarded by a byte-for-byte fixture. Its
 ordering, `sbatch` gate, typed failure phases (from `sbatch --parsable` job
@@ -234,6 +290,23 @@ change, the context-discovery script (`context.sh`, used in every lifecycle)
 quotes its scratch path, so shell syntax in that path is no longer executed. The
 pre-staging transfer loop is injection-safe, while the legacy launcher text
 is unchanged.
+Portable emulation ends a `workflow://` reference where real runs do (at the
+next space) and fails a task whose reference names no producer artifact, so a
+reference closed by a shell character, such as `$(cat workflow:///A/ids.txt)`,
+no longer passes emulation and then reads nothing in a real run; this is unit
+tested for the parser and for an emulated workflow.
+
+Meta-tasks (`TaskType.META`) run workflows written for other engines through
+an adapter registry (entry-point group `dagon.meta_adapters`); the engines are
+never modified. The generated engine commands and parameter files for
+Nextflow, Snakemake, Parsl, StreamFlow, and CWL runners, staging, output
+containment, failure phases, timeouts, verified checkpoint reuse, portable
+emulation, FAIR records, JSON, and the `dagon-meta-runner` CWL step are unit
+tested without any engine. Live runs on macOS (19 November 2026,
+`docs/performance/meta_engines_2026-11-19.md`) passed with Snakemake 9.27.2,
+Parsl 2026.11.16, StreamFlow 0.2.0rc3, and cwltool; Nextflow has not been run
+live yet. The engine runs on the DAGonStar host; remote execution is delegated
+to each engine's own executors and has not been exercised.
 
 The repository has a sound baseline for changes to the core behavior:
 
@@ -243,6 +316,8 @@ The repository has a sound baseline for changes to the core behavior:
   command generation, Docker and remote-container construction, SSH-port
   forwarding, packaging extras, optional integration boundaries,
   BeeOND command generation, launcher persistence, and holder lifecycle,
+  ad-hoc file-system provider contracts, scopes, the adapter registry,
+  multi-volume task environments, cleanup, and inter-task streaming,
   scheduler-aware pre-staging (configuration, ordering, failure gating,
   retries, checkpoints, and local and remote Slurm paths),
   command exit-status propagation through the launcher's output capture
@@ -282,6 +357,10 @@ The repository has a sound baseline for changes to the core behavior:
   loopback OpenAI-compatible adapter, JSON, FAIR, portable emulation, and CWL
   export executed with `cwltool`; tests use only the deterministic mock adapter
   or a loopback server, and live models are not evaluated.
+- meta-tasks have engine-free tests for validation, generated engine
+  commands, staging, output containment, failures and timeouts, checkpoint
+  identity, the adapter registry, FAIR, JSON, and CWL export, plus live tests
+  that run only where an engine is installed.
 - the Nomad backend has mocked HTTP lifecycle tests (submission, polling,
   timeout, logs, purge, and SSH ports).
 - native Python tasks have local staging, dependency, output, and runner tests;
@@ -300,7 +379,7 @@ external profile. Credential capture remains disabled by default.
 The test suite is intentionally fast and local: it validates command generation,
 failure propagation, and integration boundaries, not live Docker, Kubernetes,
 Nomad, Apptainer, SSH, Slurm, cloud, Globus, SKYCDS, FaaS, IoT, LLM, or agent
-providers. CI also runs focused style checks and a
+providers, or external workflow engines (their live tests are skipped when absent). CI also runs focused style checks and a
 progressive type check over the shell-command helper. Several legacy and
 site-specific code paths still construct shell commands, so changes around
 external execution should be kept small, quoted defensively, and verified at
@@ -456,6 +535,9 @@ Example groups:
 - `examples/agentic`: deterministic agentic tasks: tool-free revision, guarded
   repair, a failing mandatory gate, checkpoint identity, mixed graphs, and CWL;
   see the [example guide](docs/examples/agentic.md).
+- `examples/meta`: the same word count written for Snakemake, Parsl, Nextflow,
+  StreamFlow, and CWL, each run unmodified as a meta-task; `meta_workflow_local.py`
+  needs no engine. See the [example guide](docs/examples/meta.md).
 - `examples/tutorial`: one self-checking script for each of the 33 lessons.
 
 Generate and test the portable CWL example without a private configuration:
@@ -539,6 +621,29 @@ the environment variable named by `api_key_env` at invocation. See the
 [examples](examples/agentic/README.md), and tutorial
 [Lessons 14–16](docs/tutorial/lesson_14_specify_and_configure_an_agentic_task.md).
 
+## Meta-tasks
+
+`TaskType.META` runs a workflow written for another engine as one task. An
+adapter translates the task into the engine's own command line and parameter
+files; the engine is never modified:
+
+```python
+DagonTask(TaskType.META, "count", engine="nextflow", workflow="pipelines/main.nf",
+          inputs={"text": "workflow:///prepare/data/text.txt", "top": 10},
+          outputs={"counts": {"path": "counts.tsv", "source": "results/counts.tsv"}})
+DagonTask(TaskType.BATCH, "report", "sort workflow:///count/outputs/counts.tsv > report.tsv")
+```
+
+`workflow://` inputs are staged and passed as engine parameters (Nextflow
+`params`, Snakemake `config`, Parsl keyword arguments, a CWL job document);
+declared outputs are collected into `outputs/`, where downstream tasks read
+them. Built-in adapters: `nextflow`, `snakemake`, `parsl`, `streamflow`, `cwl`,
+`command` (any CLI), and `mock` (portable emulation). A new engine needs only
+a `MetaEngineAdapter` subclass registered with `register_adapter` or the
+`dagon.meta_adapters` entry point. See the [meta-task guide](docs/meta_tasks.md)
+(interface and adapter development), [examples](examples/meta/README.md), and
+[Lesson 28](docs/tutorial/lesson_28_compose_meta_workflows.md).
+
 ## Development
 
 Useful checks:
@@ -546,8 +651,8 @@ Useful checks:
 ```bash
 python -m unittest discover -s tests -v
 python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py
-python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic tests tools/run_local_examples.py
-python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic/*.py
+python -m ruff check dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic dagon/meta tests tools/run_local_examples.py
+python -m mypy --follow-imports=skip dagon/shell.py dagon/runtime_env.py dagon/platform_support.py dagon/agentic/*.py dagon/meta/task.py dagon/meta/runner.py dagon/meta/adapters/*.py
 python tools/run_local_examples.py
 python tools/validate_tutorial.py
 python tools/validate_tutorial_coverage.py

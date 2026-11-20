@@ -26,6 +26,8 @@ The statistics task consumes the observation artifact produced earlier. A logica
 
 A workflow reference identifies workflow, producer task, and relative artifact path. Discovery adds a control edge; staging materialises the file and rewrites the path.
 
+A reference ends at the next space or at the end of the command, never at a shell character: `$(cat workflow:///A/ids.txt)` names the artifact `ids.txt)`. Write `$(cat workflow:///A/ids.txt )` instead. Portable emulation applies the same rule and fails a task whose reference names no producer artifact ([whitespace boundary rule](../the_workflow_schema.md#whitespace-boundary-rule)).
+
 New terms are collected in the [glossary](resources/glossary.md).
 
 ## Build the workflow

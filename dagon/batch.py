@@ -1,4 +1,5 @@
 import os
+import re
 import shlex
 import shutil
 from typing import Any, Dict, List, Optional, Union
@@ -535,14 +536,17 @@ class Slurm(Batch):
 
     def launcher_prologue(self) -> str:
         from dagon.beeond import task_prologue
+        common = super().launcher_prologue()
         volume = self.beeond_volume()
         if volume is not None:
-            return volume.task_prologue()
+            # Streams on the BeeOND volume refer to $DAGON_BEEOND: export them after it.
+            return (self.adhoc_prologue() + volume.task_prologue() + self.adhoc_late_prologue()
+                    + self.stream_prologue())
         config = self.beeond_task_config()
         if config is None:
-            return ""
+            return common
         persist_dir = self.beeond_persist_dir() or ""
-        return task_prologue(config, persist_dir, self.working_dir + "/.dagon")
+        return common + task_prologue(config, persist_dir, self.working_dir + "/.dagon")
 
     def launcher_epilogue(self) -> str:
         from dagon.beeond import task_epilogue
@@ -604,22 +608,30 @@ class Slurm(Batch):
 
     def portable_environment(self) -> Dict[str, str]:
         """Emulate the BeeOND mount with its persistent directory locally."""
+        common = super().portable_environment()
         volume = self.beeond_volume()
         if volume is not None:
             mount = volume.persist_dir()
             os.makedirs(mount, exist_ok=True)
-            return {"DAGON_BEEOND": mount, "DAGON_BEEOND_SCOPE": "workflow",
-                    "DAGON_BEEOND_VOLUME": volume.name, "DAGON_BEEOND_PERSIST_DIR": mount,
-                    "DAGON_BEEOND_NODES": "1"}
+            common.update({"DAGON_BEEOND": mount, "DAGON_BEEOND_SCOPE": "workflow",
+                           "DAGON_BEEOND_VOLUME": volume.name, "DAGON_BEEOND_PERSIST_DIR": mount,
+                           "DAGON_BEEOND_NODES": "1"})
+            for filesystem in getattr(self, "adhoc_filesystems", []):
+                if getattr(filesystem, "provider", None) == "beeond":
+                    suffix = re.sub(r"[^A-Za-z0-9]", "_", filesystem.name).upper()
+                    common.update({"DAGON_ADHOC_PATH": mount, "DAGON_ADHOC_%s_PATH" % suffix: mount,
+                                   "DAGON_ADHOC_%s_ACCESS" % suffix: "posix"})
+            return self.apply_adhoc_exports(common)
         config = self.beeond_task_config()
         if config is None:
-            return {}
+            return common
         mount = self.beeond_persist_dir() or self.working_dir.rstrip("/") + "/.dagon/beeond-emulated"
         os.makedirs(mount, exist_ok=True)
         environment = {"DAGON_BEEOND": mount, "DAGON_BEEOND_SCOPE": "task", "DAGON_BEEOND_NODES": "1"}
         if config.persist:
             environment["DAGON_BEEOND_PERSIST_DIR"] = mount
-        return environment
+        common.update(environment)
+        return common
 
     def as_json(self) -> Dict[str, Any]:
         json_task = super().as_json()

@@ -57,8 +57,15 @@ class FairRecorder:
                     text = json.dumps(task.contract, sort_keys=True)
                     if marker in text:
                         path = re.split(r"[\s\"']", text.split(marker, 1)[1], 1)[0]
-                edges.append({"producer": previous.name, "consumer": task.name,
-                              "path": path, "type": "workflow-edge"})
+                edge = {"producer": previous.name, "consumer": task.name,
+                        "path": path, "type": "workflow-edge"}
+                if path and "?" in path:
+                    # workflow:///producer/path?stream: the same edge, carried as a stream.
+                    path, _, query = path.partition("?")
+                    edge["path"] = path
+                    if query.split("=", 1)[0] == "stream":
+                        edge["transfer"] = "stream"
+                edges.append(edge)
         self.run["dependencies"] = edges
 
     def on_workflow_start(self, workflow: Any) -> None:
@@ -111,6 +118,22 @@ class FairRecorder:
                 if artifact["exists"]:
                     artifact.update({"size_bytes": candidate.stat().st_size, "checksum": _checksum(candidate),
                         "media_type": declared.get("media_type") or mimetypes.guess_type(str(candidate))[0]})
+                self.run["artifacts"].append(artifact)
+
+        if type(task).__name__ == "MetaTask" and task.working_dir and task.meta_result:
+            # Only outputs the runner collected and hashed locally are recorded.
+            for output in task.meta_result.get("outputs", []):
+                candidate = Path(task.working_dir) / output["path"]
+                artifact = {"name": output["name"], "path": output["path"], "task": task.name,
+                            "declared_output": True, "id": self._artifact_id(task.name, output["path"]),
+                            "exists": candidate.exists(), "local_path": str(candidate),
+                            "role": "meta-" + output["type"], "emulated": bool(task.meta_result.get("emulated"))}
+                if candidate.is_file():
+                    artifact.update({"size_bytes": candidate.stat().st_size, "checksum": _checksum(candidate),
+                                     "media_type": mimetypes.guess_type(str(candidate))[0]})
+                elif candidate.is_dir():
+                    artifact["checksum"] = "sha256:" + output["sha256"]
+                    artifact["media_type"] = "inode/directory"
                 self.run["artifacts"].append(artifact)
 
         if type(task).__name__ == "AgenticTask" and task.working_dir:
@@ -170,6 +193,16 @@ class FairRecorder:
                 action["instrument"] = {"@id": identity}
                 services.append({"@id": identity, "@type": ["SoftwareApplication", "Service"],
                                  "name": str(execution.get("function")), "runtimePlatform": str(execution.get("provider"))})
+            if execution.get("model") == "meta":
+                digest = execution.get("workflow_sha256")
+                identity = "urn:dagonstar:meta-workflow:%s:%s" % (_safe(str(execution.get("engine"))),
+                                                                   digest or _safe(str(execution.get("workflow"))))
+                action["instrument"] = {"@id": identity}
+                services.append({"@id": identity, "@type": ["SoftwareSourceCode", "ComputationalWorkflow"],
+                                 "name": str(execution.get("workflow")), "programmingLanguage": str(execution.get("engine")),
+                                 **({"sha256": digest} if digest else {}),
+                                 **({"softwareRequirements": "%s %s" % (execution.get("engine"), execution["engine_version"])}
+                                    if execution.get("engine_version") else {})})
             actions.append(action)
         graph += actions + services
         return {"@context": "https://w3id.org/ro/crate/1.2/context", "@graph": graph}

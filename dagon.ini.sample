@@ -107,6 +107,15 @@ provider=gcp
 endpoint=https://example-europe-west1.a.run.app
 audience=https://example-europe-west1.a.run.app
 
+; Optional meta-task (TaskType.META) site defaults: only `executable` (every
+; engine) and `python` (Parsl) are read; task engine_options take precedence.
+; Engines inherit credentials from the environment; never store them here.
+[meta.nextflow]
+executable=nextflow
+
+[meta.parsl]
+python=python3
+
 [ec2]
 key=<aws_access_key_id>
 secret=<aws_secret_access_key>

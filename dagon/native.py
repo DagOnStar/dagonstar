@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Mapping, Optional, Tuple, Union
 
 import dagon
+from dagon.streaming import reject_stream_reference
 from dagon.batch import Slurm
 from dagon.runtime_env import runner_environment
 from dagon.shell import join_command
@@ -23,6 +24,8 @@ class NativeTask(Task):
     maps function parameter names to relative output names; each is exposed below
     ``outputs/`` in the scratch directory.
     """
+    # No command launcher: streams (dagon.streaming) need a command task.
+    stream_capable = False
 
     def __init__(self, name: str, function: Union[str, Any], inputs: Optional[Mapping[str, Any]] = None,
                  outputs: Optional[Mapping[str, str]] = None, executor: str = "local",
@@ -99,6 +102,7 @@ class NativeTask(Task):
 
     @staticmethod
     def _parse_reference(reference: str) -> Tuple[str, str, str]:
+        reject_stream_reference(reference, 'Native')
         value = reference[len(dagon.Workflow.SCHEMA):]
         pieces = value.split("/")
         if len(pieces) < 3 or not pieces[1] or not "/".join(pieces[2:]):

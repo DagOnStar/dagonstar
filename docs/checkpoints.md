@@ -82,6 +82,14 @@ recorded one, the commit manifest exists, and the published files keep their
 recorded hashes. A run that was not accepted is never reused. See
 [Agentic evaluation and checkpoints](agentic_evaluation.md#checkpoint-identity).
 
+Meta-tasks (`TaskType.META`) are reused only when the effective specification
+digest, the digest of the external workflow definition (a remote definition is
+never reused), the content digests of the file and directory inputs re-read
+from the producers' current outputs, and the digests of the collected outputs
+all match the record; a bare successful directory is not enough. Records from
+portable emulation are not reused by real runs. See
+[Meta-tasks](meta_tasks.md#checkpoint-and-resume).
+
 ## Working directory persistence
 
 Checkpoint reuse requires the recorded working directory to exist.
@@ -140,7 +148,8 @@ part of the implementation for explicit checkpoint behavior. The workflow-level
 resuming task metadata.
 
 All registered task types use the same successful-checkpoint contract. LLM,
-Native, Web, and FaaS implement it in their structured executors;
+Native, Web, and FaaS implement it in their structured executors (IoT,
+Agentic, and Meta add the stricter identities described above);
 command-oriented tasks inherit it from `Task`. See
 [Task-type interoperability](tasktype_interoperability.md).
 

@@ -1,0 +1,203 @@
+{
+  "environment": {
+    "cpus": 32,
+    "host": "wn02",
+    "platform": "Linux-4.18.0-553.104.1.el8_10.x86_64-x86_64-with-glibc2.28",
+    "python": "3.11.13"
+  },
+  "generated_at": "2026-11-18T22:59:01Z",
+  "parameters": {
+    "capio_library": "libcapio_posix.so",
+    "capio_library_dir": null,
+    "capio_server": null,
+    "dagonfs": null,
+    "dagonfs_frontends": "fuse3,native,preload",
+    "dagonfs_preload": null,
+    "dagonfs_python": null,
+    "dagonfs_ranks": 4,
+    "delay": 0.25,
+    "dynostore_catalog": "dagonstar-streaming",
+    "dynostore_server": null,
+    "hercules_config": "~/devel/adhoc-results/hercules-20201.conf",
+    "hercules_launcher": "~/devel/hercules/scripts/hercules",
+    "hercules_library_dir": "~/devel/hercules/install/lib",
+    "item_kib": 1024,
+    "items": 16,
+    "modes": "sequential,stream",
+    "mpirun": "mpirun",
+    "mpirun_arg": [],
+    "output": "~/devel/adhoc-results/purplejeans-stream-2n-20201-hercules.json",
+    "repeats": 3,
+    "skip_local": true,
+    "socket_dir": "/tmp"
+  },
+  "results": {
+    "hercules": {
+      "sequential": {
+        "consumer_mib_s": {
+          "maximum": 88.00193027915613,
+          "median": 87.69442985241578,
+          "minimum": 87.5687852642897,
+          "samples": [
+            87.5687852642897,
+            88.00193027915613,
+            87.69442985241578
+          ]
+        },
+        "consumer_start_after_producer_seconds": {
+          "maximum": 7.935112953186035,
+          "median": 7.8264381885528564,
+          "minimum": 7.799304723739624,
+          "samples": [
+            7.935112953186035,
+            7.799304723739624,
+            7.8264381885528564
+          ]
+        },
+        "first_item_latency_seconds": {
+          "maximum": 7.686896085739136,
+          "median": 7.578351259231567,
+          "minimum": 7.550997018814087,
+          "samples": [
+            7.686896085739136,
+            7.550997018814087,
+            7.578351259231567
+          ]
+        },
+        "median_item_latency_seconds": {
+          "maximum": 7.706748127937317,
+          "median": 7.595878005027771,
+          "minimum": 7.56813383102417,
+          "samples": [
+            7.706748127937317,
+            7.56813383102417,
+            7.595878005027771
+          ]
+        },
+        "pipeline_seconds": {
+          "maximum": 12.117826461791992,
+          "median": 12.00888991355896,
+          "minimum": 11.98111891746521,
+          "samples": [
+            12.117826461791992,
+            11.98111891746521,
+            12.00888991355896
+          ]
+        },
+        "producer_mib_s": {
+          "maximum": 111.27116567265395,
+          "median": 109.06211494051131,
+          "minimum": 107.8164887635034,
+          "samples": [
+            111.27116567265395,
+            107.8164887635034,
+            109.06211494051131
+          ]
+        },
+        "work_seconds": {
+          "maximum": 8.330214500427246,
+          "median": 8.32915711402893,
+          "minimum": 8.32650637626648,
+          "samples": [
+            8.32650637626648,
+            8.330214500427246,
+            8.32915711402893
+          ]
+        },
+        "workflow_seconds": {
+          "maximum": 20.462422221899033,
+          "median": 20.120748966932297,
+          "minimum": 20.11316215991974,
+          "samples": [
+            20.462422221899033,
+            20.11316215991974,
+            20.120748966932297
+          ]
+        }
+      },
+      "stream": {
+        "consumer_mib_s": {
+          "maximum": 23.26735338476207,
+          "median": 23.20495324006935,
+          "minimum": 18.037166168358336,
+          "samples": [
+            23.20495324006935,
+            23.26735338476207,
+            18.037166168358336
+          ]
+        },
+        "consumer_start_after_producer_seconds": {
+          "maximum": 0.5274388790130615,
+          "median": 0.4096405506134033,
+          "minimum": 0.32404327392578125,
+          "samples": [
+            0.4096405506134033,
+            0.5274388790130615,
+            0.32404327392578125
+          ]
+        },
+        "first_item_latency_seconds": {
+          "maximum": 0.2737138271331787,
+          "median": 0.13167738914489746,
+          "minimum": 0.052622079849243164,
+          "samples": [
+            0.13167738914489746,
+            0.2737138271331787,
+            0.052622079849243164
+          ]
+        },
+        "median_item_latency_seconds": {
+          "maximum": 0.30992770195007324,
+          "median": 0.17071115970611572,
+          "minimum": 0.0896679162979126,
+          "samples": [
+            0.17071115970611572,
+            0.30992770195007324,
+            0.0896679162979126
+          ]
+        },
+        "pipeline_seconds": {
+          "maximum": 5.37493634223938,
+          "median": 5.363926649093628,
+          "minimum": 5.255399942398071,
+          "samples": [
+            5.255399942398071,
+            5.37493634223938,
+            5.363926649093628
+          ]
+        },
+        "producer_mib_s": {
+          "maximum": 59.88339361036676,
+          "median": 57.60689474610389,
+          "minimum": 55.806023593433224,
+          "samples": [
+            55.806023593433224,
+            59.88339361036676,
+            57.60689474610389
+          ]
+        },
+        "work_seconds": {
+          "maximum": 9.317627906799316,
+          "median": 9.132466793060303,
+          "minimum": 9.114683389663696,
+          "samples": [
+            9.132466793060303,
+            9.114683389663696,
+            9.317627906799316
+          ]
+        },
+        "workflow_seconds": {
+          "maximum": 14.312212385237217,
+          "median": 13.78580679744482,
+          "minimum": 13.660203196108341,
+          "samples": [
+            13.660203196108341,
+            13.78580679744482,
+            14.312212385237217
+          ]
+        }
+      }
+    }
+  },
+  "schema_version": 1
+}

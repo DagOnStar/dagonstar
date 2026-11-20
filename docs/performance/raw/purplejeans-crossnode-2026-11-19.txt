@@ -1,0 +1,26 @@
+# Producer and consumer on different nodes (PurpleJeans, wn01 + wn02), 19 November 2026 (UTC)
+# python examples/adhoc/streaming.py --scratch <shared> --wrap "B1=srun --overlap -N1 -n1 -c1 -w wn01"
+#     --wrap "B2=srun --overlap -N1 -n1 -c1 -w wn02" --live <provider> ...
+# DAGonStar host: wn01. Lines copied from the job logs.
+
+job 20289  DAGonFS fuse3 peer-to-peer, ranks=2, mpirun --map-by node, mountpoint=/tmp/dfs-xnode-20289
+  B2 received frame 1 4.07 s before B1 finished; 8 frames verified in order
+  nodes: B1 on wn01.e4.cluster, B2 on wn02.e4.cluster
+  Verification: ok
+
+job 20289 / 20314  Hercules a13da96 + fixes patch, default UCX transports
+  20314: A, B1, B2, C, D FINISHED; B2 received frame 1 16.34 s before B1 finished; 8 frames verified in order
+  20314: nodes: B1 on wn01.e4.cluster, B2 on wn02.e4.cluster
+  20314: wn02 data server: ud_ep.c:267 Assertion `ucs_queue_is_empty(&ep->tx.window)' failed (uct_ud_ep_deferred_timeout_handler, hercules_ucx_server)
+  20314: hercules stop command failed with status 1 (no data server left to stop)
+
+job 20316  Hercules, UCX_TLS=^ud
+  same assertion; stop failed; streaming check passed (15.80 s early)
+
+job 20318  Hercules, UCX_TLS=tcp,self,sm
+  A, B1, B2, C, D FINISHED; workflow and stop succeeded; no assertion
+  B2 received frame 1 6.79 s before B1 finished; 8 frames verified in order
+  nodes: B1 on wn01.e4.cluster, B2 on wn02.e4.cluster
+
+job 20290  tools/check_adhoc_multivolume.py, default order, 1 node: passed, 7 hops (CAPIO -> Hercules split
+  through a local file), 5 concurrent streams, 33.3 s; raw: purplejeans-stream-1n-20290-multivolume.json

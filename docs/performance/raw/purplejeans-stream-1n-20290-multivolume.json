@@ -1,0 +1,86 @@
+{
+  "failed": {},
+  "generated_at": "2026-11-19T00:46:18Z",
+  "hops": [
+    "hop-0",
+    "hop-1",
+    "hop-2",
+    "hop-3",
+    "hop-4",
+    "hop-5",
+    "hop-6"
+  ],
+  "host": "wn01",
+  "overlapping_stream_consumers": [
+    "consume-v0-dagonfs-fuse3",
+    "consume-v1-dagonfs-native",
+    "consume-v2-dagonfs-preload",
+    "consume-v3-capio",
+    "consume-v4-hercules"
+  ],
+  "passed": true,
+  "streams": [
+    "consume-v0-dagonfs-fuse3",
+    "consume-v1-dagonfs-native",
+    "consume-v2-dagonfs-preload",
+    "consume-v3-capio",
+    "consume-v4-hercules"
+  ],
+  "volumes": [
+    {
+      "access": "posix",
+      "frontend": "fuse3",
+      "model": "client-server",
+      "name": "v0-dagonfs-fuse3",
+      "path": "/tmp/dfscwljl9ro",
+      "provider": "dagonfs",
+      "ranks": 2,
+      "scope": "workflow"
+    },
+    {
+      "access": "client",
+      "frontend": "native",
+      "model": "client-server",
+      "name": "v1-dagonfs-native",
+      "path": "/tmp/dfsdpushref.sock",
+      "provider": "dagonfs",
+      "ranks": 2,
+      "scope": "workflow"
+    },
+    {
+      "access": "preload",
+      "frontend": "preload",
+      "model": "client-server",
+      "name": "v2-dagonfs-preload",
+      "path": "/dagonfs",
+      "provider": "dagonfs",
+      "ranks": 2,
+      "scope": "workflow"
+    },
+    {
+      "access": "preload",
+      "backend": "default",
+      "configured": false,
+      "name": "v3-capio",
+      "path": "/tmp/tmp25zqpf_a/scratch/.capio-v3-capio",
+      "provider": "capio",
+      "scope": "workflow",
+      "stream_rules": true
+    },
+    {
+      "access": "preload",
+      "hostfiles": "scheduler",
+      "name": "v4-hercules",
+      "path": "/mnt/hercules",
+      "provider": "hercules",
+      "scope": "workflow"
+    },
+    {
+      "access": "posix",
+      "name": "private",
+      "provider": "scratch-directory",
+      "scope": "task"
+    }
+  ],
+  "workflow_seconds": 33.315928883850574
+}

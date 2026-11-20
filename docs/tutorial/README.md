@@ -42,7 +42,7 @@ Python 3, a command shell, and a repository checkout are sufficient for the loca
 | [25](lesson_25_stage_inputs_before_scheduler_submission.md) | Scheduler-aware pre-staging | Mock `sbatch` | Cluster (live only) | Limited | Infrastructure |
 | [26](lesson_26_select_data_movers_and_transfer_services.md) | Data movers and transfer services | Local mock | Transfer services (live only) | Supported | Infrastructure |
 | [27](lesson_27_make_a_workflow_fair_by_design.md) | FAIR metadata and provenance | Local | No | Supported | Advanced |
-| [28](lesson_28_compose_meta_workflows.md) | Workflow composition | Local | No | Limited | Advanced |
+| [28](lesson_28_compose_meta_workflows.md) | Workflow composition and meta-tasks over other engines | Local | Engines (optional) | Limited | Advanced |
 | [29](lesson_29_export_and_validate_common_workflow_language.md) | CWL v1.2 export and execution | Local | Optional validator | Supported | Advanced |
 | [30](lesson_30_compute_continuum_operations.md) | Compute continuum synthesis | Local mock | No | Supported | Advanced |
 | [31](lesson_31_operate_deploy_and_troubleshoot_dagonstar.md) | Operations, packaging, CI | Local | No | Limited | Advanced |

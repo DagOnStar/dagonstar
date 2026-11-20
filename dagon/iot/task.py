@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
 
 import dagon
+from dagon.streaming import reject_stream_reference
 from dagon.iot.references import references, replace_references
 from dagon.iot.registry import get_provider, provider_exists
 from dagon.iot.security import json_copy, redact
@@ -49,6 +50,8 @@ def _safe_path(value: str) -> str:
 
 class IoTTask(Task):
     """Execute one bounded observe, configure, actuate, or edge-compute operation."""
+    # No command launcher: streams (dagon.streaming) need a command task.
+    stream_capable = False
     task_type = TaskType.IOT
 
     def __init__(self, name: str, *, operation: str, provider: str = "mock", endpoint: Optional[str] = None,
@@ -125,6 +128,7 @@ class IoTTask(Task):
 
     @staticmethod
     def _parse_reference(reference: str) -> Tuple[str, str, str]:
+        reject_stream_reference(reference, 'IoT')
         pieces = reference[len(dagon.Workflow.SCHEMA):].split("/")
         if len(pieces) < 3 or not pieces[1] or not "/".join(pieces[2:]):
             raise IoTValidationError("Invalid IoT workflow reference: %s" % reference)

@@ -40,9 +40,10 @@ REQUIRED_FEATURES = (
     "agentic.checkpoint-identity", "agentic.mixed-dataflow", "agentic.openai-compatible-adapter",
     "agentic.cwl-runner",
     "faas.http-provider", "faas.cloud-adapters", "iot.actuation-safety", "iot.compute-placement",
-    "remote.ssh-ports-and-quoting", "slurm.beeond", "slurm.scheduler-prestaging",
+    "remote.ssh-ports-and-quoting", "slurm.beeond", "storage.adhoc-filesystems", "slurm.scheduler-prestaging",
     "movers.scp", "movers.gridftp-globus", "movers.skycds", "movers.dynostore", "movers.stager-modes",
-    "fair.metadata-export", "fair.agentic-artifacts", "meta.dag-tps", "meta.dagon-service-api", "cwl.export",
+    "fair.metadata-export", "fair.agentic-artifacts", "meta.dag-tps", "meta.external-engines",
+    "meta.dagon-service-api", "cwl.export",
     "operations.runtime-environment", "operations.packaging-extras", "operations.continuous-integration",
 )
 

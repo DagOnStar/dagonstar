@@ -106,6 +106,7 @@ Factory task types:
 - `TaskType.FAAS`
 - `TaskType.IOT`
 - `TaskType.AGENTIC`
+- `TaskType.META`
 
 ## `dagon.task.DagonTask`
 
@@ -495,6 +496,21 @@ contract and [FaaS providers](faas_providers.md) for configuration.
 - `add_dependency(workflow_id, task, dependency)`
 
 The service is optional and disabled in the default sample configuration.
+
+## Meta-task reference
+
+`DagonTask(TaskType.META, name, engine=..., workflow=..., inputs=None,
+outputs=None, engine_options=None, environment=None, timeout=None,
+staging="copy")` creates a `dagon.meta.MetaTask` that runs an external
+workflow through the adapter registered as `engine` (`nextflow`, `snakemake`,
+`parsl`, `streamflow`, `cwl`, `command`, `mock`). Specification errors raise
+`MetaValidationError`; run-time errors are `MetaEngineUnavailableError`,
+`MetaStagingError`, `MetaEngineFailedError` (and `MetaTimeoutError`), and
+`MetaOutputError`, with `task.failure_phase` set. After a run,
+`task.meta_result` holds the result document. New engines subclass
+`dagon.meta.MetaEngineAdapter` and call `register_adapter` (or use the
+`dagon.meta_adapters` entry-point group). The `dagon-meta-runner` console
+script runs a specification outside a workflow. See [Meta-tasks](meta_tasks.md).
 
 ## Agentic task reference
 

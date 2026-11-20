@@ -1,0 +1,550 @@
+diff --git a/APIGateway/app/dynostore/controllers/catalogs.py b/APIGateway/app/dynostore/controllers/catalogs.py
+index b3f91f8..2d219c1 100644
+--- a/APIGateway/app/dynostore/controllers/catalogs.py
++++ b/APIGateway/app/dynostore/controllers/catalogs.py
+@@ -62,8 +62,7 @@ class CatalogController():
+         print(results.text, flush=True)
+         if results.status_code == 201:
+             return results.json(), results.status_code
+-        elif results:
+-            return results.text, results.status_code
++        return results.text, results.status_code
+     
+     @staticmethod
+     def listFilesInCatalog(
+diff --git a/APIGateway/app/dynostore/controllers/data.py b/APIGateway/app/dynostore/controllers/data.py
+index cb04f3b..063e1f6 100644
+--- a/APIGateway/app/dynostore/controllers/data.py
++++ b/APIGateway/app/dynostore/controllers/data.py
+@@ -785,7 +785,7 @@ class DataController:
+             pubsub_service, catalog_result["data"]["tokencatalog"], token_user, key_object
+         )
+         reg_ms = _ms_since(t_reg)
+-        if status != 200:
++        if status not in (200, 201):
+             _log("warning", "UPLOAD_DATA", key_object, "END", "CATALOG_REGISTER_ERROR",
+                  f"status={status};result={results};time_ms={reg_ms:.3f}")
+         
+diff --git a/APIGateway/app/dynostore/controllers/datacontainer.py b/APIGateway/app/dynostore/controllers/datacontainer.py
+index ee01be3..365e759 100644
+--- a/APIGateway/app/dynostore/controllers/datacontainer.py
++++ b/APIGateway/app/dynostore/controllers/datacontainer.py
+@@ -5,7 +5,7 @@ import json
+ class DataContainerController():
+     @staticmethod
+     async def regist(request, admintoken: str, metadataService: str):
+-        url_to_regist = f"http://{metadataService}/api/servers/{admintoken}"
++        url_to_regist = f"http://{metadataService}/servers/{admintoken}"
+         print(url_to_regist, flush=True)
+ 
+         json_data = await request.json  
+@@ -15,13 +15,13 @@ class DataContainerController():
+ 
+         print(r.status_code, flush=True)
+         print(r.text, flush=True)
+-        return r.text
++        return r.text, r.status_code
+ 
+     @staticmethod
+     async def delete_all(request, admintoken: str, metadataService: str):
+-        url_to_regist = f"http://{metadataService}/api/servers/delete/{admintoken}"
++        url_to_regist = f"http://{metadataService}/servers/delete/{admintoken}"
+         print(url_to_regist, flush=True)
+         r = requests.get(url_to_regist)
+         print(r.status_code, flush=True)
+         print(r.text, flush=True)
+-        return r.text
+\ No newline at end of file
++        return r.text, r.status_code
+diff --git a/APIGateway/app/main.py b/APIGateway/app/main.py
+index 96109bb..3126954 100644
+--- a/APIGateway/app/main.py
++++ b/APIGateway/app/main.py
+@@ -142,6 +142,17 @@ PUBLIC_IP = os.getenv('PUBLIC_IP', 'localhost')
+ 
+ db.create_all()
+ 
++# Object keys must match the pub/sub catalog grammar (pub_sub/.htaccess);
++# reject others before any metadata or data is stored.
++import re as _re
++_OBJECT_KEY = _re.compile(r"[0-9A-Za-z-]{32,256}")
++
++
++def _invalid_key(keyobject):
++    if _OBJECT_KEY.fullmatch(keyobject):
++        return None
++    return jsonify({"error": "object key must match [0-9A-Za-z-]{32,256}"}), 400
++
+ import os
+ if os.getenv("ENABLE_REPLICATOR", "true").lower() == "true":
+     from dynostore.daemons.replicator import start_replicator_daemon
+@@ -406,6 +417,9 @@ async def downloadObject(tokenuser, keyobject):
+ @app.route('/storage/<tokenuser>/<catalog>/<keyobject>', methods=["PUT"])
+ @validateToken(auth_host=AUTH_HOST)
+ async def uploadObjectDREX(tokenuser, catalog, keyobject):
++    refused = _invalid_key(keyobject)
++    if refused:
++        return refused
+     return await DataController.push_data(request, METADATA_HOST, PUB_SUB_HOST, catalog, tokenuser, keyobject)
+ 
+ @app.route('/timeline/<tokenuser>/<keyobject>', methods=["GET"])
+@@ -416,12 +430,18 @@ async def get_timeline(tokenuser, keyobject):
+ @app.route('/metadata/<tokenuser>/<keyobject>', methods=["POST"])
+ @validateToken(auth_host=AUTH_HOST)
+ async def upload_metadata(tokenuser, keyobject):
++    refused = _invalid_key(keyobject)
++    if refused:
++        return refused
+     return await DataController.upload_metadata(request, tokenuser, keyobject)
+ 
+ 
+ @app.route('/upload/<tokenuser>/<catalog>/<keyobject>', methods=["PUT"])
+ @validateToken(auth_host=AUTH_HOST)
+ async def upload_data(tokenuser, catalog, keyobject):
++    refused = _invalid_key(keyobject)
++    if refused:
++        return refused
+     return await DataController.upload_data(request, METADATA_HOST, PUB_SUB_HOST, catalog, tokenuser, keyobject)
+ 
+ 
+@@ -434,7 +454,8 @@ async def existsObject(tokenuser, keyobject):
+ @app.route('/storage/<tokenuser>/<keyobject>', methods=["DELETE"])
+ @validateToken(auth_host=AUTH_HOST)
+ async def deleteObject(tokenuser, keyobject):
+-    return DataController.delete_object(request, tokenuser, keyobject, METADATA_HOST)
++    payload, status = await DataController.delete_object(tokenuser, keyobject, METADATA_HOST)
++    return jsonify(payload), status
+ 
+ 
+ @app.route('/datacontainer/<admintoken>', methods=["POST"])
+@@ -452,7 +473,7 @@ async def deleteAllDCs(admintoken):
+ @app.route("/statistic/<admintoken>", methods=["GET"])
+ @validateAdminToken(auth_host=AUTH_HOST)
+ async def statistics(admintoken):
+-    url_service = f"http://{METADATA_HOST}/api/servers/{admintoken}"
++    url_service = f"http://{METADATA_HOST}/servers/{admintoken}"
+     results = requests.get(url_service)
+     return jsonify(results.json()), results.status_code
+ 
+@@ -460,7 +481,7 @@ async def statistics(admintoken):
+ @app.route("/clean/<admintoken>", methods=["GET"])
+ @validateAdminToken(auth_host=AUTH_HOST)
+ async def clean(admintoken):
+-    url_service = f'http://{METADATA_HOST}/api/clean'
++    url_service = f'http://{METADATA_HOST}/servers/clean/all'
+     results = requests.get(url_service)
+     return jsonify(results.json()), results.status_code
+ 
+diff --git a/README.md b/README.md
+index 36767f2..5902c70 100644
+--- a/README.md
++++ b/README.md
+@@ -33,11 +33,19 @@ This guide describes how to deploy DynoStore in a single-node environment using
+ To build the DynoStore services and launch them in the background:
+ 
+ ```bash
+-docker compose -f docker-compose-dev.yml build
+-docker compose -f docker-compose-dev.yml up -d
++docker compose -f docker-compose.dev.yml build
++docker compose -f docker-compose.dev.yml up -d
+ ```
+ 
+-> ℹ️ This command will start the metadata service, API gateway, and any other services defined in the `docker-compose-dev.yml` file.
++> ℹ️ This command will start the metadata service, API gateway, and any other services defined in the `docker-compose.dev.yml` file.
++
++> ℹ️ The scripts below use `docker-compose.dev.yml`.  Set `DYNOSTORE_PROJECT`
++> to the compose project name if you started the stack with `-p <name>`, and
++> `DYNOSTORE_COMPOSE_FILE` to use another compose file.  KAGIO analytics and the
++> replicator are disabled by default because they need an external KAGIO
++> service; enable them with `ENABLE_KAGIO=true ENABLE_REPLICATOR=true
++> KAGIO_API_BASE_URL=http://<kagio-host>:8080`.  On arm64 hosts, `mysql:5.7` has
++> no native image: export `DOCKER_DEFAULT_PLATFORM=linux/amd64` before step 1.
+ 
+ ### 2. Configure the Metadata Database
+ 
+@@ -47,7 +55,7 @@ Initialize the database schema and apply initial configurations:
+ bash configure_services.sh
+ ```
+ 
+-This script sets up the database schema and ensures required tables and migrations are in place.
++This script waits for the metadata database and creates any missing tables (the metadata service also does this when it starts).
+ 
+ ### 3. Create Superuser
+ 
+@@ -57,7 +65,7 @@ Create a superuser to access the admin API and manage the system:
+ bash generate_admin.sh
+ ```
+ 
+-After execution, this script will print the admin token. **Save it**, as it is required to perform privileged operations like registering storage nodes.
++After execution, this script will print the admin token on standard output. **Save it** (for example `bash generate_admin.sh > admin.token`), as it is required to perform privileged operations like registering storage nodes.
+ 
+ ### 4. Register a Local Data Container
+ 
+@@ -90,7 +98,7 @@ After installation, you can use the `dynostore` command-line tool to interact wi
+ To stop and remove all services:
+ 
+ ```bash
+-docker compose -f docker-compose-dev.yml down
++docker compose -f docker-compose.dev.yml down
+ ```
+ 
+ 
+diff --git a/configure_services.sh b/configure_services.sh
+index 3004248..b395c5a 100644
+--- a/configure_services.sh
++++ b/configure_services.sh
+@@ -1,4 +1,17 @@
+-#/bin/bash
++#!/bin/bash
++# Create the metadata schema.  The metadata service also does this on start-up;
++# running it here is idempotent and fails loudly if the database is unreachable.
++set -euo pipefail
++COMPOSE=(docker compose -f "${DYNOSTORE_COMPOSE_FILE:-docker-compose.dev.yml}")
++if [ -n "${DYNOSTORE_PROJECT:-}" ]; then COMPOSE+=(-p "$DYNOSTORE_PROJECT"); fi
+ 
+-docker compose exec metadata /bin/sh -c "composer install && php artisan migrate && php artisan key:generate"
+-#docker compose exec apigateway /bin/sh -c "composer install && php artisan key:generate"
++for attempt in $(seq 1 60); do
++  if "${COMPOSE[@]}" exec -T metadata_server python -c \
++      "import models; from database import engine, Base; Base.metadata.create_all(bind=engine)" 2>/dev/null; then
++    echo "Metadata schema ready"
++    exit 0
++  fi
++  sleep 2
++done
++echo "Metadata database did not become ready" >&2
++exit 1
+diff --git a/create_nodes.sh b/create_nodes.sh
+index a0e2e4b..87b11ec 100644
+--- a/create_nodes.sh
++++ b/create_nodes.sh
+@@ -1,11 +1,17 @@
+-docker compose -f docker-compose.dev.yml exec datacontainer1 python3 regist_on_metadata.py $1 10.88.0.19
+-docker compose -f docker-compose.dev.yml exec datacontainer1 python3 regist_on_metadata.py $1 10.88.0.20
+-docker compose -f docker-compose.dev.yml exec datacontainer1 python3 regist_on_metadata.py $1 10.88.0.21
+-docker compose -f docker-compose.dev.yml exec datacontainer1 python3 regist_on_metadata.py $1 10.88.0.22
+-docker compose -f docker-compose.dev.yml exec datacontainer1 python3 regist_on_metadata.py $1 10.88.0.23
+-docker compose -f docker-compose.dev.yml exec datacontainer1 python3 regist_on_metadata.py $1 10.88.0.24
+-docker compose -f docker-compose.dev.yml exec datacontainer1 python3 regist_on_metadata.py $1 10.88.0.25
+-docker compose -f docker-compose.dev.yml exec datacontainer1 python3 regist_on_metadata.py $1 10.88.0.26
+-docker compose -f docker-compose.dev.yml exec datacontainer1 python3 regist_on_metadata.py $1 10.88.0.27
+-docker compose -f docker-compose.dev.yml exec datacontainer1 python3 regist_on_metadata.py $1 10.88.0.28
+-
++#!/bin/bash
++# Register the ten data containers of the compose file with the metadata service.
++# Usage: bash create_nodes.sh <admin token>
++set -euo pipefail
++if [ $# -ne 1 ]; then echo "usage: $0 <admin token>" >&2; exit 2; fi
++COMPOSE=(docker compose -f "${DYNOSTORE_COMPOSE_FILE:-docker-compose.dev.yml}")
++if [ -n "${DYNOSTORE_PROJECT:-}" ]; then COMPOSE+=(-p "$DYNOSTORE_PROJECT"); fi
++for n in $(seq 1 10); do
++  for attempt in 1 2 3 4 5; do
++    if "${COMPOSE[@]}" exec -T "datacontainer$n" python3 regist_on_metadata.py "$1" "10.88.0.$((18 + n))"; then
++      continue 2
++    fi
++    sleep 3
++  done
++  echo "Could not register datacontainer$n" >&2
++  exit 1
++done
+diff --git a/datacontainer/code/dynostore/utils/hardware.py b/datacontainer/code/dynostore/utils/hardware.py
+index 807c14f..61df48b 100644
+--- a/datacontainer/code/dynostore/utils/hardware.py
++++ b/datacontainer/code/dynostore/utils/hardware.py
+@@ -10,7 +10,9 @@ def get_default_partition_size():
+         if current_directory.startswith(part.mountpoint):
+             partition_usage = psutil.disk_usage(part.mountpoint)
+             return partition_usage.total
+-    return None
++    # Containers often list no partition containing the working directory
++    # (for example Docker Desktop); use the file system that holds it.
++    return psutil.disk_usage(current_directory).total
+ 
+ 
+ def get_total_memory():
+diff --git a/datacontainer/code/regist_on_metadata.py b/datacontainer/code/regist_on_metadata.py
+index 0c0bc4e..70efcac 100644
+--- a/datacontainer/code/regist_on_metadata.py
++++ b/datacontainer/code/regist_on_metadata.py
+@@ -12,13 +12,14 @@ def registContainer(admin_token, address, memory, storage, verbose=True):
+ 
+     r = requests.post(url, json=data)
+ 
+-    if r.status_code == 200:
++    if r.status_code in (200, 201):
+         logger.info('Data container succesfully added')
+-    else:
+-        try:
+-            logger.error(r.json()['message'])
+-        except:
+-            logger.error(r.text)
++        return True
++    try:
++        logger.error(r.json()['message'])
++    except Exception:
++        logger.error('HTTP %s: %s', r.status_code, r.text[:200])
++    return False
+ 
+ 
+ logging.basicConfig(level=logging.DEBUG,
+@@ -42,5 +43,6 @@ parser.add_argument('-v', '--verbose', action='store_true',
+ 
+ args = parser.parse_args()
+ 
+-registContainer(args.admintoken, args.address,
+-                args.memory, args.storage, args.verbose)
++if not registContainer(args.admintoken, args.address,
++                       args.memory, args.storage, args.verbose):
++    raise SystemExit(1)
+diff --git a/docker-compose.dev.yml b/docker-compose.dev.yml
+index 1738200..00e58b9 100644
+--- a/docker-compose.dev.yml
++++ b/docker-compose.dev.yml
+@@ -2,12 +2,14 @@ version: "3.8"
+ 
+ x-kagio-env: &kagio-env
+   # KAGIO ENVIRONMENT VARIABLES
+-  API_BASE_URL: "http://10.18.173.209:8080"
++  # KAGIO is an external analytics service; set ENABLE_KAGIO=true and
++  # KAGIO_API_BASE_URL to use it.
++  API_BASE_URL: "${KAGIO_API_BASE_URL:-http://10.18.173.209:8080}"
+   ROOT_USER: "root"
+   KAGIO_FOXX_URL: "http://localhost:8529/_db/_system/kagio"
+   KAGIO_FOXX_DB: "fgcs"
+-  ENABLE_KAGIO: "${ENABLE_KAGIO:-true}"
+-  ENABLE_REPLICATOR: "${ENABLE_REPLICATOR:-true}"
++  ENABLE_KAGIO: "${ENABLE_KAGIO:-false}"
++  ENABLE_REPLICATOR: "${ENABLE_REPLICATOR:-false}"
+ 
+ services:
+   # metadata:
+diff --git a/generate_admin.sh b/generate_admin.sh
+index 4a307e6..5eb032d 100644
+--- a/generate_admin.sh
++++ b/generate_admin.sh
+@@ -1 +1,6 @@
+-docker compose exec db_auth python3 configure/create_admin.py
+\ No newline at end of file
++#!/bin/bash
++# Create an administrator and print its token on standard output.
++set -euo pipefail
++COMPOSE=(docker compose -f "${DYNOSTORE_COMPOSE_FILE:-docker-compose.dev.yml}")
++if [ -n "${DYNOSTORE_PROJECT:-}" ]; then COMPOSE+=(-p "$DYNOSTORE_PROJECT"); fi
++"${COMPOSE[@]}" exec -T db_auth python3 configure/create_admin.py
+diff --git a/metadata/app/main.py b/metadata/app/main.py
+index d974b93..c79d5b7 100644
+--- a/metadata/app/main.py
++++ b/metadata/app/main.py
+@@ -1,3 +1,4 @@
++import asyncio
+ import os
+ from contextlib import asynccontextmanager
+ from fastapi import FastAPI
+@@ -10,8 +11,20 @@ from routers import storage, servers
+ 
+ @asynccontextmanager
+ async def lifespan(app: FastAPI):
+-    # Depending on how the production db is created, you might not do this here.
+-    # Currently assuming tables are already created via Laravel migrations.
++    # Create the schema on start-up.  create_all only adds missing tables, so
++    # it is safe against an existing database and needs no separate migration.
++    # The database container may still be starting, so retry for a while.
++    import models  # noqa: F401  (registers the tables on Base.metadata)
++    from sqlalchemy.exc import OperationalError
++    attempts = int(os.getenv("METADATA_DB_WAIT_ATTEMPTS", "60"))
++    for attempt in range(1, attempts + 1):
++        try:
++            Base.metadata.create_all(bind=engine)
++            break
++        except OperationalError:
++            if attempt == attempts:
++                raise
++            await asyncio.sleep(2)
+     yield
+ 
+ app = FastAPI(
+diff --git a/metadata/app/routers/servers.py b/metadata/app/routers/servers.py
+index 4397433..323391b 100644
+--- a/metadata/app/routers/servers.py
++++ b/metadata/app/routers/servers.py
+@@ -16,13 +16,15 @@ router = APIRouter(
+ 
+ @router.post("/{tokenuser}", status_code=201, dependencies=[Depends(verify_token)])
+ async def store_server(tokenuser: str, payload: schemas.ServerCreate, db: Session = Depends(get_db)):
+-    server = Server(
+-        url=payload.url,
+-        memory=payload.memory,
+-        storage=payload.storage,
+-        up=payload.up
+-    )
+-    db.add(server)
++    # Registering the same URL again refreshes that record instead of adding a
++    # duplicate, so create_nodes.sh can be re-run safely.
++    server = db.query(Server).filter(Server.url == payload.url).first()
++    if server is None:
++        server = Server(url=payload.url)
++        db.add(server)
++    server.memory = str(payload.memory)
++    server.storage = str(payload.storage)
++    server.up = bool(payload.up)
+     try:
+         db.commit()
+     except SQLAlchemyError as e:
+diff --git a/metadata/app/routers/storage.py b/metadata/app/routers/storage.py
+index 1a0e4aa..f8114fc 100644
+--- a/metadata/app/routers/storage.py
++++ b/metadata/app/routers/storage.py
+@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
+ from database import get_db
+ from core.auth import verify_token
+ import schemas
+-from models import File, Server, Abekey
++from models import File, Server, Abekey, Chunk, FilesInServer
+ from services.server import allocate, locate, emplazador
+ from services.server import NODES_REQUIRED_PUSH
+ 
+@@ -16,6 +16,54 @@ router = APIRouter(
+     tags=["storage"]
+ )
+ 
++
++def _placement_routes(db: Session, file_model):
++    """Data-container routes of every chunk and replica recorded for a file."""
++    owner = file_model.owner
++    routes = []
++    for chunk, srv in db.query(Chunk, Server).join(Server, Server.id == Chunk.server_id).filter(
++            Chunk.keyfile == file_model.keyfile).all():
++        routes.append(f"http://{srv.url}/objects/{chunk.keyfile}{chunk.keychunk}/{owner}")
++    for fis, srv in db.query(FilesInServer, Server).join(Server, Server.id == FilesInServer.server_id).filter(
++            FilesInServer.keyfile == file_model.keyfile).all():
++        routes.append(f"http://{srv.url}/objects/{file_model.keyfile}/{owner}")
++    return routes
++
++
++async def _delete_routes(routes):
++    """Delete objects from data containers; True when every deletion succeeded."""
++    ok = True
++    async with httpx.AsyncClient() as client:
++        for route in routes:
++            try:
++                response = await client.delete(route, timeout=5.0)
++                ok = ok and response.status_code == 200
++            except httpx.RequestError:
++                ok = False
++    return ok
++
++
++def _forget_placements(db: Session, keyfile: str):
++    db.query(Chunk).filter(Chunk.keyfile == keyfile).delete()
++    db.query(FilesInServer).filter(FilesInServer.keyfile == keyfile).delete()
++
++
++async def _file_for_push(db: Session, tokenuser: str, keyfile: str):
++    """File row to (re)write.  A key that already holds an object is replaced:
++    its old chunks are deleted and forgotten so that reads never return them.
++    A live key owned by another user is refused."""
++    file_model = db.query(File).filter(File.keyfile == keyfile).first()
++    if file_model is None:
++        file_model = File(keyfile=keyfile)
++        db.add(file_model)
++        return file_model
++    if not file_model.removed and file_model.owner not in (None, tokenuser):
++        raise HTTPException(status_code=409, detail="Object key is in use by another user")
++    await _delete_routes(_placement_routes(db, file_model))
++    _forget_placements(db, keyfile)
++    file_model.removed = False
++    return file_model
++
+ @router.get("/{tokenuser}/{keyfile}/exists", dependencies=[Depends(verify_token)])
+ async def file_exists(tokenuser: str, keyfile: str, db: Session = Depends(get_db)):
+     file_model = db.query(File).filter(
+@@ -39,10 +87,10 @@ async def file_exists(tokenuser: str, keyfile: str, db: Session = Depends(get_db
+                 "disperse": file_model.disperse
+             }
+         }
+-        return {
+-            "message": "File not found",
+-            "exists": False
+-        }
++    return {
++        "message": "File not found",
++        "exists": False
++    }
+ 
+ @router.get("/internal/{keyfile}", dependencies=[])
+ async def internal_file_info(keyfile: str, db: Session = Depends(get_db)):
+@@ -86,23 +134,11 @@ async def delete_file(tokenuser: str, keyfile: str, db: Session = Depends(get_db
+     if not file_model:
+         raise HTTPException(status_code=404, detail="File not found")
+ 
+-    try:
+-        data = await locate(db, tokenuser, file_model)
+-        servers = data.get("routes", [])
+-    except Exception:
+-        servers = []
+-
+-    error = False
+-    async with httpx.AsyncClient() as client:
+-        for srv in servers:
+-            try:
+-                response = await client.delete(srv["route"], timeout=5.0)
+-                if response.status_code != 200:
+-                    error = True
+-            except httpx.RequestError:
+-                error = True
++    # Delete every chunk and replica, not only the ones a read would use.
++    error = not await _delete_routes(_placement_routes(db, file_model))
+ 
+     try:
++        _forget_placements(db, keyfile)
+         file_model.removed = True
+         db.commit()
+     except SQLAlchemyError as e:
+@@ -152,10 +188,7 @@ async def push_file(
+ 
+     # Register object metadata
+     try:
+-        file_model = db.query(File).filter(File.keyfile == keyfile).first()
+-        if not file_model:
+-            file_model = File(keyfile=keyfile)
+-            db.add(file_model)
++        file_model = await _file_for_push(db, tokenuser, keyfile)
+         
+         file_model.name = payload.name
+         file_model.size = payload.size
+@@ -222,10 +255,7 @@ async def push_file_drex(
+     disperse = "SINGLE" if payload.chunks == 1 else "IDA"
+ 
+     try:
+-        file_model = db.query(File).filter(File.keyfile == keyfile).first()
+-        if not file_model:
+-            file_model = File(keyfile=keyfile)
+-            db.add(file_model)
++        file_model = await _file_for_push(db, tokenuser, keyfile)
+         
+         file_model.name = payload.name
+         file_model.size = payload.size
+diff --git a/metadata/app/schemas.py b/metadata/app/schemas.py
+index 36012c3..e6ff96f 100644
+--- a/metadata/app/schemas.py
++++ b/metadata/app/schemas.py
+@@ -1,5 +1,5 @@
+ from pydantic import BaseModel
+-from typing import Optional, List, Any
++from typing import Optional, List, Any, Union
+ 
+ # File Schemas
+ class FileCreate(BaseModel):
+@@ -36,9 +36,9 @@ class FilePullResponse(BaseModel):
+ # Server Schemas
+ class ServerCreate(BaseModel):
+     url: str
+-    memory: str
+-    storage: str
+-    up: bool = False
++    memory: Union[str, int, float]
++    storage: Union[str, int, float]
++    up: Union[bool, int] = False
+ 
+ class ServerResponse(BaseModel):
+     id: int

@@ -32,6 +32,9 @@ dagon/
   agentic/                    TaskType.AGENTIC: contract, dagon.ini profiles, registry,
                               guardrails, evaluators, adapters, bounded engine, tool worker,
                               atomic publication, checkpoint identity, dagon-agent-runner
+  meta/                       TaskType.META: MetaTask, engine adapters (Nextflow, Snakemake,
+                              Parsl, StreamFlow, CWL, command, mock), shared runner and
+                              dagon-meta-runner, self-contained Parsl driver
   fair/                       Optional FAIR models, recorder, validation, exporters
   api/                        HTTP client and workflow service
   cloud/                      Apache Libcloud helpers
@@ -263,6 +266,17 @@ use = False
   configuration, staging, task-subclass, and API-client code; stricter static
   checking remains a maintainability improvement.
 - Some examples depend on external systems and cannot be verified in generic CI.
+
+## Meta-tasks
+
+`dagon.meta.task.MetaTask` is a local `Task` subclass that runs a workflow
+written for another engine. Its `execute()` stages the `workflow://` inputs and
+calls `dagon.meta.runner.run`, which asks the engine adapter
+(`dagon/meta/adapters/`) for an argument vector and engine-native parameter
+files, runs the unmodified engine in `run/` without a shell, collects the
+declared outputs into `outputs/`, and writes `.dagon/meta_result.json`. The same
+runner is the `dagon-meta-runner` used by CWL exports. Engine imports are lazy:
+the base installation contains no engine. See [Meta-tasks](meta_tasks.md).
 
 ## Agentic tasks
 

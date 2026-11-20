@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
 
 import dagon
+from dagon.streaming import reject_stream_reference
 from dagon.faas_models import FaaSInvocation, RetryPolicy
 from dagon.faas_providers import FaaSError, get_provider
 from dagon.task import Task
@@ -65,6 +66,8 @@ def _retry_policy(value: Optional[Mapping[str, Any]]) -> RetryPolicy:
 
 class FaaSTask(Task):
     """Invoke an already-deployed function through a provider adapter."""
+    # No command launcher: streams (dagon.streaming) need a command task.
+    stream_capable = False
 
     def __init__(self, name: str, specification: Optional[Mapping[str, Any]] = None, **kwargs: Any) -> None:
         common = {key: kwargs.pop(key) for key in list(kwargs) if key in ("working_dir", "transversal_workflow", "globusendpoint")}
@@ -156,6 +159,7 @@ class FaaSTask(Task):
 
     @staticmethod
     def _parse_reference(reference: str) -> Tuple[str, str, str]:
+        reject_stream_reference(reference, 'FaaS')
         pieces = reference[len(dagon.Workflow.SCHEMA):].split("/")
         if len(pieces) < 3 or not pieces[1] or not "/".join(pieces[2:]):
             raise ValueError("Invalid FaaS workflow input reference: %s" % reference)

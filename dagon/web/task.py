@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
 
 import dagon
+from dagon.streaming import reject_stream_reference
 from dagon.batch import Slurm
 from dagon.runtime_env import runner_environment
 from dagon.shell import join_command
@@ -17,6 +18,8 @@ from dagon.web.schema import references, safe_output_path, validate
 
 class WebTask(Task):
     """Run a JSON-serializable web request through a scratch-local runner."""
+    # No command launcher: streams (dagon.streaming) need a command task.
+    stream_capable = False
 
     def __init__(self, name: str, specification: Mapping[str, Any], executor: str = "local",
                  resources: Optional[Mapping[str, Any]] = None, python: str = sys.executable,
@@ -34,6 +37,7 @@ class WebTask(Task):
 
     @staticmethod
     def _parse_reference(reference: str) -> Tuple[str, str, str]:
+        reject_stream_reference(reference, 'Web')
         pieces = reference[len(dagon.Workflow.SCHEMA):].split("/")
         if len(pieces) < 3 or not pieces[1] or not "/".join(pieces[2:]):
             raise ValueError("Invalid web workflow input reference: %s" % reference)

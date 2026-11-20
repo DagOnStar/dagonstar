@@ -6,6 +6,8 @@ Start with the [academic tutorial syllabus](tutorial/README.md). It presents the
 - workflow graph construction;
 - execution, staging, checkpointing, and lifecycle;
 - native Python, web, LLM, FaaS, IoT, and agentic task models;
+- meta-tasks that run workflows written for other engines (Nextflow,
+  Snakemake, Parsl, StreamFlow, CWL runners) through adapters;
 - optional Docker, Apptainer, Kubernetes, Nomad, SSH, cloud, Slurm, BeeOND,
   pre-staging, and data-mover infrastructure (taught with mocks and emulation);
 - FAIR metadata, meta-workflows, CWL interoperability, the compute continuum,
@@ -25,6 +27,7 @@ The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) has 
 - [Workflow schema](the_workflow_schema.md)
 - [Checkpointing](checkpoints.md)
 - [BeeOND on-demand file systems](beeond.md)
+- [Common ad-hoc file-system interface](adhoc_filesystems.md)
 - [Scheduler-aware pre-staging](scheduler_prestaging.md)
 - [Asynchronous launch](asynch_launch.md)
 - [Native tasks](native_tasks.md)
@@ -33,6 +36,8 @@ The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) has 
 - [Agentic tasks](agentic_tasks.md), with [configuration](agentic_configuration.md),
   [tools and guardrails](agentic_guardrails.md), and
   [evaluation, publication, and checkpoints](agentic_evaluation.md)
+- [Meta-tasks: workflows from other engines](meta_tasks.md), including the
+  adapter interface and how to develop new adapters
 - [FAIR principles](fair_principles.md)
 - [IoT tasks and compute-continuum operations](iot_tasks.md)
 - [IoT providers](iot_providers.md)
@@ -41,5 +46,6 @@ The locally runnable [tutorial notebook](tutorial/DAGonStar_tutorial.ipynb) has 
 - [Compute continuum](compute_continuum.md)
 - [CWL export](cwl_export.md)
 - [Examples](examples/README.md)
+- [Presentations](presentations/README.md): a 20-minute scientific talk and a 20-minute hands-on tutorial deck
 
 Documentation follows the implementation-first rule: source and passing tests define supported behavior. Infrastructure and experimental integrations are labelled explicitly and are never prerequisites for the local core track.

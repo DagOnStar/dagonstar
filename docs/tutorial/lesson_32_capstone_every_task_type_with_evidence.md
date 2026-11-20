@@ -43,7 +43,7 @@ python tools/validate_tutorial_coverage.py
 
 ## Expected result
 
-Every task finishes; the agent is accepted under portable emulation; NATIVE counts four records; FAIR records every task; a checkpoint and a deterministic CWL file exist. The checklist reports 14 task types and zero live adapter calls. The coverage validator reports no unmatched feature.
+Every task finishes; the agent is accepted under portable emulation; NATIVE counts four records; FAIR records every task; a checkpoint and a deterministic CWL file exist. The checklist reports 15 task types and zero live adapter calls; the META task (a Nextflow pipeline) ran on the mock engine, so Nextflow was never started. The coverage validator reports no unmatched feature.
 
 ## Verify
 

@@ -199,6 +199,13 @@ The complete option table, scopes, and persistence guarantees are in
 
 `TaskType.WEB` authentication is supplied through environment-variable names in the task specification, such as `token_env`, `username_env`, `password_env`, or `value_env`. Do not place HTTP tokens, passwords, or API keys in configuration samples or workflow files.
 
+Meta-tasks (`TaskType.META`) read an optional `[meta.<engine>]` section with
+two keys only: `executable` (the engine executable, for every engine) and
+`python` (the interpreter that has Parsl, for `parsl`). Explicit
+`engine_options` take precedence, and the effective values are part of the
+checkpoint identity. Engines inherit credentials from the process environment;
+no credential key is read from these sections. See [Meta-tasks](meta_tasks.md).
+
 FaaS named profiles use `[faas.<provider>.<profile>]`, for example
 `[faas.aws.production]` with a non-secret `region`, or `[faas.http.local]` with an
 `endpoint`. Select them with `provider="aws", profile="production"`. Explicit

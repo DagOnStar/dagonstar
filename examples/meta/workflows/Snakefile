@@ -1,0 +1,18 @@
+# Unmodified Snakemake workflow: counts words in config["text"].
+# DAGonStar passes the staged input through --configfile; no DAGonStar code here.
+rule all:
+    input:
+        "results/counts.tsv"
+
+rule count_words:
+    input:
+        config["text"]
+    output:
+        "results/counts.tsv"
+    run:
+        from collections import Counter
+        words = open(input[0], encoding="utf-8").read().lower().split()
+        counts = Counter(words)
+        with open(output[0], "w", encoding="utf-8") as stream:
+            for word, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:config.get("top", 10)]:
+                stream.write("%s\t%d\n" % (word, count))

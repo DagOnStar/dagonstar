@@ -7,7 +7,7 @@ from logging.config import fileConfig
 import threading
 from configparser import NoSectionError
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from requests.exceptions import ConnectionError
 
 from time import time
@@ -181,6 +181,10 @@ class Workflow(object):
         # Workflow-scope BeeOND volumes, created on demand (see dagon.beeond).
         self.beeond_volumes: Dict[str, Any] = {}
         self._beeond_lock = threading.Lock()
+        self.adhoc_filesystems: Dict[str, Any] = {}
+        # Streams planned for the current run (dagon.streaming).
+        self.streams: List[Any] = []
+        self.run_id: Optional[str] = None
         self._event_hooks = {
             name: EventHook(self, name) for name in (
                 "on_workflow_start", "on_workflow_end", "on_task_start",
@@ -446,6 +450,218 @@ class Workflow(object):
             self.beeond_volumes[name] = volume
             return volume
 
+    def create_adhoc_filesystem(self, provider: Any, name: str = "default", scope: str = "workflow",
+                                default: bool = False, export: Optional[str] = None, **options: Any) -> Any:
+        """Create and register an ad-hoc file system or data store resource.
+
+        :param provider: a registered provider name (``dagonfs``, ``beeond``,
+            ``hercules``, ``capio``, ``dynostore``, or one added with
+            :func:`dagon.adhoc.register_provider`) or an adapter class
+        :param scope: ``"workflow"`` (started before the first task, stopped
+            after the last) or ``"task"`` (started and stopped around the one
+            task it is bound to; see :meth:`dagon.task.Task.create_adhoc_filesystem`)
+        :param default: bind the workflow-scope resource to every task at run time
+        :param export: an extra environment variable, chosen by the developer,
+            that carries the resource's path in every task it is bound to (in
+            addition to ``DAGON_ADHOC_<NAME>_PATH``); see
+            :func:`dagon.adhoc.check_export_name` for the names refused
+        """
+        from dagon.adhoc import SCOPES, check_export_name, create
+        if scope not in SCOPES:
+            raise ValueError("ad-hoc scope must be one of %s" % ", ".join(SCOPES))
+        if default and scope != "workflow":
+            raise ValueError("only a workflow-scope resource can be the default of every task")
+        if name in self.adhoc_filesystems:
+            raise ValueError("ad-hoc file system %r already exists" % name)
+        if export is not None:
+            check_export_name(export)
+        filesystem = create(self, provider, name=name, **options)
+        filesystem.scope = scope
+        filesystem.default = bool(default)
+        filesystem.export = export
+        self.adhoc_filesystems[name] = filesystem
+        return filesystem
+
+    def _bind_default_adhoc_filesystems(self) -> None:
+        for filesystem in self.adhoc_filesystems.values():
+            if getattr(filesystem, "default", False):
+                for task in self.tasks:
+                    filesystem.bind(task)
+
+    def plan_streams(self, prepare: bool = True) -> List[Any]:
+        """Resolve ``workflow://...?stream`` references into stream channels.
+
+        A reference is a stream when its query names ``stream``; it is carried
+        by the streaming ad-hoc resource that both tasks are bound to (or the
+        one named by ``stream=<name>``).  A consumer starts as soon as the
+        producer runs when *all* its references to that producer are streams.
+        Called by :meth:`run`; returns the planned channels.  With
+        ``prepare=False`` (CWL export) resources are not told about the
+        streams, so planning has no side effect outside the tasks.
+        """
+        import uuid as _uuid
+        from dagon.streaming import StreamChannel, parse_reference, validate_stream_path, iter_command_references
+        if self.run_id is None:
+            self.run_id = _uuid.uuid4().hex[:12]
+        for task in self.tasks:
+            task.stream_inputs, task.stream_outputs = [], {}
+            task.stream_prevs, task.stream_references = [], {}
+            task.stream_started.clear()
+            task.stream_launched = False
+        channels: Dict[Any, Any] = {}
+        for consumer in self.tasks:
+            command = getattr(consumer, "command", None)
+            if not isinstance(command, str) or "?" not in command:
+                continue
+            plain, streamed = set(), set()
+            for _, _, text in iter_command_references(command, self.SCHEMA):
+                reference = parse_reference(text, self.SCHEMA)
+                producer = self.find_task_by_name(reference.workflow or self.name, reference.task)
+                if not reference.stream:
+                    plain.add(producer)
+                    continue
+                if reference.workflow not in ("", self.name):
+                    raise ValueError("%s: streams between workflows are not supported: %s" % (consumer.name, text))
+                if producer is None:
+                    raise ValueError("%s: stream producer not found: %s" % (consumer.name, text))
+                if producer is consumer:
+                    raise ValueError("%s: a task cannot consume its own stream: %s" % (consumer.name, text))
+                for endpoint in (producer, consumer):
+                    if not getattr(endpoint, "stream_capable", False):
+                        raise ValueError("%s tasks cannot produce or consume streams (%s)"
+                                         % (type(endpoint).__name__, text))
+                path = validate_stream_path(reference.path)
+                shared = [fs for fs in getattr(consumer, "adhoc_filesystems", [])
+                          if fs in getattr(producer, "adhoc_filesystems", [])]
+                if reference.stream_filesystem:
+                    shared = [fs for fs in shared if fs.name == reference.stream_filesystem]
+                    if not shared:
+                        raise ValueError("%s: ad-hoc file system %r is not bound to both %s and %s"
+                                         % (text, reference.stream_filesystem, producer.name, consumer.name))
+                capable = [fs for fs in shared if fs.supports_streaming]
+                if not capable:
+                    raise ValueError("%s: %s and %s share no ad-hoc file system that supports streaming"
+                                     % (text, producer.name, consumer.name))
+                if len(capable) > 1:
+                    raise ValueError("%s: %s and %s share several streaming resources (%s); name one with "
+                                     "?stream=<name>" % (text, producer.name, consumer.name,
+                                                         ", ".join(fs.name for fs in capable)))
+                filesystem = capable[0]
+                channel = channels.get((producer, path))
+                if channel is None:
+                    channel = StreamChannel(producer, path, filesystem, self.run_id,
+                                            emulated=self.portable_emulation)
+                    channel.location = filesystem.stream_location(channel)
+                    channel.signal = os.path.join(self.get_scratch_dir_base(), ".dagon", "stream-signals",
+                                                  self.run_id, channel.key + ".ended")
+                    channels[(producer, path)] = channel
+                    producer.stream_outputs[path] = channel
+                elif channel.filesystem is not filesystem:
+                    raise ValueError("stream %s/%s is carried by %s; %s names %s"
+                                     % (producer.name, path, channel.filesystem.name, consumer.name, filesystem.name))
+                if consumer not in channel.consumers:
+                    channel.consumers.append(consumer)
+                if channel not in consumer.stream_inputs:
+                    consumer.stream_inputs.append(channel)
+                consumer.stream_references[text] = channel
+                streamed.add(producer)
+            consumer.stream_prevs = [task for task in consumer.prevs if task in streamed and task not in plain]
+        self.streams = list(channels.values())
+        if prepare:
+            for filesystem in self.adhoc_filesystems.values():
+                filesystem.prepare_streams([channel for channel in self.streams if channel.filesystem is filesystem])
+        return self.streams
+
+    def _cwl_streams(self, task: Any, task_ids: Dict[Any, str], command: str, step_inputs: Dict[str, str],
+                     tool_inputs: Dict[str, Any]) -> Tuple[str, Dict[str, str], Dict[str, Any], List[Dict[str, Any]]]:
+        """CWL form of the streams of *task*: materialized stream Directories.
+
+        CWL v1.2 has no concurrency between steps.  The producer's stream is a
+        ``Directory`` output (the same items and markers, ended by
+        ``dagon.adhoc stream close``); the consumer receives it as an input
+        after the producer completes.  The ``dagon:Stream`` hint keeps the
+        streaming intent for runners that can honour it.
+        """
+        from dagon.streaming import variable_suffix
+        environment: Dict[str, str] = {}
+        outputs: Dict[str, Any] = {}
+        hints: List[Dict[str, Any]] = []
+
+        def identifier(channel: Any) -> str:
+            return "stream_" + re.sub(r"[^A-Za-z0-9_]", "_", channel.key.lower())
+
+        def spec(channel: Any, location: str) -> str:
+            return json.dumps({"v": 1, "location": location, "access": "posix", "adhoc": channel.filesystem.name,
+                               "provider": channel.filesystem.provider, "adapter": "dagon.adhoc:AdHocFileSystem",
+                               "producer": channel.producer.name, "path": channel.path, "parameters": {}},
+                              sort_keys=True)
+
+        def consumed(channel: Any) -> str:
+            after = "after_" + task_ids[channel.producer]
+            if after in step_inputs and self.portable_emulation:
+                # The producer's whole working directory is already an input;
+                # a second, nested Directory input is not staged reliably.
+                return "$(inputs.%s.path)/.dagon-streams/%s" % (after, channel.path)
+            input_id = identifier(channel)
+            tool_inputs[input_id] = "Directory"
+            step_inputs[input_id] = "%s/%s" % (task_ids[channel.producer], input_id)
+            return "$(inputs.%s.path)" % input_id
+
+        locations = {id(channel): consumed(channel) for channel in task.stream_inputs}
+        for text, channel in sorted(task.stream_references.items()):
+            command = command.replace(text, locations[id(channel)])
+        for channel in task.stream_inputs:
+            location = locations[id(channel)]
+            environment["DAGON_STREAM_%s" % channel.key] = location
+            environment["DAGON_STREAM_%s_SPEC" % channel.key] = spec(channel, location)
+            environment["DAGON_STREAM_IN_%s" % channel.key] = location
+            # Not "path": CWL processors resolve a field of that name as a URI.
+            hints.append({"producer": channel.producer.name, "stream": channel.path,
+                          "adhoc": channel.filesystem.name, "provider": channel.filesystem.provider})
+        if len(task.stream_inputs) == 1:
+            environment["DAGON_STREAM_IN"] = locations[id(task.stream_inputs[0])]
+        if task.stream_inputs:
+            # The materialized stream is complete when the consumer starts: a
+            # missing marker is an error, not a producer still writing.
+            environment["DAGON_STREAM_IDLE_TIMEOUT"] = "60"
+        produced = list(task.stream_outputs.values())
+        if produced:
+            closes = []
+            for channel in produced:
+                location = "$(runtime.outdir)/.dagon-streams/%s" % channel.path
+                environment["DAGON_STREAM_%s" % channel.key] = location
+                environment["DAGON_STREAM_%s_SPEC" % channel.key] = spec(channel, location)
+                environment["DAGON_STREAM_OUT_%s" % variable_suffix(channel.path)] = location
+                outputs[identifier(channel)] = {"type": "Directory",
+                                                "outputBinding": {"glob": ".dagon-streams/%s" % channel.path}}
+                closes.append('"$DAGON_PYTHON" -m dagon.adhoc stream close "$DAGON_STREAM_%s" --status "$code" '
+                              '|| code=1' % channel.key)
+            if len(produced) == 1:
+                environment["DAGON_STREAM_OUT"] = environment["DAGON_STREAM_%s" % produced[0].key]
+            environment["DAGON_STREAM_STATE_DIR"] = "$(runtime.outdir)/.dagon/streams"
+            command = "(%s); code=$?; %s; exit \"$code\"" % (command, "; ".join(closes))
+        if environment:
+            environment.setdefault("DAGON_PYTHON", "python3")
+        return command, environment, outputs, hints
+
+    def stop_adhoc_filesystems(self, raise_errors: bool = True) -> Dict[str, Optional[int]]:
+        """Stop all started ad-hoc resources, continuing after errors."""
+        results: Dict[str, Optional[int]] = {}
+        errors = []
+        for name, filesystem in reversed(list(self.adhoc_filesystems.items())):
+            if not filesystem.started:
+                results[name] = None
+                continue
+            try:
+                results[name] = filesystem.stop()
+            except Exception as exc:
+                results[name] = None
+                errors.append(str(exc))
+                self.logger.error("%s", exc)
+        if errors and raise_errors:
+            raise RuntimeError("; ".join(errors))
+        return results
+
     def add_beeond_volume(self, volume: Any) -> Any:
         """Register an existing :class:`dagon.beeond.BeeONDVolume` and return it."""
         with self._beeond_lock:
@@ -539,6 +755,7 @@ class Workflow(object):
         # it here as well; make_dependencies() keeps explicit edges.
         if not self._dependencies_made:
             self.make_dependencies()
+        streams = self.plan_streams(prepare=False)
 
         def cwl_identifier(value: str, used: set) -> str:
             identifier = re.sub(r"[^A-Za-z0-9_]", "_", value)
@@ -561,12 +778,16 @@ class Workflow(object):
         # Narrow file bindings for agentic tasks: producer -> {relative path: output id}.
         file_outputs: Dict[Any, Dict[str, str]] = {}
         agentic_bindings: Dict[Any, List[Any]] = {}
-        for task in agentic_tasks:
+        # Meta-tasks bind their workflow:// inputs the same way (File or Directory).
+        meta_tasks = [task for task in self.tasks if type(task).__name__ == "MetaTask"]
+        output_types: Dict[Any, Dict[str, str]] = {}
+        for task in agentic_tasks + (meta_tasks if not self.portable_emulation else []):
             bindings = []
+            kind = "agentic" if type(task).__name__ == "AgenticTask" else "meta"
             for reference, workflow_name, relative, producer in task._producers():
                 if workflow_name != self.name or producer not in task_ids:
-                    raise ValueError("CWL export of agentic task %s supports only producers in workflow %s: %s"
-                                     % (task.name, self.name, reference))
+                    raise ValueError("CWL export of %s task %s supports only producers in workflow %s: %s"
+                                     % (kind, task.name, self.name, reference))
                 produced = file_outputs.setdefault(producer, {})
                 if type(producer).__name__ == "AgenticTask":
                     names = {path: name for name, path in producer.outputs.items()}
@@ -576,6 +797,8 @@ class Workflow(object):
                 elif relative not in produced:
                     reserved = {"completed", "task_dir"} | set(produced.values())
                     produced[relative] = cwl_identifier("file_" + relative, reserved)
+                if kind == "meta" and task.input_kind(reference) == "Directory":
+                    output_types.setdefault(producer, {})[relative] = "Directory"
                 bindings.append((reference, producer, relative, produced[relative]))
             agentic_bindings[task] = bindings
         steps = {}
@@ -603,6 +826,10 @@ class Workflow(object):
                 steps[task_ids[task]] = self._agentic_cwl_step(task, task_ids, step_inputs, tool_inputs,
                                                                agentic_bindings[task])
                 continue
+            if type(task).__name__ == "MetaTask" and not self.portable_emulation:
+                steps[task_ids[task]] = self._meta_cwl_step(task, task_ids, step_inputs, tool_inputs,
+                                                            agentic_bindings[task])
+                continue
 
             bound_command = False
             if not self.portable_emulation and agentic_tasks:
@@ -619,6 +846,14 @@ class Workflow(object):
                                 step_inputs[input_id] = task_ids[producer] + "/" + output_name
                                 command = command.replace(prefix + relative, "$(inputs.%s.path)" % input_id)
                                 bound_command = True
+
+            stream_environment: Dict[str, str] = {}
+            stream_outputs: Dict[str, Any] = {}
+            stream_hints: List[Dict[str, Any]] = []
+            if task.stream_inputs or task.stream_outputs:
+                command, stream_environment, stream_outputs, stream_hints = self._cwl_streams(
+                    task, task_ids, command, step_inputs, tool_inputs)
+                bound_command = True
 
             if self.portable_emulation:
                 command_types = {"Checkpoint", "RemoteCheckpoint", "Batch", "RemoteBatch", "Slurm",
@@ -641,7 +876,9 @@ class Workflow(object):
             tool = {
                 "class": "CommandLineTool",
                 "label": str(task.name),
-                "requirements": {"InlineJavascriptRequirement": {}},
+                "requirements": {"InlineJavascriptRequirement": {},
+                                 **({"EnvVarRequirement": {"envDef": stream_environment}}
+                                    if stream_environment else {})},
                 "baseCommand": ["/bin/sh", "-c"] if self.portable_emulation or bound_command
                 else ["/bin/sh", "-c", command],
                 **({"arguments": [command]} if self.portable_emulation or bound_command else {}),
@@ -657,9 +894,12 @@ class Workflow(object):
                        if self.portable_emulation else {})
                 },
             }
+            tool["outputs"].update(stream_outputs)
             image = getattr(task, "image", None)
             if image and not self.portable_emulation:
                 tool["hints"] = {"DockerRequirement": {"dockerPull": image}}
+            if stream_hints:
+                tool.setdefault("hints", {})["dagon:Stream"] = {"inputs": stream_hints}
 
             if type(task).__name__ == "FaaSTask" and not self.portable_emulation:
                 portable_spec = task._portable_spec()
@@ -695,7 +935,7 @@ class Workflow(object):
             steps[task_ids[task]] = {
                 "label": str(task.name),
                 "in": step_inputs,
-                "out": step_outputs,
+                "out": step_outputs + sorted(stream_outputs),
                 "run": tool,
             }
 
@@ -705,7 +945,12 @@ class Workflow(object):
                     continue
                 step = steps[task_ids[producer]]
                 for relative, output_id in sorted(produced.items(), key=lambda item: item[1]):
-                    step["run"]["outputs"][output_id] = {"type": "File", "outputBinding": {"glob": relative}}
+                    if output_id in step["run"]["outputs"]:
+                        continue
+                    output_type = output_types.get(producer, {}).get(relative, "File")
+                    if type(producer).__name__ == "MetaTask":
+                        output_type = producer.output_kind(relative) or output_type
+                    step["run"]["outputs"][output_id] = {"type": output_type, "outputBinding": {"glob": relative}}
                     step["out"].append(output_id)
 
         terminal_tasks = [task for task in self.tasks if not task.nexts]
@@ -716,6 +961,13 @@ class Workflow(object):
             }
             for task in terminal_tasks
         }
+        if not self.portable_emulation:
+            # The external workflow's declared outputs are workflow results.
+            for task in meta_tasks:
+                for output_name, declared in sorted(task.outputs.items()):
+                    outputs[task_ids[task] + "_" + output_name] = {
+                        "type": "Directory" if declared["type"] == "directory" else "File",
+                        "outputSource": task_ids[task] + "/" + output_name}
         for task in agentic_tasks:
             for output_name in ("result", "evaluation"):
                 outputs[task_ids[task] + "_" + output_name] = {
@@ -728,11 +980,53 @@ class Workflow(object):
             "outputs": outputs,
             "steps": steps,
         }
-        if any(type(task).__name__ in {"FaaSTask", "IoTTask", "AgenticTask"} for task in self.tasks):
+        if streams or any(type(task).__name__ in {"FaaSTask", "IoTTask", "AgenticTask", "MetaTask"}
+                                for task in self.tasks):
             document["$namespaces"] = {"dagon": "https://dagonstar.org/cwl#"}
         with open(os.fspath(filename), "w", encoding="utf-8") as stream:
             json.dump(document, stream, indent=2, sort_keys=False)
             stream.write("\n")
+
+    def _meta_cwl_step(self, task: Any, task_ids: Dict[Any, str], step_inputs: Dict[str, str],
+                       tool_inputs: Dict[str, Any], bindings: List[Any]) -> Dict[str, Any]:
+        """Return the executable CWL step of a meta-task (``dagon-meta-runner``).
+
+        The credential-free specification is embedded; every ``workflow://``
+        input is bound to the producer step's File or Directory output.  The
+        external engine and the workflow definition named in the specification
+        must be installed on the CWL execution host: what the engine does
+        inside its run is outside the portable command-graph contract.
+        """
+        from dagon.meta.runner import workflow_identity
+        arguments = ["--spec", "meta-task.json", "--workdir", "."]
+        for index, (reference, producer, relative, output_id) in enumerate(bindings):
+            input_id = "in_%d" % index
+            tool_inputs[input_id] = task.input_kind(reference)
+            step_inputs[input_id] = task_ids[producer] + "/" + output_id
+            arguments += ["--bind", "%s=$(inputs.%s.path)" % (reference, input_id)]
+        outputs: Dict[str, Any] = {"completed": {"type": "boolean",
+                                                 "outputBinding": {"outputEval": "$(runtime.exitCode === 0)"}}}
+        for name, declared in sorted(task.outputs.items()):
+            outputs[name] = {"type": "Directory" if declared["type"] == "directory" else "File",
+                             "outputBinding": {"glob": "outputs/" + declared["path"]}}
+        spec = task.portable_spec()
+        identity = workflow_identity(spec["workflow"])
+        tool = {
+            "class": "CommandLineTool",
+            "label": str(task.name),
+            "requirements": {
+                "InlineJavascriptRequirement": {},
+                "InitialWorkDirRequirement": {"listing": [
+                    {"entryname": "meta-task.json", "entry": json.dumps(spec, sort_keys=True)}]},
+            },
+            "hints": {"dagon:MetaTask": {"schema_version": spec["schema_version"], "engine": spec["engine"],
+                                         "workflow": spec["workflow"], "workflow_sha256": identity["sha256"]}},
+            "baseCommand": ["dagon-meta-runner", "run"],
+            "arguments": arguments,
+            "inputs": tool_inputs,
+            "outputs": outputs,
+        }
+        return {"label": str(task.name), "in": step_inputs, "out": list(outputs), "run": tool}
 
     def _agentic_cwl_step(self, task: Any, task_ids: Dict[Any, str], step_inputs: Dict[str, str],
                           tool_inputs: Dict[str, Any], bindings: List[Any]) -> Dict[str, Any]:
@@ -798,8 +1092,14 @@ class Workflow(object):
             self.logger.debug("Running workflow: %s", self.name)
 
         start_time = time()
+        self.run_id = None
+        self._bind_default_adhoc_filesystems()
+        self.plan_streams()
         self._fire_event("on_workflow_start", self)
         try:
+            for filesystem in self.adhoc_filesystems.values():
+                if getattr(filesystem, "scope", "workflow") == "workflow":
+                    filesystem.start()
             for task in self.tasks:
                 try:
                     task.start()
@@ -818,6 +1118,11 @@ class Workflow(object):
                 self.stop_beeond_volumes()
             except RuntimeError as exc:
                 beeond_error = exc
+            adhoc_error = None
+            try:
+                self.stop_adhoc_filesystems()
+            except RuntimeError as exc:
+                adhoc_error = exc
 
             completed_in = (time() - start_time)
             self.logger.info("Workflow '" + self.name + "' completed in %s seconds ---" % completed_in)
@@ -828,10 +1133,13 @@ class Workflow(object):
                     fp.write(json.dumps(self.checkpoints, sort_keys=True, indent=4))
             if beeond_error is not None:
                 raise beeond_error
+            if adhoc_error is not None:
+                raise adhoc_error
         finally:
             # Idempotent: only volumes still running (for example after an
             # interruption) are persisted and released here.
             self.stop_beeond_volumes(raise_errors=False)
+            self.stop_adhoc_filesystems(raise_errors=False)
             self._fire_event("on_workflow_end", self)
 
     def launch(self, resume_checkpoint_file=None) -> threading.Thread:
@@ -898,6 +1206,9 @@ class Workflow(object):
                 contract = dict(temp.get('agentic', {}))
                 contract.pop('schema_version', None)
                 tk = DagonTask(TaskType.AGENTIC, temp['name'], **contract)
+            elif temp['type'].upper() == 'META':
+                tk = DagonTask(TaskType.META, temp['name'], **{key: value for key, value in dict(
+                    temp.get('meta', {})).items() if key != 'schema_version'})
             elif temp['type'].upper() == 'IOT':
                 raw = dict(temp.get('iot', {}))
                 aliases = {'endpointRef': 'endpoint_ref', 'credentialRef': 'credential_ref',

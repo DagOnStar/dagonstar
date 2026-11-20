@@ -1,0 +1,258 @@
+{
+  "availability": {
+    "beeond": {
+      "available": true,
+      "commands": {
+        "sbatch": "/opt/share/sw/gcc-8.5.0/slurm-23.11.3/bin/sbatch"
+      },
+      "missing": []
+    },
+    "capio": {
+      "available": false,
+      "commands": {
+        "capio_server": null
+      },
+      "missing": [
+        "capio_server"
+      ]
+    },
+    "dagonfs": {
+      "available": false,
+      "commands": {
+        "dagonfs": null,
+        "mpirun": "/opt/share/comps/gcc-12.2.1/ompi-4.1.4_nccl/bin/mpirun"
+      },
+      "missing": [
+        "dagonfs"
+      ]
+    },
+    "dynostore": {
+      "available": false,
+      "commands": {
+        "docker": null
+      },
+      "missing": [
+        "docker"
+      ]
+    },
+    "hercules": {
+      "available": false,
+      "commands": {
+        "hercules": null
+      },
+      "missing": [
+        "hercules"
+      ]
+    }
+  },
+  "environment": {
+    "cpus": 32,
+    "platform": "Linux-4.18.0-553.104.1.el8_10.x86_64-x86_64-with-glibc2.28",
+    "python": "3.11.13"
+  },
+  "generated_at": "2026-11-18T07:08:05Z",
+  "interface": {},
+  "live": {
+    "capio": {
+      "aggregate_read_mib_s": {
+        "maximum": 2861.9124206849015,
+        "median": 2841.5979556879206,
+        "minimum": 2795.9630783083,
+        "samples": [
+          2841.5979556879206,
+          2861.9124206849015,
+          2795.9630783083
+        ]
+      },
+      "options": {
+        "startup_delay": 1.0
+      },
+      "read_seconds_max": {
+        "maximum": 1.4649692736566067,
+        "median": 1.4414424784481525,
+        "minimum": 1.4312108121812344,
+        "samples": [
+          1.4414424784481525,
+          1.4312108121812344,
+          1.4649692736566067
+        ]
+      },
+      "start_seconds": {
+        "maximum": 1.025574766099453,
+        "median": 1.0136041529476643,
+        "minimum": 1.0015083625912666,
+        "samples": [
+          1.0136041529476643,
+          1.025574766099453,
+          1.0015083625912666
+        ]
+      },
+      "stop_seconds": {
+        "maximum": 0.01570124179124832,
+        "median": 0.015471205115318298,
+        "minimum": 0.01535845547914505,
+        "samples": [
+          0.01535845547914505,
+          0.01570124179124832,
+          0.015471205115318298
+        ]
+      },
+      "workflow_seconds": {
+        "maximum": 18.708794496953487,
+        "median": 18.095351956784725,
+        "minimum": 17.71232071146369,
+        "samples": [
+          18.708794496953487,
+          18.095351956784725,
+          17.71232071146369
+        ]
+      },
+      "write_mib_s": {
+        "maximum": 263.1353780754416,
+        "median": 263.0589190891785,
+        "minimum": 261.96309492845575,
+        "samples": [
+          263.0589190891785,
+          261.96309492845575,
+          263.1353780754416
+        ]
+      },
+      "write_seconds": {
+        "maximum": 1.9544737786054611,
+        "median": 1.9463320299983025,
+        "minimum": 1.9457664862275124,
+        "samples": [
+          1.9463320299983025,
+          1.9544737786054611,
+          1.9457664862275124
+        ]
+      }
+    },
+    "local": {
+      "aggregate_read_mib_s": {
+        "maximum": 2979.137276969057,
+        "median": 2967.322737734573,
+        "minimum": 2938.1319561419004,
+        "samples": [
+          2938.1319561419004,
+          2967.322737734573,
+          2979.137276969057
+        ]
+      },
+      "options": {},
+      "read_seconds_max": {
+        "maximum": 1.3940830640494823,
+        "median": 1.3803688921034336,
+        "minimum": 1.3748946823179722,
+        "samples": [
+          1.3940830640494823,
+          1.3803688921034336,
+          1.3748946823179722
+        ]
+      },
+      "start_seconds": {
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0,
+        "samples": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "stop_seconds": {
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0,
+        "samples": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "workflow_seconds": {
+        "maximum": 16.391174152493477,
+        "median": 16.345931887626648,
+        "minimum": 16.28703672811389,
+        "samples": [
+          16.28703672811389,
+          16.345931887626648,
+          16.391174152493477
+        ]
+      },
+      "write_mib_s": {
+        "maximum": 258.8963692161894,
+        "median": 257.6420287983333,
+        "minimum": 254.25071570946756,
+        "samples": [
+          254.25071570946756,
+          257.6420287983333,
+          258.8963692161894
+        ]
+      },
+      "write_seconds": {
+        "maximum": 2.013760309666395,
+        "median": 1.9872534088790417,
+        "minimum": 1.977625261992216,
+        "samples": [
+          2.013760309666395,
+          1.9872534088790417,
+          1.977625261992216
+        ]
+      }
+    }
+  },
+  "local_io": {
+    "fanout_copy": {
+      "aggregate_mib_s": 2673.3453895177922,
+      "copies": 4,
+      "seconds": 0.005985010415315628,
+      "source_mib": 4
+    },
+    "sequential": {
+      "read_mib_s": 4567.374655184515,
+      "read_seconds": 0.0035031065344810486,
+      "size_mib": 16,
+      "write_mib_s": 377.7826982650802,
+      "write_seconds": 0.04235238954424858
+    },
+    "small_files": {
+      "bytes_per_file": 4096,
+      "create_files_s": 39853.827629723106,
+      "create_seconds": 0.002509169280529022,
+      "files": 100,
+      "scan_files_s": 267206.3069878559,
+      "scan_seconds": 0.0003742426633834839
+    }
+  },
+  "parameters": {
+    "capio_library": "~/devel/adhoc-install/capio/lib64/libcapio_posix.so",
+    "capio_library_dir": null,
+    "capio_server": "~/devel/adhoc-install/capio/bin/capio_server",
+    "dagonfs": null,
+    "dagonfs_frontends": "fuse3,native,preload",
+    "dagonfs_preload": null,
+    "dagonfs_python": null,
+    "dagonfs_ranks": 4,
+    "dynostore_catalog": "dagonstar-benchmark",
+    "dynostore_server": null,
+    "hercules_config": null,
+    "hercules_launcher": "hercules",
+    "hercules_library_dir": null,
+    "live_files": 32,
+    "live_only": true,
+    "live_readers": 8,
+    "live_repeats": 3,
+    "live_size_mib": 16,
+    "mpirun": "mpirun",
+    "mpirun_arg": [],
+    "output": "~/devel/adhoc-results/purplejeans-capio-1n-20024.json",
+    "repeats": 5,
+    "size_mib": 16,
+    "skip_interface": false,
+    "small_files": 100,
+    "socket_dir": "/tmp",
+    "tasks": 32
+  },
+  "schema_version": 1
+}

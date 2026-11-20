@@ -439,7 +439,10 @@ class LauncherExecutionTests(unittest.TestCase):
             holder = os.path.join(volume.state_dir(), "holder.sh")
             with open(holder, "w", newline="\n") as stream:
                 stream.write(volume.holder_script())
-            env = dict(os.environ, SLURM_JOB_USER="u", SLURM_JOB_ID="1")
+            # Inside a Slurm job the caller's SLURM_* values (node list, ...)
+            # would leak into the holder: keep only the simulated ones.
+            env = {key: value for key, value in os.environ.items() if not key.startswith("SLURM_")}
+            env.update(SLURM_JOB_USER="u", SLURM_JOB_ID="1")
             process = subprocess.Popen([bash_executable(), holder], env=env, text=True,
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             ready = os.path.join(volume.state_dir(), "ready")

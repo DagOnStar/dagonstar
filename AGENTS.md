@@ -61,8 +61,17 @@ local, remote, Slurm, Docker, cloud, and data-staging environments.
   registry of tools, guardrails, evaluators, and adapters, bounded engine,
   sandboxed tool execution, publication, checkpoint identity, and the
   `dagon-agent-runner` CLI used by CWL export.
+- `dagon/meta/`: `TaskType.META` (`MetaTask`), the engine-neutral run model,
+  the adapter interface and registry (`adapters/base.py`), the built-in
+  Nextflow, Snakemake, Parsl, StreamFlow, CWL, command, and mock adapters, the
+  shared runner behind `dagon-meta-runner`, and the self-contained Parsl driver.
 - `docs/tutorial/coverage.json`: machine-checked map from every `TaskType` and
   inventoried feature to lessons, examples, and tests.
+- `dagon/adhoc.py`: common lifecycle for DAGonFS, BeeOND, Hercules, CAPIO,
+  and DynoStore resources (`Workflow.create_adhoc_filesystem`), scopes, and the
+  adapter registry.
+- `dagon/streaming.py`: `workflow://…?stream` references, the stream marker
+  protocol, stores, and the `python -m dagon.adhoc stream` CLI.
 - `dagon/communication/`: SSH/SCP/Globus/SKYCDS transfer helpers.
 - `examples/`: runnable examples and tutorial material.
 - `dagon.ini.sample`: safe sample configuration.
@@ -73,7 +82,7 @@ At minimum, run:
 
 ```bash
 python -m unittest discover -s tests -v
-python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py
+python -m py_compile dagon/*.py dagon/api/*.py dagon/communication/*.py dagon/ftp_publisher/*.py dagon/peer2peer/*.py dagon/meta/*.py dagon/meta/adapters/*.py
 ```
 
 If packaging metadata changed, also run:
@@ -154,6 +163,57 @@ configuration validation separately from live integration behavior.
   examples, `docs/scheduler_prestaging.md`, and tutorial Lessons 23 and 25
   (with `examples/tutorial/lesson_25_scheduler_prestaging.py`) to stay consistent.
 
+## Ad-hoc file-system maintenance
+
+- `dagon/adhoc.py` is opt-in: workflows that create no resource must behave
+  exactly as before, and the legacy Slurm launcher fixture must stay unchanged.
+- Providers stay external programs. Never vendor them; keep readiness checks
+  real (mount, socket answer, HTTP answer, or a configured command) and make a
+  failed start clean up everything it started.
+- Task environments are credential-free: `_check_environment` rejects
+  token-like names. The DynoStore token is read from `token_env` only inside
+  `put`/`get`/`exists`/`evict` and must never appear in errors, logs, metadata,
+  or launchers (it is a URL path segment).
+- The DAGonFS native readiness/shutdown requests mirror DAGonFS protocol
+  version 2; update them together with DAGonFS's `Protocol.h`.
+- DynoStore `b9dedd7` needs `tools/adhoc/dynostore-b9dedd7-fixes.patch` for a
+  scripted deployment and consistent overwrites. Keep it applicable to that
+  commit, list each fix in `docs/adhoc_filesystems.md`, and never let it, a
+  deployment log, or a benchmark report contain a user or admin token.
+- Interception libraries that cannot share a process are declared in the
+  adapter's `preload_conflicts` (CAPIO and Hercules declare each other) and
+  refused at `bind`; never silently drop one of the libraries.
+- DAGonFS `fuse3` peer-to-peer resolves the node-local rank mount at run time
+  (launcher via `/proc/mounts`, stream helper via `node_local_location`);
+  specifications keep the static rank-0 path.
+- Hercules `a13da96` needs `tools/adhoc/hercules-a13da96-fixes.patch`. Keep the
+  patch applicable to the commit it names, list each fix in
+  `docs/adhoc_filesystems.md`, and record its verification in
+  `docs/performance/`. Inside an allocation, stop Hercules with the per-job
+  configuration only: `hercules stop -d FILE` deletes hosts from `FILE`.
+- New storage systems are supported by adapters (`register_provider` or the
+  `dagon.adhoc_providers` entry-point group), never by special cases in the
+  core or changes to the storage software. Built-in names stay protected.
+- Task-scope resources start and stop around their single task; workflow-scope
+  resources around the run. Path-list variables (`LD_PRELOAD`,
+  `LD_LIBRARY_PATH`) are combined across resources, never overwritten.
+- Streams: only `?stream[=name]` is a `workflow://` query; any other `?` stays
+  part of the path, so older references keep their meaning. Keep the marker
+  protocol rename-free and verified (size and SHA-256), end every produced
+  stream with the command status (launcher `EXIT` trap, then the host), write
+  the producer-ended signal before any host-side store access, and keep stream
+  specs, markers, and CAPIO-CL rules credential-free (DynoStore specs name the
+  token variable only). Streaming tasks stay ineligible for pre-staging, and
+  structured task types refuse stream references.
+- Changes require `tests/test_adhoc_filesystems.py`,
+  `tests/test_adhoc_streaming.py`, `examples/adhoc/`,
+  `examples/cwl/export_streaming_workflow.py`, `docs/adhoc_filesystems.md`,
+  `docs/the_workflow_schema.md`, `docs/cwl_export.md`, Lessons 24 and 29, the
+  coverage entries `storage.adhoc-filesystems` and `storage.adhoc-streaming`,
+  `tools/benchmark_adhoc_filesystems.py`, `tools/benchmark_adhoc_streaming.py`,
+  and `tools/check_adhoc_multivolume.py` to stay consistent; record live runs,
+  with host and date, in `docs/performance/`.
+
 ## FaaS maintenance
 
 - `TaskType.FAAS` invokes already-deployed functions; deployment and infrastructure
@@ -189,6 +249,40 @@ configuration validation separately from live integration behavior.
   all-type interoperability tests, `examples/agentic/`, Lessons 14–16, 30, and
   32, `docs/agentic_*.md`, CWL/FAIR/JSON documentation, and `coverage.json` to
   stay consistent.
+
+## Meta-task maintenance
+
+- `TaskType.META` runs workflows written for other engines. Never modify,
+  patch, vendor, or monkey-patch an engine: adapters use only the engine's
+  documented command line or public API, and write the engine's own parameter
+  files below `.dagon/`.
+- Engine-specific behavior lives only in adapters (`MetaEngineAdapter`
+  subclasses, `register_adapter`, or the `dagon.meta_adapters` entry-point
+  group). Built-in names stay protected; never special-case an engine in
+  `dagon/meta/task.py`, `runner.py`, or the core.
+- Keep the base installation engine-free: no engine import at module level,
+  and the Parsl driver must import nothing from DAGonStar.
+- Engines run without a shell from an argument vector. Outputs are collected
+  only from declared locations and refused when they resolve outside the task
+  scratch directory.
+- Specifications, parameter files, invocation records, results, checkpoints,
+  CWL, and FAIR metadata stay credential-free: credential-like option keys and
+  environment names are rejected, and only environment variable *names* are
+  recorded. Engines inherit credentials from the parent environment.
+- Reuse a meta-task checkpoint only after re-verifying the specification,
+  workflow-definition, input, and output digests; never relax this to
+  directory accessibility. Portable emulation uses the `mock` engine and never
+  starts a real engine.
+- Report engine versions and metadata only when read locally. Record live
+  engine runs, with host, versions, and date, in `docs/performance/`, and keep
+  the README status and `docs/meta_tasks.md` limitations accurate about which
+  engines were run.
+- Changes require `tests/test_meta_task.py` (engine-free tests must pass
+  without any engine; live tests skip when an engine is absent), the all-type
+  interoperability tests, `examples/meta/`, `examples/cwl/export_meta_workflow.py`,
+  `docs/meta_tasks.md`, `docs/cwl_export.md`, Lessons 28, 29, and 32, and the
+  coverage entries `tasktype.meta` and `meta.external-engines` to stay
+  consistent.
 
 ## Documentation standards
 

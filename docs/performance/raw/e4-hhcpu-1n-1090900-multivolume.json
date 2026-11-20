@@ -1,0 +1,47 @@
+{
+  "failed": {},
+  "generated_at": "2026-11-19T20:31:50Z",
+  "hops": [
+    "hop-0",
+    "hop-1",
+    "hop-2",
+    "hop-3"
+  ],
+  "host": "wn17",
+  "overlapping_stream_consumers": [
+    "consume-v0-capio",
+    "consume-v1-hercules"
+  ],
+  "passed": true,
+  "streams": [
+    "consume-v0-capio",
+    "consume-v1-hercules"
+  ],
+  "volumes": [
+    {
+      "access": "preload",
+      "backend": "default",
+      "configured": false,
+      "name": "v0-capio",
+      "path": "/tmp/tmpc_i2cz4w/scratch/.capio-v0-capio",
+      "provider": "capio",
+      "scope": "workflow",
+      "stream_rules": true
+    },
+    {
+      "access": "preload",
+      "hostfiles": "scheduler",
+      "name": "v1-hercules",
+      "path": "/mnt/hercules",
+      "provider": "hercules",
+      "scope": "workflow"
+    },
+    {
+      "access": "posix",
+      "name": "private",
+      "provider": "scratch-directory",
+      "scope": "task"
+    }
+  ],
+  "workflow_seconds": 14.316098233000957
+}
