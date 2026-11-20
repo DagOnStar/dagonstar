@@ -79,7 +79,13 @@ python examples/adhoc/volume_task.py --emulate dagonfs
 python examples/adhoc/volume_task.py --live dagonfs --option executable=/path/to/dagonfs
 ```
 
-It prints `Verification: ok`. See [volume tasks](../../docs/volume_tasks.md);
+Commands read and write the volume through a program (the running Python
+interpreter), so preload providers intercept them. With a client or object
+provider (DAGonFS `frontend=native`, DynoStore), which has no path a command
+can open, the example uses only stage-in, the stream, stage-out, and attached
+tasks. It prints `Verification: ok`; live DAGonFS runs are recorded in
+[`docs/performance/volume_tasks_2026-11-20.md`](../../docs/performance/volume_tasks_2026-11-20.md).
+See [volume tasks](../../docs/volume_tasks.md);
 the CWL form is shown by
 [`../cwl/export_volume_workflow.py`](../cwl/export_volume_workflow.py).
 

@@ -52,6 +52,15 @@ directory under its own name. What changes is only the transfer:
   through the scratch-directory link, which exists for POSIX volumes and under
   portable emulation. Structured readers of preload, client, or object volumes
   are refused when dependencies are made.
+- A command task cannot open paths inside a `client` (DAGonFS `native`) or
+  `object` (DynoStore) volume, because there is no path to open: such
+  references are refused when dependencies are made. Use `?stream=<volume>`,
+  `attach()` with the provider's client, or the volume tasks' `stage_in` and
+  `stage_out` for those providers.
+- Preload providers (CAPIO, Hercules, DAGonFS `preload`) intercept the file
+  calls of the programs their library is loaded into. Read and write such a
+  volume with a program rather than a shell redirection. On macOS, system
+  binaries such as `/bin/bash` and `/bin/cat` never receive the library.
 - A reference to `Abc` whose path does not start with the volume name is an
   ordinary scratch reference.
 - `abc.attach(t1, t2)` binds tasks that use the volume only through
@@ -111,10 +120,11 @@ failure.
 | Provider | Access | Location used for references | Streams |
 |---|---|---|---|
 | DAGonFS (`fuse3`) | posix | mount point | yes |
-| DAGonFS (`native`) | client | path in the DAGonFS namespace, staged through its Python client | yes |
+| DAGonFS (`native`) | client | none for commands; stage-in and stage-out use the DAGonFS Python client | yes |
+| DAGonFS (`preload`) | preload | the preloaded prefix (`preload_root`); staging uses the socket client when `python_path` is set, since the library does not list directories | yes |
 | CAPIO | preload | intercepted directory | yes |
 | Hercules | preload | intercepted directory | yes |
-| DynoStore | object | deterministic object key (UUID v5 of volume and path); directories are a manifest object | yes |
+| DynoStore | object | none for commands; staging uses deterministic object keys (UUID v5 of volume and path) and a manifest object per directory | yes |
 | pluggable adapters | as declared | `volume_location()` hook | when `supports_streaming` |
 | BeeOND | - | refused (allocation-scoped) | - |
 
@@ -151,6 +161,8 @@ reference-counted release on a real local-directory adapter, and accepts
 `--emulate PROVIDER` or `--live PROVIDER --option KEY=VALUE`.
 [`tests/test_volume_task.py`](../tests/test_volume_task.py) covers
 construction, discovery, execution, checkpoints, stores (with an in-memory
-object store), and CWL. No live run of a volume task on a deployed provider is
-recorded in `docs/performance/` yet. Tutorial:
+object store), and CWL. Live runs on DAGonFS (`fuse3`, `native`, and
+`preload` frontends, macOS) are recorded in
+[`performance/volume_tasks_2026-11-20.md`](performance/volume_tasks_2026-11-20.md);
+CAPIO, Hercules, and DynoStore volume tasks have not been run live yet. Tutorial:
 [Lesson 26](tutorial/lesson_26_share_and_release_volumes_with_volume_tasks.md).

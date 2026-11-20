@@ -27,10 +27,10 @@ with tempfile.TemporaryDirectory(prefix="dagon-tutorial-26-") as scratch:
     abc = DagonTask(TaskType.VOLUME, "Abc", provider="dagonfs", volume="xyz",
                     stage_in={"in": "workflow:///Prep/data"})
     square = DagonTask(TaskType.BATCH, "Square", "mkdir -p workflow:///Abc/xyz/out ; "
-                       "for i in $(cat workflow:///Abc/xyz/in/n.txt); do echo $((i * i)); done "
+                       "for i in $(cat workflow:///Abc/xyz/in/n.txt ); do echo $((i * i)); done "
                        "> workflow:///Abc/xyz/out/square.txt")
     emit = DagonTask(TaskType.BATCH, "Emit",
-                     'for i in $(cat workflow:///Abc/xyz/in/n.txt); do echo $i > item-$i; '
+                     'for i in $(cat workflow:///Abc/xyz/in/n.txt ); do echo $i > item-$i; '
                      '"$DAGON_PYTHON" -m dagon.adhoc stream publish "$DAGON_STREAM_OUT" item-$i > /dev/null; done')
     total = DagonTask(TaskType.BATCH, "Sum",
                       'total=0; for item in $("$DAGON_PYTHON" -m dagon.adhoc stream items '

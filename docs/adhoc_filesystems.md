@@ -175,7 +175,8 @@ local-directory = "my_package.adapters:LocalDirectory"
 ```
 
 `available_providers()` lists the registered names; built-in names cannot be
-replaced or unregistered, other names need `replace=True` to be replaced.
+replaced (not even with `replace=True`) or unregistered, other names need
+`replace=True` to be replaced.
 `create_adhoc_filesystem` also accepts the class itself. The adapter inherits
 binding, scopes, emulation, metadata, streaming over POSIX or preload paths,
 and the credential checks. An adapter with `client` or `object` access

@@ -55,7 +55,7 @@ python examples/tutorial/lesson_26_volume_tasks.py
 python -m unittest tests.test_volume_task -v
 ~~~
 
-Emulation verifies planning, references, staging, release, and the stream protocol, not the speed, sharing, or durability of DAGonFS or CAPIO. `examples/adhoc/volume_task.py` without options executes the same lifecycle on a real local-directory adapter.
+Emulation verifies planning, references, staging, release, and the stream protocol, not the speed, sharing, or durability of DAGonFS or CAPIO. `examples/adhoc/volume_task.py` without options executes the same lifecycle on a real local-directory adapter, and its live DAGonFS runs are recorded in [`docs/performance/volume_tasks_2026-11-20.md`](../performance/volume_tasks_2026-11-20.md).
 
 ## What DAGonStar did
 
@@ -67,7 +67,7 @@ Predict whether `Square` can run before `Prep`; it cannot, because it depends on
 
 ## Common problems and diagnosis
 
-`does not name the volume of a create volume task` means the destroy reference has a wrong task or volume name. Credential-like keys in `options` are rejected. BeeOND volumes exist only inside a Slurm allocation and are refused. A stream query on a plain volume reference is refused with a hint to use `?stream=<volume>`. See [troubleshooting](resources/troubleshooting.md).
+`does not name the volume of a create volume task` means the destroy reference has a wrong task or volume name. Credential-like keys in `options` are rejected. BeeOND volumes exist only inside a Slurm allocation and are refused. A stream query on a plain volume reference is refused with a hint to use `?stream=<volume>`. `has client access and no POSIX path` means a command opened a path in a DAGonFS `native` or DynoStore volume: use the stream, `attach()`, or `stage_in`/`stage_out` instead. On preload providers, write the volume with a program rather than a shell redirection. See [troubleshooting](resources/troubleshooting.md).
 
 ## Scientific practice
 

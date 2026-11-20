@@ -666,13 +666,29 @@ class DAGonFS(ProcessFileSystem):
             return "/" + relative if relative else "/"
         return super().volume_reference_text(relative, emulated)
 
+    def volume_parameters(self) -> Dict[str, str]:
+        parameters = self.stream_parameters()
+        if self.frontend == "preload":
+            # The preload library intercepts file calls but not directory listings, so the
+            # staging helper prefers the volume's socket, whose paths are those below
+            # preload_root, when DAGonFS's Python client is importable.
+            parameters["socket"] = self.mountpoint
+            if self.python_path:
+                parameters["python_path"] = str(self.python_path)
+        return parameters
+
     @classmethod
     def open_volume_store(cls, spec: Mapping[str, Any]) -> Any:
+        from dagon.volume import DagonFSNativeVolumeStore, VolumeError
+        parameters = spec.get("parameters", {})
+        python_path = parameters.get("python_path") or os.environ.get("DAGONFS_PYTHON")
         if spec.get("access") == "client":
-            from dagon.volume import DagonFSNativeVolumeStore
-            parameters = spec.get("parameters", {})
-            return DagonFSNativeVolumeStore(parameters["socket"],
-                                            parameters.get("python_path") or os.environ.get("DAGONFS_PYTHON"))
+            return DagonFSNativeVolumeStore(parameters["socket"], python_path)
+        if spec.get("access") == "preload" and parameters.get("socket"):
+            try:
+                return DagonFSNativeVolumeStore(parameters["socket"], python_path)
+            except VolumeError:
+                pass  # no Python client: file calls through the preload library
         return super().open_volume_store(spec)
 
     def launcher_environment_lines(self) -> List[str]:
@@ -1474,8 +1490,9 @@ def register_provider(name: str, implementation: type, replace: bool = False) ->
     """Register an adapter class under *name* (case-insensitive); return the class.
 
     This is the only step a new storage system needs: neither DAGonStar nor
-    the storage software is modified.  Usable as ``@register_provider("x")``
-    through :func:`provider`.
+    the storage software is modified.  Built-in names cannot be replaced, not
+    even with ``replace=True``; ``replace`` applies to registered names only.
+    Usable as ``@register_provider("x")`` through :func:`provider`.
     """
     key = str(name).lower()
     if not re.match(r"^[a-z0-9][a-z0-9._-]*$", key):
@@ -1484,6 +1501,9 @@ def register_provider(name: str, implementation: type, replace: bool = False) ->
         raise TypeError("ad-hoc providers must subclass dagon.adhoc.AdHocFileSystem")
     if implementation.access not in ACCESS_MODES:
         raise ValueError("unknown access mode %r" % implementation.access)
+    if key in BUILTIN_PROVIDERS and PROVIDERS.get(key) is not implementation:
+        raise ValueError("built-in ad-hoc provider %r cannot be replaced, even with replace=True; "
+                         "register the adapter under another name" % key)
     if key in PROVIDERS and PROVIDERS[key] is not implementation and not replace:
         raise ValueError("ad-hoc provider %r is already registered" % key)
     PROVIDERS[key] = implementation

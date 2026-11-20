@@ -1320,8 +1320,8 @@
         "tests.test_volume_task",
         "tests.test_tasktype_interoperability"
       ],
-      "evidence_level": "local-executed",
-      "limitations": "examples/adhoc/volume_task.py executes create, shared use, streaming, destroy with stage-out, and reference-counted release on a real local-directory adapter; the built-in providers (DAGonFS, CAPIO, Hercules, DynoStore) are exercised only under portable emulation and with mocked stores in tests. No live run of a volume task on a deployed provider is recorded yet. BeeOND volumes cannot be created by a volume task."
+      "evidence_level": "live-optional",
+      "limitations": "examples/adhoc/volume_task.py executes create, shared use, streaming, destroy with stage-out, and reference-counted release on a real local-directory adapter, and passed live on DAGonFS with the fuse3, native, and preload frontends on macOS (docs/performance/volume_tasks_2026-11-20.md). CAPIO, Hercules, and DynoStore volume tasks are exercised only under portable emulation and with stand-in stores in tests. Command tasks cannot open paths in client or object volumes. BeeOND volumes cannot be created by a volume task."
     },
     {
       "feature_id": "meta.external-engines",

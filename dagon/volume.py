@@ -62,7 +62,6 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import dagon
 from dagon.runtime_env import runner_environment
-from dagon.shell import quote
 from dagon.streaming import iter_command_references, parse_reference
 from dagon.task import Task, TaskType
 
@@ -173,7 +172,7 @@ def _write_all(path: str, data: bytes) -> None:
 
 def _read_all(path: str) -> bytes:
     with open(path, "rb", buffering=0) as stream:
-        chunks = []
+        chunks: List[bytes] = []
         while True:
             chunk = stream.read(4 << 20)
             if not chunk:
@@ -225,7 +224,14 @@ class PosixVolumeStore(VolumeStore):
     def mkdir(self, relative: str) -> None:
         current = self.root
         if not os.path.isdir(current):
-            os.makedirs(current, exist_ok=True)
+            # A preloaded root (for example DAGonFS's /dagonfs) exists only for the
+            # interposer, which may not intercept stat; the provider created it when it
+            # became ready, so a failure here is not an error by itself: writing below the
+            # root reports a missing volume.
+            try:
+                os.makedirs(current, exist_ok=True)
+            except OSError:
+                pass
         for part in [item for item in relative.split("/") if item]:
             current += "/" + part
             try:
@@ -243,10 +249,13 @@ class PosixVolumeStore(VolumeStore):
         try:
             data = _read_all(source)
         except (IsADirectoryError, PermissionError) as exc:
-            if not os.path.isdir(source):
+            # List the directory without stat, which some interposers do not intercept.
+            try:
+                names = sorted(os.listdir(source))
+            except OSError:
                 raise exc
             os.makedirs(local, exist_ok=True)
-            for name in sorted(os.listdir(source)):
+            for name in names:
                 self.get((relative + "/" + name).strip("/"), os.path.join(local, name))
             return
         os.makedirs(os.path.dirname(os.path.abspath(local)), exist_ok=True)
@@ -346,8 +355,6 @@ class ObjectVolumeStore(VolumeStore):
 def open_store(spec: Mapping[str, Any]) -> VolumeStore:
     """Open the store of a helper specification through its adapter."""
     access = spec.get("access")
-    if access in ("posix", "preload"):
-        return PosixVolumeStore(str(spec["location"]))
     module_name, _, qualname = str(spec.get("adapter", "")).partition(":")
     try:
         import importlib
@@ -355,6 +362,9 @@ def open_store(spec: Mapping[str, Any]) -> VolumeStore:
         for part in qualname.split("."):
             adapter = getattr(adapter, part)
     except (ImportError, AttributeError, ValueError) as exc:
+        if access in ("posix", "preload"):
+            # Plain file calls need no adapter code (for example an adapter defined in a script).
+            return PosixVolumeStore(str(spec["location"]))
         raise VolumeError("volume adapter %s is not importable" % spec.get("adapter")) from exc
     opener = getattr(adapter, "open_volume_store", None)
     if opener is None:
@@ -460,6 +470,16 @@ def plan_volumes(workflow: Any) -> None:
                 owner, relative = found
                 if not getattr(task, "stream_capable", False):
                     continue  # structured tasks read through the scratch link (checked below)
+                access = owner.filesystem.access
+                if access not in ("posix", "preload") and not workflow.portable_emulation:
+                    # A client or object volume has no path a command could open: the rewritten
+                    # text would name a host path (for example /results) instead of the volume.
+                    raise ValueError(
+                        "task %s refers to %s, but volume %s of %s has %s access and no POSIX path; a "
+                        "command task can use it only through ?stream=%s, %s.attach(task) with the "
+                        "provider's client, or the volume tasks' stage_in and stage_out"
+                        % (task.name, text, owner.volume_name, owner.name, access, owner.volume_name,
+                           owner.name))
                 owner.filesystem.bind(task)
                 task.volume_references[text] = (owner, relative)
                 continue
@@ -488,8 +508,8 @@ def plan_volumes(workflow: Any) -> None:
             if owner in task.__dict__.get("explicit_prevs", []):
                 continue
             if not reachable:
-                raise ValueError("%s task %s cannot read volume %s of %s: its %s access has no POSIX path; use a "
-                                 "command task bound to the volume, or stage the data out with a destroy volume task"
+                raise ValueError("%s task %s cannot read volume %s of %s: its %s access has no POSIX path; stage "
+                                 "the data out with a destroy volume task"
                                  % (type(task).__name__, task.name, owner.volume_name, owner.name, filesystem.access))
     # Destroy tasks run after every other user of their volume.
     destroyers: Dict[Any, Any] = {}

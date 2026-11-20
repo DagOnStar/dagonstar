@@ -138,6 +138,7 @@ The full documentation set is available in `docs/`:
 - [Examples Catalog](docs/examples/README.md)
 - [Tutorials: thirty-six incremental lessons (00–35)](docs/tutorial/README.md)
 - [Platform support and CI/CD](docs/platform_support.md)
+- [Changelog](CHANGELOG.md)
 
 ## What DAGonStar supports
 
@@ -272,9 +273,12 @@ receives the preload environment, streams through a volume, POSIX, DAGonFS
 native, and object stores, verified checkpoint reuse, JSON, FAIR edges, and a
 materialized CWL export (`dagon:Volume` hint, run with `cwltool` when
 installed) are unit tested, and `examples/adhoc/volume_task.py` executes them
-on a real local-directory adapter. The built-in providers are exercised only
-under portable emulation and with stand-in stores; no live volume-task run on
-a deployed provider is recorded yet.
+on a real local-directory adapter. A live run on DAGonFS (FUSE3, native, and
+preload frontends on macOS, 20 November 2026,
+`docs/performance/volume_tasks_2026-11-20.md`) passed after four fixes. It led
+to command paths into client and object volumes being refused, and to staging
+preload volumes through the DAGonFS socket client. CAPIO, Hercules, and
+DynoStore volume tasks are covered only by stand-in stores and emulation.
 Scheduler-aware pre-staging is opt-in and leaves the default lifecycle
 unchanged: the legacy launcher is guarded by a byte-for-byte fixture. Its
 ordering, `sbatch` gate, typed failure phases (from `sbatch --parsable` job

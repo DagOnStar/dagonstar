@@ -26,7 +26,7 @@ A research group runs its pipelines on a site whose fast scratch tier is a stora
 
 ## Conceptual model
 
-Every ad-hoc file system is a subclass of `dagon.adhoc.AdHocFileSystem` with a provider name, an access mode, a `task_path`, and `start`, `is_ready`, and `stop` methods. `register_provider(name, cls)` (or the `dagon.adhoc_providers` entry-point group of an installed package) makes it available to `workflow.create_adhoc_filesystem(name, ...)`. Built-in names (DAGonFS, BeeOND, Hercules, CAPIO, DynoStore) cannot be silently replaced.
+Every ad-hoc file system is a subclass of `dagon.adhoc.AdHocFileSystem` with a provider name, an access mode, a `task_path`, and `start`, `is_ready`, and `stop` methods. `register_provider(name, cls)` (or the `dagon.adhoc_providers` entry-point group of an installed package) makes it available to `workflow.create_adhoc_filesystem(name, ...)`. Built-in names (DAGonFS, BeeOND, Hercules, CAPIO, DynoStore) cannot be replaced or unregistered, not even with `replace=True`.
 
 A workflow-scope resource starts before the first task and stops after the last; `default=True` binds it to every task. `task.create_adhoc_filesystem(...)` creates a task-scope resource that starts and stops around that single task. Each bound resource is exported as `DAGON_ADHOC_<NAME>_PATH`, or under a variable chosen with `export=` (credential-like names are refused).
 
@@ -49,7 +49,7 @@ python examples/adhoc/streaming.py --emulate dagonfs
 
 ## Expected result
 
-The script prints that `shared` and `private` were both bound to `read`, that `consume` received four verified items through `?stream` (total 10), that registering `dagonfs` again was refused, and the access modes `capio=preload, dagonfs=posix, dynostore=object, hercules=preload`. It also asserts that the task-scope directory was removed after its task.
+The script prints that `shared` and `private` were both bound to `read`, that `consume` received four verified items through `?stream` (total 10), that registering another class as `dagonfs` was refused even with `replace=True`, and the access modes `capio=preload, dagonfs=posix, dynostore=object, hercules=preload`. It also asserts that the task-scope directory was removed after its task.
 
 ## Verify
 
@@ -70,7 +70,7 @@ Predict what `$DAGON_ADHOC_NAMES` contains in `read`; the script asserts `privat
 
 ## Common problems and diagnosis
 
-A provider name that is already registered raises `ValueError`; use a new name or `replace=True` for your own class. `export` values that look like credentials (for example containing `TOKEN` or `PRIVATE`) are refused. A stream reference on a resource whose adapter does not support streaming is refused at planning time. See [troubleshooting](resources/troubleshooting.md).
+A provider name that is already registered raises `ValueError`; use a new name, or `replace=True` for a name you registered yourself (built-in names are always refused). `export` values that look like credentials (for example containing `TOKEN` or `PRIVATE`) are refused. A stream reference on a resource whose adapter does not support streaming is refused at planning time. See [troubleshooting](resources/troubleshooting.md).
 
 ## Scientific practice
 

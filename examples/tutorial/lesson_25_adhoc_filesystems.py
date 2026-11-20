@@ -52,11 +52,11 @@ class ScratchDirectory(AdHocFileSystem):
 register_provider("lesson25-directory", ScratchDirectory, replace=True)
 assert "lesson25-directory" in available_providers()
 try:
-    register_provider("dagonfs", ScratchDirectory)
+    register_provider("dagonfs", ScratchDirectory, replace=True)
 except ValueError as error:
     protected = str(error)
 else:
-    raise AssertionError("a built-in provider name must not be replaced silently")
+    raise AssertionError("a built-in provider name must not be replaced, even with replace=True")
 
 with tempfile.TemporaryDirectory(prefix="dagon-tutorial-25-") as scratch:
     # 2. A workflow-scope default volume plus a task-scope volume exported under a chosen name.
@@ -81,7 +81,8 @@ with tempfile.TemporaryDirectory(prefix="dagon-tutorial-25-") as scratch:
     stream = workflow("Stream25", scratch)
     produce = DagonTask(TaskType.BATCH, "produce",
                         'for i in 1 2 3 4; do echo $i > item-$i; '
-                        '"$DAGON_PYTHON" -m dagon.adhoc stream publish "$DAGON_STREAM_OUT" item-$i > /dev/null || exit 1; '
+                        '"$DAGON_PYTHON" -m dagon.adhoc stream publish "$DAGON_STREAM_OUT" item-$i > /dev/null '
+                        '|| exit 1; '
                         'done')
     consume = DagonTask(TaskType.BATCH, "consume",
                         'total=0; for item in $("$DAGON_PYTHON" -m dagon.adhoc stream items '

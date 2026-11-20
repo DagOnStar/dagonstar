@@ -253,6 +253,31 @@ class DiscoveryTests(VolumeTestCase):
                                     outputs={"output_file": "y.txt"}))
         emulated.make_dependencies()
 
+    def test_command_paths_into_client_and_object_volumes_are_refused(self):
+        # Found live: a DAGonFS native volume reference became the host path /results.
+        for provider, options in (("dagonfs", {"frontend": "native"}), ("dynostore", {"catalog": "c"})):
+            with self.subTest(provider=provider):
+                workflow = self.workflow("refused-" + provider)
+                workflow.add_task(DagonTask(TaskType.VOLUME, "Abc", provider=provider, volume="xyz",
+                                            options=options))
+                workflow.add_task(DagonTask(TaskType.BATCH, "W", "mkdir -p workflow:///Abc/xyz/results"))
+                with self.assertRaisesRegex(ValueError, "no POSIX path"):
+                    workflow.make_dependencies()
+                # Streams and attached tasks remain available; emulation has a local path.
+                allowed = self.workflow("allowed-" + provider)
+                owner = DagonTask(TaskType.VOLUME, "Abc", provider=provider, volume="xyz", options=options)
+                emit = DagonTask(TaskType.BATCH, "Emit", "echo 1")
+                read = DagonTask(TaskType.BATCH, "Read", "echo workflow:///Emit/n?stream=xyz")
+                for task in (owner, emit, read):
+                    allowed.add_task(task)
+                allowed.make_dependencies()
+                self.assertIn(read, owner.filesystem.tasks)
+                emulated = self.workflow("emulated-" + provider, portable_emulation=True)
+                emulated.add_task(DagonTask(TaskType.VOLUME, "Abc", provider=provider, volume="xyz",
+                                            options=options))
+                emulated.add_task(DagonTask(TaskType.BATCH, "W", "mkdir -p workflow:///Abc/xyz/results"))
+                emulated.make_dependencies()
+
     def test_volume_users_are_not_pre_staged(self):
         workflow = self.workflow()
         workflow.add_task(DagonTask(TaskType.VOLUME, "Abc", provider="dagonfs", volume="xyz"))

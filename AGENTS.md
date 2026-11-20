@@ -226,6 +226,10 @@ configuration validation separately from live integration behavior.
   reference (same components, dependency, and reference counting); only the
   transfer changes. Paths not starting with the volume name keep their usual
   meaning, and only `?stream=<volume>` streams through a volume.
+- Command paths into `client` or `object` volumes stay refused outside
+  emulation (the rewritten text would name a host path); preload volumes are
+  staged through the adapter's `open_volume_store` (DAGonFS uses its socket
+  client because its library lists no directories).
 - A volume is released when its reference count reaches zero (the scratch
   collector's rule) or by a destroy task that every user precedes; users after
   the destroy task, two destroyers, and unknown volumes are refused at
