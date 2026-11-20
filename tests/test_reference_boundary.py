@@ -11,6 +11,7 @@ import tempfile
 import unittest
 
 from dagon import Workflow
+from dagon.platform_support import shell_path
 from dagon.task import DagonTask, TaskType
 
 from tests.helpers import make_workflow, minimal_config
@@ -52,13 +53,13 @@ class ReferenceBoundaryTests(unittest.TestCase):
 
         self.assertEqual([item.local_path for item in inputs], ["/x.txt"])
         self.assertEqual(missing, ["workflow:///A/x.txt"])  # the producer has not run
-        self.assertEqual(portable, "for i in $(cat %s/x.txt ); do echo $i; done" % producer.working_dir)
+        self.assertEqual(portable, "for i in $(cat %s/x.txt ); do echo $i; done" % shell_path(producer.working_dir))
 
     def test_reference_at_end_of_command(self):
         producer, inputs, portable, _ = self.live_and_portable("cat workflow:///A/x.txt")
 
         self.assertEqual([item.local_path for item in inputs], ["/x.txt"])
-        self.assertEqual(portable, "cat %s/x.txt" % producer.working_dir)
+        self.assertEqual(portable, "cat %s/x.txt" % shell_path(producer.working_dir))
 
 
 class PortableReferenceBoundaryTests(unittest.TestCase):
