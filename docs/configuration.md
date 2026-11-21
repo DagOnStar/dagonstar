@@ -72,6 +72,27 @@ When `use = True`, `Workflow` attempts to register itself with the DAGon service
 through `dagon.api.API`. The service is used for workflow/task registration,
 status updates, and some transversal workflow lookups.
 
+Two optional keys configure the client:
+
+```ini
+[dagon_service]
+route = https://dagon-service.example.org
+use = True
+token = <access token>
+timeout = 10
+```
+
+- `token` is required when the service sets `DAGONSERVICE_API_TOKEN`; it is sent
+  as `Authorization: Bearer <token>`. When the key is absent the client reads the
+  `DAGON_SERVICE_TOKEN` environment variable, which keeps the secret out of
+  `dagon.ini` files that are shared or exported.
+- `timeout` is the number of seconds after which a request to the service is
+  abandoned (default 10).
+
+Path segments and query values are URL-encoded, so task names and working
+directories reach the service unchanged. See the
+[DAGonService documentation](https://github.com/DagOnStar/DagOnService/tree/main/docs).
+
 If the service is disabled, DAGonStar runs as a local in-process workflow engine.
 This is the recommended mode for introductory examples and unit tests.
 

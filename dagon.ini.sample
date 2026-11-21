@@ -1,6 +1,11 @@
 [dagon_service]
 route = http://localhost:57000
 use = False
+# Optional: access token of a service that sets DAGONSERVICE_API_TOKEN
+# (or export DAGON_SERVICE_TOKEN instead of storing it here), and the
+# request timeout in seconds.
+# token =
+# timeout = 10
 
 [ftp_pub]
 ip = localhost

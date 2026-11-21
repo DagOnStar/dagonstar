@@ -210,7 +210,10 @@ class Workflow(object):
         if self.cfg.get('dagon_service', {}).get('use', "False") == "True":
             try:
                 #self.logger.debug("verifing dagon service")
-                self.api = API(self.cfg['dagon_service']['route'])
+                service_cfg = self.cfg['dagon_service']
+                token = service_cfg.get('token') or os.environ.get('DAGON_SERVICE_TOKEN') or None
+                self.api = API(service_cfg['route'], token=token,
+                               timeout=float(service_cfg.get('timeout', 10)))
                 self.is_api_available = True
             except KeyError:
                 self.logger.error("No dagon URL in config file")

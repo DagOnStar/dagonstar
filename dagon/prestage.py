@@ -373,8 +373,11 @@ class PreparedTask:
     resolved_command: str
     inputs: List[StageInput] = field(default_factory=list)
 
-    def _cd(self, quoted: bool) -> str:
-        target = quote(self.working_dir) if quoted else self.working_dir
+    def _cd(self, quoted: bool = True) -> str:
+        # Always quoted: shlex.quote leaves ordinary paths unchanged, and a path
+        # with shell syntax must never be expanded or split. ``quoted`` is kept
+        # for callers that still pass it.
+        target = quote(self.working_dir)
         return ("# Change the current directory to the working directory\n"
                 "cd " + target + "\n"
                 "if [ $? -ne 0 ]; then code=1; fi \n\n")
