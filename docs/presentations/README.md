@@ -6,8 +6,8 @@ speaker notes with a timing cue, so a presenter can keep each deck within
 
 | Deck | Audience and length | Contents |
 |---|---|---|
-| [`dagonstar_scientific_talk.pptx`](dagonstar_scientific_talk.pptx) | Workshop or conference, 20 minutes, 17 slides (the last one is a backup reference slide) | Motivation, contributions, programming model, architecture, the 16 task types, data movers, scheduler-aware pre-staging, bounded agentic tasks, FAIR recording, CWL v1.2 export, evaluation by evidence level, the production pre-staging run, applications, limitations, conclusions |
-| [`dagonstar_tutorial.pptx`](dagonstar_tutorial.pptx) | Hands-on tutorial, 20 minutes, 15 slides | Prerequisites, getting the source and compiling (byte-compilation and the sdist/wheel build), installation and extras, `dagon.ini` configuration, environment check (Lesson 00), a first workflow, the unit tests, local examples and tutorial validators, evaluating checkpoint reuse, CWL, FAIR, and mock pre-staging, a table of expected results, troubleshooting |
+| [`dagonstar_scientific_talk.pptx`](dagonstar_scientific_talk.pptx) | Workshop or conference, 20 minutes, 19 slides (the last one is a backup reference slide) | Motivation, contributions of release 3.0.0, programming model, architecture, the 16 task types, data movers, scheduler-aware pre-staging, ad-hoc file systems with volume tasks and streams, bounded agentic tasks, meta-tasks over other engines with their live record, FAIR recording, CWL v1.2 export, evaluation by evidence level, the production pre-staging run, applications, limitations, conclusions |
+| [`dagonstar_tutorial.pptx`](dagonstar_tutorial.pptx) | Hands-on tutorial, 20 minutes, 16 slides | Prerequisites, getting the source and compiling (byte-compilation and the sdist/wheel build), installation and extras, `dagon.ini` configuration, environment check (Lesson 00), a first workflow, the unit tests, local examples and tutorial validators, evaluating checkpoint reuse, CWL, FAIR, mock pre-staging, volume tasks, streams, and meta-tasks, a table of expected results, troubleshooting (including the 3.0.0 exit-status change) |
 
 ## Evidence behind the slides
 
@@ -25,10 +25,15 @@ DAGonStar 3.0.0 (macOS 26.6.2 arm64, Python 3.12.10, 20 November 2026):
 | CWL | `python examples/tutorial/lesson_32_cwl_export.py` | `cwltool --validate: ok` |
 | FAIR | `python examples/fair/fair_local.py` | the nine exported files listed on the slide |
 | Pre-staging (mock) | `python examples/dataflow/slurm/pre_stage_mock.py` | identical results in both modes, `Verification: ok` |
+| Volume tasks | `python examples/adhoc/volume_task.py` | `Report: 5 rows from the volume; Sum read 15 while Emit ran; volume destroyed by Del`, `Verification: ok`, about 25 s |
+| Streams | `python examples/adhoc/streaming.py` | 8 frames verified in order, the first before B1 finished, `Verification: ok` |
+| Meta-tasks | `python examples/meta/meta_workflow_local.py` | `outputs/counts.tsv` collected, top word `sea = 3`, checkpoint reused on the second run |
 
 The production-cluster pre-staging results and the CI platform list are taken
-from the project status section of the top-level `README.md` and from
-`docs/scheduler_prestaging.md`; the decks do not add new measurements. Timings
+from the project status section of the top-level `README.md`, from
+`docs/scheduler_prestaging.md`, and from the manual live records in
+`docs/performance/` (ad-hoc file systems, streaming, BeeOND, CAPIO and
+Hercules, meta-task engines, volume tasks); the decks do not add new measurements. Timings
 depend on the machine. Re-run these commands before presenting a new release.
 
 ## Regenerating the decks

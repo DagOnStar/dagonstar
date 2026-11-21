@@ -60,7 +60,7 @@ DAGonStar registered the workflow and task through the mocked API, serialized an
 
 ## Controlled experiment
 
-Predict what happens when `use = True` but the route is unreachable; patch `requests.head` to raise `ConnectionError` and interpret the log. Then uninstall the console script in a virtual environment and observe the skip message.
+Predict what happens when `use = True` but the route is unreachable; patch `dagon.api.requests.Session.head` to raise `requests.exceptions.ConnectionError` and interpret the log. Then uninstall the console script in a virtual environment and observe the skip message.
 
 ## Common problems and diagnosis
 

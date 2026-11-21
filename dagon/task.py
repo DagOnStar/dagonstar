@@ -1119,7 +1119,11 @@ class Task(Thread):
         :rtype: str
         """
         millis = int(round(time() * 1000))
-        return str(millis) + "-" + self.name
+        # The directory name reaches generated shell scripts and URLs, so keep
+        # only characters that are inert there: a task named "C$x" must not
+        # become a directory the launcher expands to ".../C".
+        safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", self.name)
+        return str(millis) + "-" + safe_name
 
     def as_json(self) -> Dict[str, Any]:
         """"

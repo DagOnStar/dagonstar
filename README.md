@@ -203,210 +203,274 @@ DAGonStar is a research-oriented workflow engine with a useful, documented
 core, rather than a fully polished modern library. Its strongest areas are the
 compact Python workflow model, explicit and `workflow://`-derived dependencies,
 checkpointing, and a broad set of execution and staging integrations.
-Workflows can also run in a background thread with lifecycle callbacks for
-local progress reporting. The opt-in FAIR recorder makes lifecycle, task,
-dependency, output, fixity, and checkpoint-reuse metadata available in standard
-local exports without adding dependencies or changing existing workflows.
-Workflows can also be saved as self-contained CWL v1.2 JSON documents for
-interchange and validation by CWL-aware tools; executor-specific DAGonStar
-staging and remote runtime behavior remain outside that export boundary.
-FaaS invocation is now a provider-neutral task type with a credential-free mock,
-lazy cloud adapters, structured artifact staging, sanitized provenance, and a
-runner-based CWL representation. Cloud deployment and automatic object-store
-artifact upload remain outside the implemented boundary.
-IoT tasks add recursively discovered structured references, output-evidence
-checkpoints, credential redaction, safe actuation retry defaults, and a
-runner-based CWL representation. Live network providers are not yet implemented.
-Slurm tasks can use BeeOND volumes per task or per workflow (through a holder
-job), with persistence verified before the volume is destroyed. Launcher
-fragments and the holder lifecycle are tested locally against a stand-in mount
-and a simulated scheduler. The `beeond-slurm` CI job also runs both scopes,
-failure persistence, and the time-limit signal against a real single-node Slurm
-cluster whose Prolog and Epilog emulate a BeeOND site; real BeeGFS and
-multi-node sites are not exercised by CI. A manual run on a four-node production
-BeeOND site (Slurm 23.11.3) passed the same checks and the live example in both
-scopes.
-The common ad-hoc file-system interface gives DAGonFS, BeeOND, Hercules,
-CAPIO, and DynoStore one opt-in workflow lifecycle and task-binding API.
-Provider command generation, readiness, environment injection, failure
-cleanup, the DynoStore client and its non-unpickling object decoder, and
-credential-free metadata are unit tested against local stand-ins on every CI
-platform, without the optional runtimes. Live runs through DAGonStar workflows
-(November 2026, recorded in `docs/performance/`) exercised DAGonFS (three
-frontends; macOS and one- and two-node Slurm), CAPIO (one Slurm node), and
-DynoStore (Docker Compose on macOS) and Hercules (one and two Slurm nodes)
-with byte-verified data. Hercules works only with the fixes recorded in
-`tools/adhoc/hercules-a13da96-fixes.patch`; unpatched deployments failed and
-were stopped by the adapter's readiness check. DynoStore deploys from its
-README steps, and keeps object overwrites consistent, only with
-`tools/adhoc/dynostore-b9dedd7-fixes.patch`; with it, the managed Docker
-Compose lifecycle was also verified live.
-CAPIO and Hercules were rerun on a second Slurm site (one node, including
-`export=` names), which also showed that preloaded volumes must be written by
-programs rather than shell redirections and recorded a CAPIO `cp` hang and a
-Hercules `tee` data loss. BeeOND, also as an ad-hoc resource with streaming
-and `export=` names, passed
-`tools/ci_beeond_slurm.py` on a real two-node BeeOND site (30 checks,
-19 November 2026) besides CI emulation. These live runs are manual and are not
-part of CI.
-Ad-hoc resources have workflow and task scopes and a provider registry
-(entry-point group `dagon.adhoc_providers`); several resources, also of
-different providers, can be bound to one task, and `export=` names the
-variable that carries a resource's path (validated against credential-like,
-`DAGON*`, shell, and loader names). Streams between tasks
-(`workflow://…?stream`, an RFC 3986 query that leaves non-stream references
-unchanged) use a rename-free marker protocol with per-item SHA-256
-verification, end-of-stream status, a producer-ended signal with a grace
-period, CAPIO-CL rules generated for CAPIO, and a materialized CWL export with
-a `dagon:Stream` hint. They are unit tested (planning errors, failures,
-concurrency, object and DAGonFS-native stores, CWL with `cwltool` when
-installed, FAIR, JSON, checkpoints, pre-staging) and were run live over
-DAGonFS, CAPIO, Hercules, and DynoStore (`docs/performance/`), including
-producer and consumer on different Slurm nodes over DAGonFS peer-to-peer and
-Hercules; BeeOND streaming is covered by launcher-text tests, the CI's
-emulated BeeOND site, and a live two-node BeeOND run. Interception libraries that cannot share a process
-(CAPIO and Hercules) are refused in one task when the workflow is built.
-Volume tasks (`TaskType.VOLUME`, `dagon/volume.py`) add a third, volume
-scope owned by a task. Reference discovery, binding, destroy ordering and its
-refusals, reference-counted release, staging in and out through a helper that
-receives the preload environment, streams through a volume, POSIX, DAGonFS
-native, and object stores, verified checkpoint reuse, JSON, FAIR edges, and a
-materialized CWL export (`dagon:Volume` hint, run with `cwltool` when
-installed) are unit tested, and `examples/adhoc/volume_task.py` executes them
-on a real local-directory adapter. A live run on DAGonFS (FUSE3, native, and
-preload frontends on macOS, 20 November 2026,
-`docs/performance/volume_tasks_2026-11-20.md`) passed after four fixes. It led
-to command paths into client and object volumes being refused, and to staging
-preload volumes through the DAGonFS socket client. CAPIO, Hercules, and
-DynoStore volume tasks are covered only by stand-in stores and emulation.
-Scheduler-aware pre-staging is opt-in and leaves the default lifecycle
-unchanged: the legacy launcher is guarded by a byte-for-byte fixture. Its
-ordering, `sbatch` gate, typed failure phases (from `sbatch --parsable` job
-identifiers), retries, content verification of same-host transfers,
-changed-input checkpoint invalidation, a compute-side check that staged
-content did not change while queued, a fail-atomic, token-owned stage-in lock with
-rejection of shared working directories, side-effect-free dry run, rejection
-of `..` references and of `StagerMover.SLURM`, and the RemoteSlurm path are
-tested with a mock `sbatch` and a loopback SSH double. A submission that exits
-0 without a job identifier is treated as a submission failure, and one that exits 0 for a job that never ran its launcher (for example, cancelled while pending) as an execution failure. Manual runs
-on a production Slurm 23.11 cluster (NFS-shared scratch, compute nodes, real
-SSH for RemoteSlurm) passed the same harness, the local and remote examples,
-and a deeper site check (`tools/hpc_prestage_deep.py`: a 1 GiB input and
-5,000 small files, a two-node allocation, induced queue waits, a change and a
-cancellation while pending, two contending processes, node-local scratch).
-On that site, the job's re-check of its staged data took most of the
-pre-staged allocation for a 1 GiB input; after checksum batching, the
-pre-staged job was shorter than the legacy one under load, but not on a quiet
-file system before it. The re-check time is reported as
-`compute_recheck_seconds` and subtracted from the core-hour figure, which
-remains an estimate. This is evidence for one site, not a general guarantee. The `beeond-slurm` CI job runs
-the same scenarios with real `sbatch` on its single-node cluster, once the
-branch is pushed. Inputs moved by `SCP`, `GRIDFTP`, or `SKYCDS` are checked
-for existence only, not content. Production-scale transfers and real queue
-waits have not been measured. Shared-scratch visibility cannot be detected
-before submission; it is checked when the job starts. Rewritten `workflow://`
-arguments in user commands remain unquoted, as before, so scratch paths with
-spaces are supported by stage-in but not by those arguments. As part of this
-change, the context-discovery script (`context.sh`, used in every lifecycle)
-quotes its scratch path, so shell syntax in that path is no longer executed. The
-pre-staging transfer loop is injection-safe, while the legacy launcher text
-is unchanged.
-Portable emulation ends a `workflow://` reference where real runs do (at the
-next space) and fails a task whose reference names no producer artifact, so a
-reference closed by a shell character, such as `$(cat workflow:///A/ids.txt)`,
-no longer passes emulation and then reads nothing in a real run; this is unit
-tested for the parser and for an emulated workflow.
 
-Meta-tasks (`TaskType.META`) run workflows written for other engines through
-an adapter registry (entry-point group `dagon.meta_adapters`); the engines are
-never modified. The generated engine commands and parameter files for
-Nextflow, Snakemake, Parsl, StreamFlow, and CWL runners, staging, output
-containment, failure phases, timeouts, verified checkpoint reuse, portable
-emulation, FAIR records, JSON, and the `dagon-meta-runner` CWL step are unit
-tested without any engine. Live runs on macOS (19 November 2026,
-`docs/performance/meta_engines_2026-11-19.md`) passed with Snakemake 9.27.2,
-Parsl 2026.11.16, StreamFlow 0.2.0rc3, and cwltool; Nextflow has not been run
-live yet. The engine runs on the DAGonStar host; remote execution is delegated
-to each engine's own executors and has not been exercised.
+### At a glance
 
-The repository has a sound baseline for changes to the core behavior:
+| Area | Tested in CI / unit tests | Live evidence | Main limits |
+| --- | --- | --- | --- |
+| Core workflow model, checkpoints, JSON | Yes | Local examples on every CI platform | — |
+| FAIR metadata | Yes (recorder, validation, example) | Local exports | Not repository publication |
+| CWL v1.2 export | Yes (deterministic, run with `cwltool`) | — | DAGonStar staging and remote runtime stay outside the export |
+| FaaS tasks | Yes (mock provider) | — | No cloud deployment or automatic object-store upload |
+| IoT tasks | Yes (deterministic, network-free) | — | No live network providers yet |
+| BeeOND on Slurm | Yes (stand-in mount, simulated and emulated Slurm) | Four-node and two-node production sites | Real BeeGFS and multi-node sites not in CI |
+| Ad-hoc file systems and streams | Yes (local stand-ins) | DAGonFS, CAPIO, Hercules, DynoStore, BeeOND | Hercules and DynoStore need the recorded patches; live runs are manual |
+| Volume tasks | Yes (stand-in stores, local adapter) | DAGonFS on macOS | CAPIO, Hercules, DynoStore only emulated |
+| Scheduler-aware pre-staging | Yes (mock `sbatch`, loopback SSH, single-node Slurm) | One production Slurm 23.11 site | Evidence for one site; some movers check existence only |
+| Meta-tasks | Yes (engine-free) | Snakemake, Parsl, StreamFlow, cwltool on macOS | Nextflow not yet run live; remote executors not exercised |
+| Agentic and LLM tasks | Yes (mock adapter, loopback server) | — | Live models are not evaluated |
 
-- unit tests cover configuration parsing, workflow defaults and dependency
-  discovery, cycle validation, JSON and CWL serialization, deterministic CWL
-  example regeneration, checkpoint reuse, staging
-  command generation, Docker and remote-container construction, SSH-port
-  forwarding, packaging extras, optional integration boundaries,
-  BeeOND command generation, launcher persistence, and holder lifecycle,
-  ad-hoc file-system provider contracts, scopes, the adapter registry,
-  multi-volume task environments, cleanup, and inter-task streaming,
-  volume tasks (creation, sharing, destroy, reference-counted release,
-  checkpoints, stores, and CWL export),
-  scheduler-aware pre-staging (configuration, ordering, failure gating,
-  retries, checkpoints, and local and remote Slurm paths),
-  command exit-status propagation through the launcher's output capture
-  (local batch, Slurm, and Docker command paths),
-  selected shell-quoting behavior, SSH host-key verification and safe remote
-  launcher creation, and FAIR profiles, artifact declarations,
-  recorder exports, validation, and safe environment defaults;
-- the GitHub Actions CI/CD workflow runs that suite, source compilation, and
-  the self-contained local examples on Ubuntu (Python 3.8–3.13), macOS,
-  Windows (with Git Bash), Rocky Linux 9, and 64-bit Raspberry Pi OS userland
-  (Debian bookworm arm64), plus focused Ruff and mypy checks, tutorial and
-  feature-coverage validation, an agentic contract job (mock adapter and CWL
-  execution with `cwltool`), safe execution of the tutorial notebook's code
-  cells, a checked sdist/wheel build, and tag-driven GitHub releases; local launchers use a
-  detected POSIX bash, so Windows requires Git for Windows, MSYS2, or Cygwin;
+### Core workflow model
+
+- Workflows can run in a background thread with lifecycle callbacks for local
+  progress reporting.
+- Portable emulation ends a `workflow://` reference where real runs do (at the
+  next space) and fails a task whose reference names no producer artifact. A
+  reference closed by a shell character, such as `$(cat workflow:///A/ids.txt)`,
+  therefore no longer passes emulation and then reads nothing in a real run;
+  this is unit tested for the parser and for an emulated workflow.
+
+### FAIR metadata and CWL export
+
+- The opt-in FAIR recorder makes lifecycle, task, dependency, output, fixity,
+  and checkpoint-reuse metadata available in standard local exports, without
+  adding dependencies or changing existing workflows.
+- FAIR exports are local metadata artifacts, not repository publication: they
+  do not copy large outputs, obtain remote checksums, or validate every
+  optional external profile. Credential capture remains disabled by default.
+- Workflows can be saved as self-contained CWL v1.2 JSON documents for
+  interchange and validation by CWL-aware tools. Executor-specific DAGonStar
+  staging and remote runtime behavior remain outside that export boundary.
+
+### FaaS and IoT tasks
+
+- **FaaS** is a provider-neutral task type with a credential-free mock, lazy
+  cloud adapters, structured artifact staging, sanitized provenance, and a
+  runner-based CWL representation. Cloud deployment and automatic object-store
+  artifact upload remain outside the implemented boundary.
+- **IoT** tasks add recursively discovered structured references,
+  output-evidence checkpoints, credential redaction, safe actuation retry
+  defaults, and a runner-based CWL representation. Live network providers are
+  not yet implemented.
+
+### BeeOND on Slurm
+
+- Slurm tasks can use BeeOND volumes per task or per workflow (through a
+  holder job), with persistence verified before the volume is destroyed.
+- Launcher fragments and the holder lifecycle are tested locally against a
+  stand-in mount and a simulated scheduler.
+- The `beeond-slurm` CI job runs both scopes, failure persistence, and the
+  time-limit signal against a real single-node Slurm cluster whose Prolog and
+  Epilog emulate a BeeOND site. Real BeeGFS and multi-node sites are not
+  exercised by CI.
+- A manual run on a four-node production BeeOND site (Slurm 23.11.3) passed
+  the same checks and the live example in both scopes.
+
+### Ad-hoc file systems and streams
+
+- **Common interface.** DAGonFS, BeeOND, Hercules, CAPIO, and DynoStore share
+  one opt-in workflow lifecycle and task-binding API. Resources have workflow
+  and task scopes and a provider registry (entry-point group
+  `dagon.adhoc_providers`). Several resources, also of different providers,
+  can be bound to one task, and `export=` names the variable that carries a
+  resource's path (validated against credential-like, `DAGON*`, shell, and
+  loader names). Interception libraries that cannot share a process (CAPIO and
+  Hercules) are refused in one task when the workflow is built.
+- **Unit tests.** Provider command generation, readiness, environment
+  injection, failure cleanup, the DynoStore client and its non-unpickling
+  object decoder, and credential-free metadata are tested against local
+  stand-ins on every CI platform, without the optional runtimes.
+- **Streams.** Streams between tasks (`workflow://…?stream`, an RFC 3986 query
+  that leaves non-stream references unchanged) use a rename-free marker
+  protocol with per-item SHA-256 verification, end-of-stream status, a
+  producer-ended signal with a grace period, CAPIO-CL rules generated for
+  CAPIO, and a materialized CWL export with a `dagon:Stream` hint. They are
+  unit tested (planning errors, failures, concurrency, object and
+  DAGonFS-native stores, CWL with `cwltool` when installed, FAIR, JSON,
+  checkpoints, pre-staging).
+- **Live runs** (November 2026, recorded in `docs/performance/`; manual, not
+  part of CI), all with byte-verified data:
+
+  | Provider | Where it ran | Notes |
+  | --- | --- | --- |
+  | DAGonFS | macOS; one- and two-node Slurm (three frontends) | Streams also ran with producer and consumer on different nodes (peer-to-peer) |
+  | CAPIO | One Slurm node, on two sites | A CAPIO `cp` hang was recorded |
+  | Hercules | One and two Slurm nodes; one node on a second site | Works only with `tools/adhoc/hercules-a13da96-fixes.patch` (unpatched deployments failed and were stopped by the readiness check); a Hercules `tee` data loss was recorded; streams ran across nodes |
+  | DynoStore | Docker Compose on macOS | Deploys from its README steps, and keeps object overwrites consistent, only with `tools/adhoc/dynostore-b9dedd7-fixes.patch`; the managed Docker Compose lifecycle was verified live |
+  | BeeOND | Real two-node BeeOND site, 19 November 2026 | Passed `tools/ci_beeond_slurm.py` (30 checks), including streaming and `export=` names, besides CI emulation |
+
+  The second-site runs (including `export=` names) also showed that preloaded
+  volumes must be written by programs rather than shell redirections. BeeOND
+  streaming is additionally covered by launcher-text tests and the CI's
+  emulated BeeOND site.
+
+### Volume tasks
+
+- Volume tasks (`TaskType.VOLUME`, `dagon/volume.py`) add a third scope, a
+  volume owned by a task.
+- Reference discovery, binding, destroy ordering and its refusals,
+  reference-counted release, staging in and out through a helper that
+  receives the preload environment, streams through a volume, POSIX, DAGonFS
+  native, and object stores, verified checkpoint reuse, JSON, FAIR edges, and
+  a materialized CWL export (`dagon:Volume` hint, run with `cwltool` when
+  installed) are unit tested. `examples/adhoc/volume_task.py` executes them on
+  a real local-directory adapter.
+- A live run on DAGonFS (FUSE3, native, and preload frontends on macOS,
+  20 November 2026, `docs/performance/volume_tasks_2026-11-20.md`) passed
+  after four fixes. It led to command paths into client and object volumes
+  being refused, and to staging preload volumes through the DAGonFS socket
+  client.
+- CAPIO, Hercules, and DynoStore volume tasks are covered only by stand-in
+  stores and emulation.
+
+### Scheduler-aware pre-staging
+
+- **Opt-in.** The default lifecycle is unchanged; the legacy launcher is
+  guarded by a byte-for-byte fixture, and its text is unchanged.
+- **Tested** with a mock `sbatch` and a loopback SSH double: ordering, the
+  `sbatch` gate, typed failure phases (from `sbatch --parsable` job
+  identifiers), retries, content verification of same-host transfers,
+  changed-input checkpoint invalidation, a compute-side check that staged
+  content did not change while queued, a fail-atomic, token-owned stage-in
+  lock with rejection of shared working directories, side-effect-free dry run,
+  rejection of `..` references and of `StagerMover.SLURM`, and the RemoteSlurm
+  path. The `beeond-slurm` CI job runs the same scenarios with real `sbatch`
+  on its single-node cluster, once the branch is pushed.
+- **Failure classification.** A submission that exits 0 without a job
+  identifier is treated as a submission failure, and one that exits 0 for a job
+  that never ran its launcher (for example, cancelled while pending) as an
+  execution failure.
+- **Production evidence.** Manual runs on a production Slurm 23.11 cluster
+  (NFS-shared scratch, compute nodes, real SSH for RemoteSlurm) passed the
+  same harness, the local and remote examples, and a deeper site check
+  (`tools/hpc_prestage_deep.py`: a 1 GiB input and 5,000 small files, a
+  two-node allocation, induced queue waits, a change and a cancellation while
+  pending, two contending processes, node-local scratch).
+- **Performance.** On that site, the job's re-check of its staged data took
+  most of the pre-staged allocation for a 1 GiB input; after checksum
+  batching, the pre-staged job was shorter than the legacy one under load, but
+  not on a quiet file system before it. The re-check time is reported as
+  `compute_recheck_seconds` and subtracted from the core-hour figure, which
+  remains an estimate. This is evidence for one site, not a general guarantee.
+- **Limits.** Inputs moved by `SCP`, `GRIDFTP`, or `SKYCDS` are checked for
+  existence only, not content. Production-scale transfers and real queue waits
+  have not been measured. Shared-scratch visibility cannot be detected before
+  submission; it is checked when the job starts. Rewritten `workflow://`
+  arguments in user commands remain unquoted, as before, so scratch paths with
+  spaces are supported by stage-in but not by those arguments.
+- **Shell safety.** The context-discovery script (`context.sh`, used in every
+  lifecycle) quotes its scratch path, so shell syntax in that path is no
+  longer executed, and the pre-staging transfer loop is injection-safe.
+
+### Meta-tasks
+
+- Meta-tasks (`TaskType.META`) run workflows written for other engines through
+  an adapter registry (entry-point group `dagon.meta_adapters`); the engines
+  are never modified.
+- The generated engine commands and parameter files for Nextflow, Snakemake,
+  Parsl, StreamFlow, and CWL runners, staging, output containment, failure
+  phases, timeouts, verified checkpoint reuse, portable emulation, FAIR
+  records, JSON, and the `dagon-meta-runner` CWL step are unit tested without
+  any engine; live tests run only where an engine is installed.
+- Live runs on macOS (19 November 2026,
+  `docs/performance/meta_engines_2026-11-19.md`) passed with Snakemake 9.27.2,
+  Parsl 2026.11.16, StreamFlow 0.2.0rc3, and cwltool. Nextflow has not been
+  run live yet.
+- The engine runs on the DAGonStar host; remote execution is delegated to each
+  engine's own executors and has not been exercised.
+
+### Test and CI baseline
+
+The repository has a sound baseline for changes to the core behavior.
+
+**Unit tests** cover:
+
+- configuration parsing, workflow defaults and dependency discovery, cycle
+  validation, JSON and CWL serialization, deterministic CWL example
+  regeneration, and checkpoint reuse;
+- staging command generation, Docker and remote-container construction,
+  SSH-port forwarding, SSH host-key verification, and safe remote launcher
+  creation;
+- command exit-status propagation through the launcher's output capture
+  (local batch, Slurm, and Docker command paths) and selected shell-quoting
+  behavior;
+- packaging extras and optional integration boundaries;
+- BeeOND command generation, launcher persistence, and holder lifecycle;
+- ad-hoc file-system provider contracts, scopes, the adapter registry,
+  multi-volume task environments, cleanup, and inter-task streaming;
+- volume tasks (creation, sharing, destroy, reference-counted release,
+  checkpoints, stores, and CWL export);
+- scheduler-aware pre-staging (configuration, ordering, failure gating,
+  retries, checkpoints, and local and remote Slurm paths);
+- FAIR profiles, artifact declarations, recorder exports, validation, and safe
+  environment defaults; the FAIR example is self-contained (inline
+  configuration, temporary scratch) and is executed by the test suite;
+- an all-factory contract test that constructs a mixed workflow containing
+  every `TaskType` and verifies `workflow://`, FAIR declarations, checkpoint
+  reuse, portable execution, and runnable deterministic CWL export without
+  live external services;
+- the LLM task boundary, with a fully local mock-provider example;
+- agentic tasks: configuration resolution, contract validation, the bounded
+  loop, timeouts and cancellation (including killing a tool's child
+  processes), guardrails, evaluator validation and aggregation, publication
+  and crash recovery, checkpoint identity, secret redaction, the loopback
+  OpenAI-compatible adapter, JSON, FAIR, portable emulation, and CWL export
+  executed with `cwltool`, using only the deterministic mock adapter or a
+  loopback server;
+- meta-tasks: validation, generated engine commands, staging, output
+  containment, failures and timeouts, checkpoint identity, the adapter
+  registry, FAIR, JSON, and CWL export;
+- the Nomad backend, with mocked HTTP lifecycle tests (submission, polling,
+  timeout, logs, purge, and SSH ports);
+- native Python tasks: staging, dependency, output, and runner tests. Local
+  native and web runner subprocesses can import `dagon` from the parent
+  process's package location (appended after the user's `PYTHONPATH`), so the
+  suite also passes from an uninstalled checkout.
+
+**GitHub Actions CI/CD** runs that suite, source compilation, and the
+self-contained local examples on:
+
+- Ubuntu (Python 3.8–3.13), macOS, Windows (with Git Bash), Rocky Linux 9, and
+  64-bit Raspberry Pi OS userland (Debian bookworm arm64);
+- plus focused Ruff and mypy checks (a progressive type check over the
+  shell-command helper), tutorial and feature-coverage validation, an agentic
+  contract job (mock adapter and CWL execution with `cwltool`), safe execution
+  of the tutorial notebook's code cells, a checked sdist/wheel build, and
+  tag-driven GitHub releases.
+
+Local launchers use a detected POSIX bash, so Windows requires Git for
+Windows, MSYS2, or Cygwin.
+
+**Packaging, documentation, and configuration:**
+
 - package extras keep Docker, cloud, Globus, and API dependencies out of the
   base installation;
 - base `requests` and `graphviz` requirements use compatible version ranges,
   allowing hosted notebook environments such as Google Colab to retain their
   platform dependencies;
 - documentation covers configuration, architecture, checkpoints, examples,
-  FAIR principles, CWL export semantics, agentic tasks, and a canonical 36-lesson
-  (00–35) academic tutorial whose structure, links, metadata, retired-name drift,
-  and task-type and feature coverage (`docs/tutorial/coverage.json`) are checked
-  automatically; and
-- an all-factory contract test constructs a mixed workflow containing every
-  `TaskType` and verifies `workflow://`, FAIR declarations, checkpoint reuse,
-  portable execution, and runnable deterministic CWL export without live
-  external services;
-- sample configuration avoids committed credentials and the SKYCDS path checks
-  for required runtime configuration; and
-- the LLM task boundary has local tests and a fully local mock-provider example.
-- agentic tasks have local tests for configuration resolution, contract
-  validation, the bounded loop, timeouts and cancellation (including killing a
-  tool's child processes), guardrails, evaluator validation and aggregation,
-  publication and crash recovery, checkpoint identity, secret redaction, the
-  loopback OpenAI-compatible adapter, JSON, FAIR, portable emulation, and CWL
-  export executed with `cwltool`; tests use only the deterministic mock adapter
-  or a loopback server, and live models are not evaluated.
-- meta-tasks have engine-free tests for validation, generated engine
-  commands, staging, output containment, failures and timeouts, checkpoint
-  identity, the adapter registry, FAIR, JSON, and CWL export, plus live tests
-  that run only where an engine is installed.
-- the Nomad backend has mocked HTTP lifecycle tests (submission, polling,
-  timeout, logs, purge, and SSH ports).
-- native Python tasks have local staging, dependency, output, and runner tests;
-  local native and web runner subprocesses can import `dagon` from the parent
-  process's package location (appended after the user's `PYTHONPATH`), so the
-  suite also passes from an uninstalled checkout.
-- the FAIR example is self-contained (inline configuration, temporary scratch)
-  and is executed by the test suite.
+  FAIR principles, CWL export semantics, agentic tasks, and a canonical
+  36-lesson (00–35) academic tutorial whose structure, links, metadata,
+  retired-name drift, and task-type and feature coverage
+  (`docs/tutorial/coverage.json`) are checked automatically;
+- sample configuration avoids committed credentials, and the SKYCDS path
+  checks for required runtime configuration;
 - DynoStore has documented, tested task-level command examples; its
   `DataMover` value remains reserved rather than an automatic stager.
 
-FAIR exports are local metadata artifacts, not repository publication: they do
-not copy large outputs, obtain remote checksums, or validate every optional
-external profile. Credential capture remains disabled by default.
+### Known limits
 
-The test suite is intentionally fast and local: it validates command generation,
-failure propagation, and integration boundaries, not live Docker, Kubernetes,
-Nomad, Apptainer, SSH, Slurm, cloud, Globus, SKYCDS, FaaS, IoT, LLM, or agent
-providers, or external workflow engines (their live tests are skipped when absent). CI also runs focused style checks and a
-progressive type check over the shell-command helper. Several legacy and
-site-specific code paths still construct shell commands, so changes around
-external execution should be kept small, quoted defensively, and verified at
-the boundary being changed.
+- The test suite is intentionally fast and local: it validates command
+  generation, failure propagation, and integration boundaries, not live
+  Docker, Kubernetes, Nomad, Apptainer, SSH, Slurm, cloud, Globus, SKYCDS,
+  FaaS, IoT, LLM, or agent providers, or external workflow engines (their live
+  tests are skipped when absent).
+- Live runs of ad-hoc file systems, volume tasks, pre-staging, and meta-task
+  engines are manual and recorded in `docs/performance/`; they are not part of
+  CI.
+- Several legacy and site-specific code paths still construct shell commands,
+  so changes around external execution should be kept small, quoted
+  defensively, and verified at the boundary being changed.
 
 ## Installation
 

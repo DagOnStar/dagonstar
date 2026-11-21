@@ -3,6 +3,22 @@
 All notable changes to DAGonStar are recorded here. Versions follow
 `setup.cfg`; release tags are `v<version>`.
 
+## Unreleased
+
+### DAGonService client
+
+- `[dagon_service] token` (or `DAGON_SERVICE_TOKEN`) sends an access token as
+  `Authorization: Bearer`, for services that set `DAGONSERVICE_API_TOKEN`.
+- `[dagon_service] timeout` (default 10 s) bounds every request to the service.
+- Path segments and the `update_task` value are URL-encoded; working
+  directories containing `&`, `#` or `+` reached the service altered.
+
+### Fixes
+
+- A task whose name contains shell metacharacters (for example `C$x`) no longer
+  fails: scratch directory names keep only `[A-Za-z0-9._-]` (other characters
+  become `_`), and the launcher's and Native launcher's `cd` are quoted.
+
 ## 3.0.0 (2026-11-20)
 
 First release since `v2.0.2`. It gathers the work released on `development`

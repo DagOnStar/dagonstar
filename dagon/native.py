@@ -13,7 +13,7 @@ import dagon
 from dagon.streaming import reject_stream_reference
 from dagon.batch import Slurm
 from dagon.runtime_env import runner_environment
-from dagon.shell import join_command
+from dagon.shell import join_command, quote
 from dagon.task import Task
 
 
@@ -201,7 +201,7 @@ class NativeTask(Task):
                 if completed.returncode:
                     raise RuntimeError("Native function failed: " + completed.stderr)
             else:
-                launcher = "#! /bin/bash\ncd " + self.working_dir + "\n" + join_command(command) + "\n"
+                launcher = "#! /bin/bash\ncd " + quote(self.working_dir) + "\n" + join_command(command) + "\n"
                 Task.on_execute(self, launcher, "native_launcher.sh")
                 completed = subprocess.run(self.generate_slurm_command("native_launcher.sh"), shell=True,
                                            text=True, capture_output=True)

@@ -1,6 +1,7 @@
 
 from requests.exceptions import ConnectionError
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+from urllib.parse import quote
 
 import requests
 from requests.exceptions import MissingSchema
@@ -8,9 +9,25 @@ from requests.exceptions import MissingSchema
 
 # Perform the communication with the dagon service
 class API:
-    def __init__(self, url: str) -> None:
-        self.base_url = url
+    """Client of DAGonService (https://github.com/DagOnStar/DagOnService).
+
+    :param url: base URL of the service, e.g. ``http://localhost:57000``
+    :param token: optional access token, sent as ``Authorization: Bearer``;
+        required when the service sets ``DAGONSERVICE_API_TOKEN``
+    :param timeout: seconds before a request is abandoned
+    """
+
+    def __init__(self, url: str, token: Optional[str] = None, timeout: float = 10.0) -> None:
+        self.base_url = url.rstrip("/")
+        self.timeout = timeout
+        self.session = requests.Session()
+        if token:
+            self.session.headers["Authorization"] = "Bearer " + token
         self.checkConnection()
+
+    def _url(self, *parts: Any) -> str:
+        """Join path segments, percent-encoding each one (task names are free text)."""
+        return self.base_url + "".join("/" + quote(str(part), safe="") for part in parts)
 
     # check if the service URL is valid or a service is available
     def checkConnection(self) -> None:
@@ -20,7 +37,7 @@ class API:
         :raises ConnectionError: when it's not possible to connect to the URL provided
         """
         try:
-            requests.head(self.base_url+"/check")
+            self.session.head(self.base_url + "/check", timeout=self.timeout)
         except ConnectionError as e:
             raise ConnectionError("It is not possible connect to the URL %s" % self.base_url)
         except MissingSchema:
@@ -39,10 +56,7 @@ class API:
 
         :raises Exception: when there is an error with the registration or the workflow name already exists
         """
-        service = "/create"
-        url = self.base_url + service
-        data = workflow.as_json()
-        res = requests.post(url, json=data)
+        res = self.session.post(self._url("create"), json=workflow.as_json(), timeout=self.timeout)
         if res.status_code == 201:  # created
             json_reponse = res.json()
             return json_reponse['id']
@@ -65,10 +79,7 @@ class API:
 
         :raises Exception: when there is an error with the call
         """
-        service = "/add_task/%s" % workflow_id
-        url = self.base_url + service
-        data = task.as_json()
-        res = requests.post(url, json=data)
+        res = self.session.post(self._url("add_task", workflow_id), json=task.as_json(), timeout=self.timeout)
         if res.status_code != 201 and res.status_code != 200:  # error
             raise Exception("Something went wrong %d %s" % (res.status_code, res.reason))
 
@@ -88,9 +99,7 @@ class API:
 
         :raises Exception: when there is an error with the call
         """
-        service = "/changestatus/%s/%s/%s" % (workflow_id, task, status)
-        url = self.base_url + service
-        res = requests.put(url)
+        res = self.session.put(self._url("changestatus", workflow_id, task, status), timeout=self.timeout)
         if res.status_code != 201 and res.status_code != 200:  # error
             raise Exception("Something went wrong %d %s" % (res.status_code, res.reason))
 
@@ -111,9 +120,7 @@ class API:
         :raises Exception: when there is an error with the call
         """
 
-        service = "/%s/%s" % (workflow_id, task)
-        url = self.base_url + service
-        res = requests.get(url)
+        res = self.session.get(self._url(workflow_id, task), timeout=self.timeout)
         if res.status_code != 201 and res.status_code != 200:  # error
             raise Exception("Something went wrong %d %s" % (res.status_code, res.reason))
         else:
@@ -134,9 +141,7 @@ class API:
         :raises Exception: when there is an error with the call
         """
 
-        service = "/getworkflow/%s" % workflow_name
-        url = self.base_url + service
-        res = requests.get(url)
+        res = self.session.get(self._url("getworkflow", workflow_name), timeout=self.timeout)
         if res.status_code != 201 and res.status_code != 200:  # error
             raise Exception("Something went wrong, no Transversal workflow %s founded, %d %s" % (workflow_name,res.status_code, res.reason))
         else:
@@ -163,9 +168,9 @@ class API:
         :raises Exception: when there is an error with the call
         """
 
-        service = "/update/%s/%s/%s?value=%s" % (workflow_id, task, attribute, value)
-        url = self.base_url + service
-        res = requests.put(url)
+        # ``params`` URL-encodes the value: paths with '&', '#' or '+' arrive intact.
+        res = self.session.put(self._url("update", workflow_id, task, attribute),
+                               params={"value": value}, timeout=self.timeout)
         if res.status_code != 201 and res.status_code != 200:  # error
             raise Exception("Something went wrong %d %s" % (res.status_code, res.reason))
 
@@ -185,8 +190,6 @@ class API:
 
         :raises Exception: when there is an error with the call
         """
-        service = "/%s/%s/dependency/%s" % (workflow_id, task, dependency)
-        url = self.base_url + service
-        res = requests.put(url)
+        res = self.session.put(self._url(workflow_id, task, "dependency", dependency), timeout=self.timeout)
         if res.status_code != 201 and res.status_code != 200:  # error
             raise Exception("Something went wrong %d %s" % (res.status_code, res.reason))
