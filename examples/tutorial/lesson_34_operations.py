@@ -27,11 +27,12 @@ class Response:
 
 with tempfile.TemporaryDirectory(prefix="dagon-tutorial-34-") as scratch:
     service = config(scratch, {"dagon_service": {"use": "True", "route": "http://dagon-service.invalid"}})
-    with mock.patch("dagon.api.requests.head") as head, \
-            mock.patch("dagon.api.requests.post", return_value=Response()) as post:
+    # The client sends every request through one requests.Session (token header, timeout).
+    with mock.patch("dagon.api.requests.Session.head") as head, \
+            mock.patch("dagon.api.requests.Session.post", return_value=Response()) as post:
         registered = Workflow("Ops31", config=service)
         registered.add_task(DagonTask(TaskType.BATCH, "hello", "echo hello > hello.txt"))
-    head.assert_called_once_with("http://dagon-service.invalid/check")
+    head.assert_called_once_with("http://dagon-service.invalid/check", timeout=10.0)
     assert registered.workflow_id == 7 and post.call_args_list[0].args[0].endswith("/create")
     assert post.call_args_list[1].args[0].endswith("/add_task/7")
 
